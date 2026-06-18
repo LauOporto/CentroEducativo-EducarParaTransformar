@@ -201,20 +201,29 @@ ul {
 }
 
 .user-menu .dropdown-content {
-    display: none;
+    display: block;
     position: absolute;
     background: var(--white);
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    min-width: 180px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
     border-radius: 8px;
     top: 100%;
     right: 0;
     z-index: 1000;
-    padding: 8px 0;
+    padding: 6px 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.12s ease-out, transform 0.12s ease-out, visibility 0.12s;
+    pointer-events: none;
 }
 
-.user-menu:hover .dropdown-content {
-    display: block;
+.user-menu:hover .dropdown-content,
+.user-menu:focus-within .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .dropdown-content a {
@@ -1575,3 +1584,173 @@ html[data-theme="dark"] details { background: #1e293b !important; border-color: 
 html[data-theme="dark"] details summary { color: #f1f5f9 !important; }
 html[data-theme="dark"] .form-controls { background: #1e293b; border-color: #334155; }
 html[data-theme="dark"] .comunicado-card { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+
+/* ============================================================
+   Dark mode — coverage para la landing (index.html)
+   ============================================================ */
+html[data-theme="dark"] .header-top { background: #0b1220; color: #cbd5e1; }
+html[data-theme="dark"] .header-top a { color: #cbd5e1; }
+html[data-theme="dark"] .section { background: #0f172a; color: #e2e8f0; }
+html[data-theme="dark"] .section.bg-light,
+html[data-theme="dark"] .bg-light { background: #111c33; color: #e2e8f0; }
+html[data-theme="dark"] .section p,
+html[data-theme="dark"] .about-text p,
+html[data-theme="dark"] .wellbeing-item p,
+html[data-theme="dark"] .level-card p,
+html[data-theme="dark"] .news-card p,
+html[data-theme="dark"] .contact-info-card p,
+html[data-theme="dark"] .mv-card p,
+html[data-theme="dark"] .employment-content p,
+html[data-theme="dark"] .opinion-card p { color: #cbd5e1; }
+html[data-theme="dark"] .section h2,
+html[data-theme="dark"] .section h3,
+html[data-theme="dark"] .mv-card h3,
+html[data-theme="dark"] .level-card h3,
+html[data-theme="dark"] .news-card h3,
+html[data-theme="dark"] .wellbeing-item h3,
+html[data-theme="dark"] .contact-info-card h3 { color: #f1f5f9; }
+html[data-theme="dark"] .level-card,
+html[data-theme="dark"] .wellbeing-item,
+html[data-theme="dark"] .news-card,
+html[data-theme="dark"] .mv-card,
+html[data-theme="dark"] .contact-info-card,
+html[data-theme="dark"] .opinion-card,
+html[data-theme="dark"] .dashboard-card,
+html[data-theme="dark"] .dashboard-section,
+html[data-theme="dark"] .form-inscription,
+html[data-theme="dark"] .form-employment,
+html[data-theme="dark"] .form-opinion,
+html[data-theme="dark"] .form-contact { background: #1e293b; color: #e2e8f0; border-color: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+html[data-theme="dark"] .news-date,
+html[data-theme="dark"] .card-subtitle,
+html[data-theme="dark"] .user-type,
+html[data-theme="dark"] .user-email,
+html[data-theme="dark"] .opinion-author,
+html[data-theme="dark"] .subtitle { color: #94a3b8; }
+html[data-theme="dark"] label,
+html[data-theme="dark"] .form-group label { color: #e2e8f0; }
+html[data-theme="dark"] .form-ayuda { color: #94a3b8; }
+html[data-theme="dark"] .read-more { color: #60a5fa; }
+html[data-theme="dark"] .modal-content { background: #1e293b; color: #e2e8f0; }
+html[data-theme="dark"] .modal-header h2 { color: #ffffff; background: transparent; }
+html[data-theme="dark"] .modal-subtitle { color: rgba(255,255,255,0.92); background: transparent; }
+html[data-theme="dark"] .modal-footer-link { color: #cbd5e1; background: #0f172a; border-color: #334155; }
+html[data-theme="dark"] .modal-footer-link a { color: #93c5fd; }
+html[data-theme="dark"] .form-layout { background: #1e293b !important; border-color: #334155 !important; }
+html[data-theme="dark"] .form-group label { color: #cbd5e1 !important; }
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .form-select { background: #0f172a !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+html[data-theme="dark"] .form-input:disabled,
+html[data-theme="dark"] .form-select:disabled { background: #1e293b !important; color: #94a3b8 !important; }
+html[data-theme="dark"] .form-input::placeholder { color: #64748b; }
+html[data-theme="dark"] h4 { color: #e2e8f0 !important; }
+html[data-theme="dark"] .data-table tbody tr td { color: #e2e8f0; }
+html[data-theme="dark"] .view-section h3,
+html[data-theme="dark"] .view-section h4 { color: #f1f5f9; }
+html[data-theme="dark"] .view-section { background: #1e293b !important; }
+
+/* ============================================================
+   Modal de confirmación / prompt custom (reemplaza confirm/prompt nativos)
+   ============================================================ */
+.ux-modal {
+    position: fixed; inset: 0; z-index: 5000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+}
+.ux-modal-content {
+    background: #fff; border-radius: 12px; width: 90%; max-width: 440px;
+    padding: 26px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    animation: uxModalIn 0.18s ease-out;
+}
+@keyframes uxModalIn {
+    from { transform: translateY(-15px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+.ux-modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ux-modal-icon {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+}
+.ux-modal-icon.ux-info    { background: #dbeafe; color: #1d4ed8; }
+.ux-modal-icon.ux-warning { background: #fef3c7; color: #b45309; }
+.ux-modal-icon.ux-danger  { background: #fee2e2; color: #b91c1c; }
+.ux-modal-icon.ux-success { background: #d1fae5; color: #047857; }
+.ux-modal-title { margin: 0; font-size: 1.1rem; color: #0f172a; font-weight: 700; }
+.ux-modal-message { color: #475569; font-size: 0.95rem; line-height: 1.45; margin: 0 0 16px; }
+.ux-modal-input {
+    width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
+    font-size: 0.95rem; margin-bottom: 16px;
+}
+.ux-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.ux-modal-actions button {
+    padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer;
+    font-weight: 600; font-size: 0.92rem;
+}
+.ux-modal-cancel { background: #e2e8f0; color: #334155; }
+.ux-modal-cancel:hover { background: #cbd5e1; }
+.ux-modal-ok { background: #3b82f6; color: #fff; }
+.ux-modal-ok:hover { background: #2563eb; }
+.ux-modal-ok.ux-danger-btn { background: #ef4444; }
+.ux-modal-ok.ux-danger-btn:hover { background: #dc2626; }
+
+html[data-theme="dark"] .ux-modal-content { background: #1e293b; }
+html[data-theme="dark"] .ux-modal-title { color: #f1f5f9; }
+html[data-theme="dark"] .ux-modal-message { color: #cbd5e1; }
+html[data-theme="dark"] .ux-modal-input { background: #0f172a; color: #f1f5f9; border-color: #334155; }
+html[data-theme="dark"] .ux-modal-cancel { background: #334155; color: #e2e8f0; }
+html[data-theme="dark"] .ux-modal-cancel:hover { background: #475569; }
+
+/* ============================================================
+   Textareas — sin resize manual; el JS se encarga de auto-grow
+   ============================================================ */
+textarea {
+    resize: none !important;
+    overflow: hidden;
+    min-height: 80px;
+    transition: height 0.12s ease-out;
+}
+textarea.ux-no-grow { overflow: auto; }
+
+/* ============================================================
+   Refinos extra dark mode (cubre lo que faltaba en nav superior)
+   ============================================================ */
+html[data-theme="dark"] .main-nav a:not(.btn-primary):not(.btn-action) { color: #f1f5f9 !important; }
+html[data-theme="dark"] .user-menu .dropdown-content { background: #1e293b; box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
+html[data-theme="dark"] .user-menu .dropdown-content a { color: #e2e8f0; }
+html[data-theme="dark"] .user-menu .dropdown-content a:hover { background: #334155; color: #ffffff; }
+html[data-theme="dark"] .user-menu .dropdown-content .logout-btn { color: #fca5a5; }
+html[data-theme="dark"] .user-menu .dropdown-content .logout-btn:hover { background: rgba(239,68,68,0.18); color: #fecaca; }
+html[data-theme="dark"] .nav-links a { color: #f1f5f9; }
+html[data-theme="dark"] .logo h1 { color: #f1f5f9; }
+html[data-theme="dark"] .bell-button:hover { background: rgba(255,255,255,0.08); }
+html[data-theme="dark"] .header-top { background: #0b1220 !important; color: #cbd5e1; }
+html[data-theme="dark"] .header-top .social-links a,
+html[data-theme="dark"] .header-top .contact-info span { color: #cbd5e1; }
+html[data-theme="dark"] .nav-links input,
+html[data-theme="dark"] .main-nav input { background: transparent !important; }
+html[data-theme="dark"] textarea { background: #0f172a !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+
+/* Pill del nombre de usuario en el nav (panel docente) */
+.nav-user-pill {
+    font-weight: 600;
+    padding: 8px 15px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    transition: background 0.15s, color 0.15s;
+}
+.nav-user-pill:hover { background: #e2e8f0; }
+html[data-theme="dark"] .nav-user-pill { background: rgba(139,92,246,0.12); color: #c4b5fd !important; }
+html[data-theme="dark"] .nav-user-pill:hover { background: rgba(139,92,246,0.22); }
+html[data-theme="dark"] .close { color: #e2e8f0; }
+html[data-theme="dark"] .dropdown-content { background: #1e293b; border-color: #334155; }
+html[data-theme="dark"] .dropdown-content a { color: #e2e8f0; }
+html[data-theme="dark"] .dropdown-content a:hover { background: #334155; }
+html[data-theme="dark"] footer { background: #020617; color: #cbd5e1; }
+html[data-theme="dark"] footer h3 { color: #f1f5f9; }
+html[data-theme="dark"] footer a { color: #cbd5e1; }
+html[data-theme="dark"] .footer-bottom { color: #94a3b8; border-color: #334155; }
+html[data-theme="dark"] .file-label { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+html[data-theme="dark"] .gallery-item { border-color: #334155; }
+html[data-theme="dark"] .btn-theme-landing { color: #f1f5f9; }
