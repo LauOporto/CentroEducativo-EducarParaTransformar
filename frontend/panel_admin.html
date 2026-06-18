@@ -76,6 +76,10 @@
             <ul class="sidebar-menu">
                 <li><a class="nav-link active" onclick="switchView('dashboard', this); cargarStats();"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                 <li><a class="nav-link" onclick="switchView('usuarios', this); cargarUsuarios();"><i class="fas fa-users"></i> Usuarios</a></li>
+                <li><a class="nav-link" onclick="switchView('docentes', this); cargarDocentesPendientes();"><i class="fas fa-user-clock"></i> Docentes pendientes <span id="badgePendientes" class="chat-list-unread" style="display:none;">0</span></a></li>
+                <li><a class="nav-link" onclick="switchView('inscripciones', this); cargarInscripciones();"><i class="fas fa-file-signature"></i> Inscripciones <span id="badgeInscripciones" class="chat-list-unread" style="display:none;">0</span></a></li>
+                <li><a class="nav-link" onclick="switchView('opiniones', this); cargarOpiniones();"><i class="fas fa-comment-dots"></i> Opiniones <span id="badgeOpiniones" class="chat-list-unread" style="display:none;">0</span></a></li>
+                <li><a class="nav-link" onclick="switchView('empleo', this); cargarPostulaciones();"><i class="fas fa-briefcase"></i> Postulaciones empleo <span id="badgeEmpleo" class="chat-list-unread" style="display:none;">0</span></a></li>
                 <li><a class="nav-link" onclick="switchView('vinculos', this); cargarLinks();"><i class="fas fa-link"></i> Vínculos Padre-Hijo</a></li>
                 <li><a class="nav-link" onclick="switchView('cuotas', this); cargarUsuarios();"><i class="fas fa-money-bill"></i> Cargar Cuota</a></li>
                 <li><a class="nav-link" onclick="switchView('mensajes', this); cargarContactos();"><i class="fas fa-comments"></i> Mensajes</a></li>
@@ -125,6 +129,63 @@
                 <table class="data-table" id="tablaUsuarios">
                     <thead><tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Rol</th><th>DNI</th><th>Email</th><th>Curso</th><th>Estado</th><th>Acciones</th></tr></thead>
                     <tbody><tr><td colspan="9" style="text-align:center; color:#64748b;">Cargando...</td></tr></tbody>
+                </table>
+            </section>
+
+            <section id="docentes" class="view-section">
+                <h3 class="section-title">Docentes pendientes de aprobación</h3>
+                <p style="color:#64748b; margin-bottom:14px;">Estos usuarios se registraron como docentes y necesitan tu autorización para poder iniciar sesión.</p>
+                <table class="data-table" id="tablaDocentesPend">
+                    <thead><tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>DNI</th><th>Email</th><th>Solicitado</th><th>Acciones</th></tr></thead>
+                    <tbody><tr><td colspan="7" style="text-align:center; color:#64748b;">Cargando...</td></tr></tbody>
+                </table>
+            </section>
+
+            <section id="inscripciones" class="view-section">
+                <h3 class="section-title">Solicitudes de inscripción</h3>
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                    <select id="filtroInsc" class="form-select" style="max-width:220px;" onchange="cargarInscripciones()">
+                        <option value="PENDIENTE">Pendientes</option>
+                        <option value="APROBADO">Aprobadas</option>
+                        <option value="RECHAZADO">Rechazadas</option>
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <table class="data-table" id="tablaInsc">
+                    <thead><tr><th>ID</th><th>Tutor</th><th>Contacto</th><th>Estudiante</th><th>Nivel / Curso</th><th>Mensaje</th><th>Estado</th><th>Recibida</th><th>Acciones</th></tr></thead>
+                    <tbody><tr><td colspan="9" style="text-align:center; color:#64748b;">Cargando...</td></tr></tbody>
+                </table>
+            </section>
+
+            <section id="opiniones" class="view-section">
+                <h3 class="section-title">Moderación de opiniones</h3>
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                    <select id="filtroOp" class="form-select" style="max-width:220px;" onchange="cargarOpiniones()">
+                        <option value="PENDIENTE">Pendientes</option>
+                        <option value="APROBADO">Aprobadas</option>
+                        <option value="RECHAZADO">Rechazadas</option>
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <table class="data-table" id="tablaOp">
+                    <thead><tr><th>ID</th><th>Autor</th><th>Rol</th><th>Texto</th><th>Estrellas</th><th>Estado</th><th>Recibida</th><th>Acciones</th></tr></thead>
+                    <tbody><tr><td colspan="8" style="text-align:center; color:#64748b;">Cargando...</td></tr></tbody>
+                </table>
+            </section>
+
+            <section id="empleo" class="view-section">
+                <h3 class="section-title">Postulaciones de empleo</h3>
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                    <select id="filtroEmp" class="form-select" style="max-width:220px;" onchange="cargarPostulaciones()">
+                        <option value="PENDIENTE">Pendientes</option>
+                        <option value="APROBADO">Aprobadas</option>
+                        <option value="RECHAZADO">Rechazadas</option>
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <table class="data-table" id="tablaEmp">
+                    <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Puesto</th><th>CV</th><th>Estado</th><th>Recibida</th><th>Acciones</th></tr></thead>
+                    <tbody><tr><td colspan="8" style="text-align:center; color:#64748b;">Cargando...</td></tr></tbody>
                 </table>
             </section>
 
@@ -216,6 +277,80 @@
         </main>
     </div>
 
+    <!-- Modal de edición de usuario -->
+    <div class="modal" id="editUserModal" style="display:none;">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <span class="close" onclick="cerrarEditarUsuario()">&times;</span>
+                <h2><i class="fas fa-user-edit"></i> Editar usuario</h2>
+                <p class="modal-subtitle">Actualizá los datos del usuario seleccionado.</p>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm" onsubmit="guardarEdicionUsuario(event)">
+                    <input type="hidden" id="editUserId">
+                    <div class="form-grid-2">
+                        <div class="form-group full-width">
+                            <label for="editUserNombre"><i class="fas fa-user" style="color:#8b5cf6; margin-right:6px;"></i> Nombre completo *</label>
+                            <input type="text" id="editUserNombre" class="form-input" maxlength="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserUsuario"><i class="fas fa-at" style="color:#8b5cf6; margin-right:6px;"></i> Usuario *</label>
+                            <input type="text" id="editUserUsuario" class="form-input" maxlength="40" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserDni"><i class="fas fa-address-card" style="color:#8b5cf6; margin-right:6px;"></i> DNI *</label>
+                            <input type="text" id="editUserDni" class="form-input" pattern="[0-9]{7,8}" title="7 u 8 dígitos" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserEmail"><i class="fas fa-envelope" style="color:#8b5cf6; margin-right:6px;"></i> Email *</label>
+                            <input type="email" id="editUserEmail" class="form-input" maxlength="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserRole"><i class="fas fa-id-badge" style="color:#8b5cf6; margin-right:6px;"></i> Rol *</label>
+                            <select id="editUserRole" class="form-select" required onchange="editUserToggleCurso()">
+                                <option value="ESTUDIANTE">Estudiante</option>
+                                <option value="DOCENTE">Docente</option>
+                                <option value="PADRE">Padre / Tutor</option>
+                                <option value="ADMIN">Administrador</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width" id="editUserCursoGroup">
+                            <label for="editUserCurso"><i class="fas fa-school" style="color:#8b5cf6; margin-right:6px;"></i> Curso / Año</label>
+                            <select id="editUserCurso" class="form-select">
+                                <option value="">Seleccionar curso...</option>
+                                <optgroup label="Educación Inicial">
+                                    <option value="Inicial — Sala de 3">Sala de 3</option>
+                                    <option value="Inicial — Sala de 4">Sala de 4</option>
+                                    <option value="Inicial — Sala de 5">Sala de 5</option>
+                                </optgroup>
+                                <optgroup label="Educación Primaria">
+                                    <option value="Primaria — 1° grado">1° grado</option>
+                                    <option value="Primaria — 2° grado">2° grado</option>
+                                    <option value="Primaria — 3° grado">3° grado</option>
+                                    <option value="Primaria — 4° grado">4° grado</option>
+                                    <option value="Primaria — 5° grado">5° grado</option>
+                                    <option value="Primaria — 6° grado">6° grado</option>
+                                </optgroup>
+                                <optgroup label="Educación Secundaria">
+                                    <option value="Secundaria — 1° año">1° año</option>
+                                    <option value="Secundaria — 2° año">2° año</option>
+                                    <option value="Secundaria — 3° año">3° año</option>
+                                    <option value="Secundaria — 4° año">4° año</option>
+                                    <option value="Secundaria — 5° año">5° año</option>
+                                </optgroup>
+                            </select>
+                            <small class="form-ayuda" style="color:#94a3b8;">Solo aplica para estudiantes. Si no figura el curso actual exactamente, se mantiene como texto libre.</small>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:18px;">
+                        <button type="button" class="btn-secondary" onclick="cerrarEditarUsuario()">Cancelar</button>
+                        <button type="submit" class="btn-action"><i class="fas fa-save"></i> Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="toast.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="campus.js"></script>
@@ -227,6 +362,7 @@
             if (!user || user.tipo !== 'admin') { window.location.href = 'index.html'; return; }
             document.getElementById('userNameDisplay').textContent = user.nombre;
             cargarStats();
+            refrescarBadgePendientes();
             window.initBell();
             window.connectSocket && window.connectSocket();
             window.onIncomingMessage = function (m) {
@@ -333,23 +469,350 @@
             }
         }
 
-        async function editarUsuario(id) {
+        function editarUsuario(id) {
             const u = _usuariosCache.find(x => x.id === id);
             if (!u) return;
-            const nombre = prompt('Nombre completo:', u.nombre);
-            if (nombre === null) return;
-            const email = prompt('Email:', u.email);
-            if (email === null) return;
-            const curso = u.role === 'ESTUDIANTE' ? prompt('Curso:', u.curso || '') : null;
-            const r = await window.apiPatch('/api/admin/users/' + id, { nombre, email, curso });
-            if (r.exito) { toastSuccess('Usuario actualizado.'); cargarUsuarios(); }
-            else toastError(r.mensaje || 'Error.');
+            document.getElementById('editUserId').value = u.id;
+            document.getElementById('editUserNombre').value = u.nombre;
+            document.getElementById('editUserUsuario').value = u.usuario;
+            document.getElementById('editUserDni').value = u.dni;
+            document.getElementById('editUserEmail').value = u.email;
+            document.getElementById('editUserRole').value = u.role;
+
+            // Curso: si coincide con una opción del select la usamos, si no,
+            // agregamos una opción temporal con el valor actual para preservarlo
+            const sel = document.getElementById('editUserCurso');
+            sel.querySelectorAll('option[data-custom]').forEach(o => o.remove());
+            if (u.curso) {
+                const match = Array.from(sel.options).some(o => o.value === u.curso);
+                if (!match) {
+                    const opt = document.createElement('option');
+                    opt.value = u.curso;
+                    opt.textContent = u.curso + ' (actual)';
+                    opt.dataset.custom = '1';
+                    sel.appendChild(opt);
+                }
+                sel.value = u.curso;
+            } else {
+                sel.value = '';
+            }
+            editUserToggleCurso();
+            document.getElementById('editUserModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function editUserToggleCurso() {
+            const role = document.getElementById('editUserRole').value;
+            const grp = document.getElementById('editUserCursoGroup');
+            grp.style.display = role === 'ESTUDIANTE' ? '' : 'none';
+        }
+
+        function cerrarEditarUsuario() {
+            document.getElementById('editUserModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        async function guardarEdicionUsuario(e) {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const role = document.getElementById('editUserRole').value;
+            const body = {
+                nombre: document.getElementById('editUserNombre').value.trim(),
+                usuario: document.getElementById('editUserUsuario').value.trim(),
+                dni: document.getElementById('editUserDni').value.trim(),
+                email: document.getElementById('editUserEmail').value.trim(),
+                role,
+                curso: role === 'ESTUDIANTE' ? (document.getElementById('editUserCurso').value || null) : null,
+            };
+            const r = await window.apiPatch('/api/admin/users/' + id, body);
+            if (r.exito) {
+                toastSuccess('Usuario actualizado.');
+                cerrarEditarUsuario();
+                cargarUsuarios();
+            } else {
+                toastError(r.mensaje || 'No se pudo actualizar.');
+            }
         }
 
         async function desactivarUsuario(id) {
-            if (!confirm('¿Desactivar este usuario?')) return;
+            const u = _usuariosCache.find(x => x.id === id);
+            const nombre = u ? u.nombre : 'este usuario';
+            const ok = await window.uxConfirm(`¿Desactivar a ${nombre}? No va a poder iniciar sesión hasta que lo reactives.`, {
+                title: 'Desactivar usuario',
+                danger: true,
+                okLabel: 'Desactivar',
+            });
+            if (!ok) return;
             const r = await window.apiDelete('/api/admin/users/' + id);
             if (r.exito) { toastSuccess('Usuario desactivado.'); cargarUsuarios(); }
+            else toastError(r.mensaje || 'Error.');
+        }
+
+        /* ============================================================
+           DOCENTES PENDIENTES DE APROBACIÓN
+           ============================================================ */
+        function fmtFechaCorta(iso) {
+            try {
+                const d = new Date(iso);
+                return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+            } catch { return iso; }
+        }
+
+        function setBadge(id, n) {
+            const badge = document.getElementById(id);
+            if (!badge) return;
+            if (n > 0) { badge.textContent = n; badge.style.display = 'inline-block'; }
+            else { badge.style.display = 'none'; }
+        }
+
+        async function refrescarBadgePendientes() {
+            try {
+                const data = await window.apiGet('/api/admin/moderation/counts');
+                if (!data || !data.exito) return;
+                const p = data.pendientes;
+                setBadge('badgePendientes', p.docentes);
+                setBadge('badgeInscripciones', p.inscripciones);
+                setBadge('badgeOpiniones', p.opiniones);
+                setBadge('badgeEmpleo', p.empleo);
+            } catch { /* ignore */ }
+        }
+
+        async function cargarDocentesPendientes() {
+            const tbody = document.querySelector('#tablaDocentesPend tbody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Cargando...</td></tr>';
+            const data = await window.apiGet('/api/admin/teachers/pending');
+            if (!data.exito) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Error al cargar.</td></tr>';
+                return;
+            }
+            if (data.docentes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">No hay docentes esperando aprobación.</td></tr>';
+                refrescarBadgePendientes();
+                return;
+            }
+            tbody.innerHTML = data.docentes.map(d => `
+                <tr>
+                    <td>${d.id}</td>
+                    <td><b>${window.escapeHtml(d.nombre)}</b></td>
+                    <td>${window.escapeHtml(d.usuario)}</td>
+                    <td>${d.dni}</td>
+                    <td>${window.escapeHtml(d.email)}</td>
+                    <td>${fmtFechaCorta(d.createdAt)}</td>
+                    <td>
+                        <button class="btn-action" style="padding:6px 12px; font-size:0.82rem;" onclick="aprobarDocente(${d.id})"><i class="fas fa-check"></i> Aprobar</button>
+                        <button class="btn-danger" onclick="rechazarDocente(${d.id})"><i class="fas fa-times"></i> Rechazar</button>
+                    </td>
+                </tr>
+            `).join('');
+            refrescarBadgePendientes();
+        }
+
+        async function aprobarDocente(id) {
+            const ok = await window.uxConfirm('¿Confirmás la aprobación de este docente? Va a poder iniciar sesión inmediatamente.', { title: 'Aprobar docente', okLabel: 'Aprobar', variant: 'success' });
+            if (!ok) return;
+            const r = await window.apiPost('/api/admin/teachers/' + id + '/approve', {});
+            if (r.exito) {
+                toastSuccess('Docente aprobado: ' + r.docente.nombre);
+                cargarDocentesPendientes();
+            } else {
+                toastError(r.mensaje || 'No se pudo aprobar.');
+            }
+        }
+
+        async function rechazarDocente(id) {
+            const ok = await window.uxConfirm('¿Rechazar y eliminar esta solicitud? La acción es irreversible.', { title: 'Rechazar docente', danger: true, okLabel: 'Rechazar' });
+            if (!ok) return;
+            const r = await window.apiDelete('/api/admin/teachers/' + id + '/reject');
+            if (r.exito) {
+                toastSuccess('Solicitud rechazada.');
+                cargarDocentesPendientes();
+            } else {
+                toastError(r.mensaje || 'No se pudo rechazar.');
+            }
+        }
+
+        /* ============================================================
+           INSCRIPCIONES (moderación)
+           ============================================================ */
+        const STATUS_LABEL = { PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', RECHAZADO: 'Rechazado' };
+        const STATUS_COLOR = { PENDIENTE: '#f59e0b', APROBADO: '#10b981', RECHAZADO: '#ef4444' };
+
+        async function cargarInscripciones() {
+            const tbody = document.querySelector('#tablaInsc tbody');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Cargando...</td></tr>';
+            const status = document.getElementById('filtroInsc').value;
+            const data = await window.apiGet('/api/admin/inscriptions' + (status ? '?status=' + status : ''));
+            if (!data.exito) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#ef4444;">Error.</td></tr>'; return; }
+            if (data.inscripciones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Sin solicitudes.</td></tr>';
+                refrescarBadgePendientes();
+                return;
+            }
+            tbody.innerHTML = data.inscripciones.map(i => `
+                <tr>
+                    <td>${i.id}</td>
+                    <td><b>${window.escapeHtml(i.nombreTutor)}</b></td>
+                    <td>${window.escapeHtml(i.emailTutor)}<br><span style="color:#64748b; font-size:0.82rem;">${window.escapeHtml(i.telefonoTutor)}</span></td>
+                    <td>${window.escapeHtml(i.nombreEstudiante)}</td>
+                    <td>${window.escapeHtml(i.nivel)}<br><span style="color:#64748b; font-size:0.82rem;">${window.escapeHtml(i.curso)}</span></td>
+                    <td style="max-width:220px; font-size:0.85rem;">${window.escapeHtml(i.mensaje || '—')}</td>
+                    <td><span style="color:${STATUS_COLOR[i.status]}; font-weight:600;">${STATUS_LABEL[i.status]}</span></td>
+                    <td style="font-size:0.82rem;">${fmtFechaCorta(i.createdAt)}</td>
+                    <td>
+                        ${i.status === 'PENDIENTE' ? `
+                            <button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolverInsc(${i.id}, 'approve')"><i class="fas fa-check"></i></button>
+                            <button class="btn-danger" onclick="resolverInsc(${i.id}, 'reject')"><i class="fas fa-times"></i></button>
+                        ` : `
+                            <button class="btn-danger" onclick="borrarInsc(${i.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        `}
+                    </td>
+                </tr>
+            `).join('');
+            refrescarBadgePendientes();
+        }
+
+        async function resolverInsc(id, accion) {
+            let nota = '';
+            if (accion === 'reject') {
+                const r = await window.uxPrompt('Motivo del rechazo (opcional):', {
+                    title: 'Rechazar inscripción',
+                    placeholder: 'Ej: cupo completo, datos inválidos...',
+                });
+                if (r === null) return;
+                nota = r;
+            } else {
+                const ok = await window.uxConfirm('¿Aprobar esta solicitud de inscripción?', {
+                    title: 'Aprobar inscripción', okLabel: 'Aprobar', variant: 'success',
+                });
+                if (!ok) return;
+            }
+            const res = await window.apiPost('/api/admin/inscriptions/' + id + '/' + accion, { notaAdmin: nota });
+            if (res.exito) {
+                toastSuccess(accion === 'approve' ? 'Inscripción aprobada.' : 'Inscripción rechazada.');
+                cargarInscripciones();
+            } else toastError(res.mensaje || 'Error.');
+        }
+        async function borrarInsc(id) {
+            const ok = await window.uxConfirm('¿Eliminar este registro de la base?', { title: 'Eliminar inscripción', danger: true, okLabel: 'Eliminar' });
+            if (!ok) return;
+            const r = await window.apiDelete('/api/admin/inscriptions/' + id);
+            if (r.exito) { toastSuccess('Eliminado.'); cargarInscripciones(); }
+            else toastError(r.mensaje || 'Error.');
+        }
+
+        /* ============================================================
+           OPINIONES (moderación)
+           ============================================================ */
+        async function cargarOpiniones() {
+            const tbody = document.querySelector('#tablaOp tbody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">Cargando...</td></tr>';
+            const status = document.getElementById('filtroOp').value;
+            const data = await window.apiGet('/api/admin/opinions' + (status ? '?status=' + status : ''));
+            if (!data.exito) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#ef4444;">Error.</td></tr>'; return; }
+            if (data.opiniones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">Sin opiniones.</td></tr>';
+                refrescarBadgePendientes();
+                return;
+            }
+            tbody.innerHTML = data.opiniones.map(o => `
+                <tr>
+                    <td>${o.id}</td>
+                    <td>${window.escapeHtml(o.nombre || 'Anónimo')}</td>
+                    <td>${window.escapeHtml(o.rol)}</td>
+                    <td style="max-width:300px; font-size:0.88rem;">"${window.escapeHtml(o.texto)}"</td>
+                    <td style="color:#f59e0b;">${'★'.repeat(o.rating)}${'☆'.repeat(5 - o.rating)}</td>
+                    <td><span style="color:${STATUS_COLOR[o.status]}; font-weight:600;">${STATUS_LABEL[o.status]}</span></td>
+                    <td style="font-size:0.82rem;">${fmtFechaCorta(o.createdAt)}</td>
+                    <td>
+                        ${o.status === 'PENDIENTE' ? `
+                            <button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolverOp(${o.id}, 'approve')"><i class="fas fa-check"></i></button>
+                            <button class="btn-danger" onclick="resolverOp(${o.id}, 'reject')"><i class="fas fa-times"></i></button>
+                        ` : `
+                            <button class="btn-danger" onclick="borrarOp(${o.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        `}
+                    </td>
+                </tr>
+            `).join('');
+            refrescarBadgePendientes();
+        }
+
+        async function resolverOp(id, accion) {
+            const r = await window.apiPost('/api/admin/opinions/' + id + '/' + accion, {});
+            if (r.exito) {
+                toastSuccess(accion === 'approve' ? 'Opinión publicada.' : 'Opinión rechazada.');
+                cargarOpiniones();
+            } else toastError(r.mensaje || 'Error.');
+        }
+        async function borrarOp(id) {
+            const ok = await window.uxConfirm('¿Eliminar esta opinión definitivamente?', { title: 'Eliminar opinión', danger: true, okLabel: 'Eliminar' });
+            if (!ok) return;
+            const r = await window.apiDelete('/api/admin/opinions/' + id);
+            if (r.exito) { toastSuccess('Eliminada.'); cargarOpiniones(); }
+            else toastError(r.mensaje || 'Error.');
+        }
+
+        /* ============================================================
+           POSTULACIONES DE EMPLEO (moderación)
+           ============================================================ */
+        async function cargarPostulaciones() {
+            const tbody = document.querySelector('#tablaEmp tbody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">Cargando...</td></tr>';
+            const status = document.getElementById('filtroEmp').value;
+            const data = await window.apiGet('/api/admin/employment' + (status ? '?status=' + status : ''));
+            if (!data.exito) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#ef4444;">Error.</td></tr>'; return; }
+            if (data.postulaciones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">Sin postulaciones.</td></tr>';
+                refrescarBadgePendientes();
+                return;
+            }
+            tbody.innerHTML = data.postulaciones.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td><b>${window.escapeHtml(p.nombre)}</b></td>
+                    <td>${window.escapeHtml(p.email)}</td>
+                    <td>${window.escapeHtml(p.puesto)}</td>
+                    <td>${p.cvUrl ? `<a href="${p.cvUrl}" target="_blank" style="color:#8b5cf6; font-weight:600;"><i class="fas fa-file-pdf"></i> Ver CV</a>` : '<span style="color:#94a3b8;">Sin CV</span>'}</td>
+                    <td><span style="color:${STATUS_COLOR[p.status]}; font-weight:600;">${STATUS_LABEL[p.status]}</span></td>
+                    <td style="font-size:0.82rem;">${fmtFechaCorta(p.createdAt)}</td>
+                    <td>
+                        ${p.status === 'PENDIENTE' ? `
+                            <button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolverEmp(${p.id}, 'approve')"><i class="fas fa-check"></i></button>
+                            <button class="btn-danger" onclick="resolverEmp(${p.id}, 'reject')"><i class="fas fa-times"></i></button>
+                        ` : `
+                            <button class="btn-danger" onclick="borrarEmp(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        `}
+                    </td>
+                </tr>
+            `).join('');
+            refrescarBadgePendientes();
+        }
+
+        async function resolverEmp(id, accion) {
+            let nota = '';
+            if (accion === 'reject') {
+                const r = await window.uxPrompt('Motivo del rechazo (opcional):', {
+                    title: 'Rechazar postulación',
+                    placeholder: 'Ej: perfil no encaja con la búsqueda actual',
+                });
+                if (r === null) return;
+                nota = r;
+            } else {
+                const ok = await window.uxConfirm('¿Aprobar esta postulación y avisar al candidato?', {
+                    title: 'Aprobar postulación', okLabel: 'Aprobar', variant: 'success',
+                });
+                if (!ok) return;
+            }
+            const res = await window.apiPost('/api/admin/employment/' + id + '/' + accion, { notaAdmin: nota });
+            if (res.exito) {
+                toastSuccess(accion === 'approve' ? 'Postulación aceptada.' : 'Postulación rechazada.');
+                cargarPostulaciones();
+            } else toastError(res.mensaje || 'Error.');
+        }
+        async function borrarEmp(id) {
+            const ok = await window.uxConfirm('¿Eliminar esta postulación de la base?', { title: 'Eliminar postulación', danger: true, okLabel: 'Eliminar' });
+            if (!ok) return;
+            const r = await window.apiDelete('/api/admin/employment/' + id);
+            if (r.exito) { toastSuccess('Eliminada.'); cargarPostulaciones(); }
             else toastError(r.mensaje || 'Error.');
         }
 
@@ -387,7 +850,8 @@
         }
 
         async function borrarVinculo(id) {
-            if (!confirm('¿Eliminar este vínculo?')) return;
+            const ok = await window.uxConfirm('¿Eliminar este vínculo padre-hijo?', { title: 'Eliminar vínculo', danger: true, okLabel: 'Eliminar' });
+            if (!ok) return;
             const r = await window.apiDelete('/api/admin/links/' + id);
             if (r.exito) { toastSuccess('Vínculo eliminado.'); cargarLinks(); }
             else toastError(r.mensaje || 'Error.');
@@ -445,7 +909,8 @@
         }
 
         async function borrarAnuncio(id) {
-            if (!confirm('¿Borrar este anuncio?')) return;
+            const ok = await window.uxConfirm('¿Borrar este anuncio definitivamente?', { title: 'Borrar anuncio', danger: true, okLabel: 'Borrar' });
+            if (!ok) return;
             const r = await window.apiDelete('/api/announcements/' + id);
             if (r.exito) { toastSuccess('Anuncio borrado.'); cargarAnuncios(); }
             else toastError(r.mensaje || 'Error.');
