@@ -113,6 +113,9 @@ router.post('/users', async (req, res, next) => {
 const updateUserSchema = z.object({
   nombre: z.string().min(2).optional(),
   email: z.string().email().optional(),
+  usuario: z.string().min(3).max(40).optional(),
+  dni: z.string().min(6).max(15).optional(),
+  role: z.enum(['ESTUDIANTE', 'DOCENTE', 'PADRE', 'ADMIN']).optional(),
   curso: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   password: z.string().min(6).optional(),
@@ -122,12 +125,43 @@ router.patch('/users/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = updateUserSchema.parse(req.body);
+
+    // Verificar colisiones en campos únicos
+    if (data.usuario || data.email || data.dni) {
+      const conflicting = await prisma.user.findFirst({
+        where: {
+          NOT: { id },
+          OR: [
+            ...(data.usuario ? [{ usuario: data.usuario }] : []),
+            ...(data.email ? [{ email: data.email }] : []),
+            ...(data.dni ? [{ dni: data.dni }] : []),
+          ],
+        },
+        select: { id: true, usuario: true, email: true, dni: true },
+      });
+      if (conflicting) {
+        if (conflicting.usuario === data.usuario) throw HttpError.conflict('Ese nombre de usuario ya está tomado.');
+        if (conflicting.email === data.email) throw HttpError.conflict('Ese email ya está registrado.');
+        if (conflicting.dni === data.dni) throw HttpError.conflict('Ese DNI ya está registrado.');
+        throw HttpError.conflict('Conflicto con otro usuario.');
+      }
+    }
+
     const patch: Record<string, unknown> = {};
     if (data.nombre !== undefined) patch.nombre = data.nombre;
     if (data.email !== undefined) patch.email = data.email;
+    if (data.usuario !== undefined) patch.usuario = data.usuario;
+    if (data.dni !== undefined) patch.dni = data.dni;
+    if (data.role !== undefined) patch.role = data.role as Role;
     if (data.curso !== undefined) patch.curso = data.curso;
     if (data.isActive !== undefined) patch.isActive = data.isActive;
     if (data.password !== undefined) patch.password = await bcrypt.hash(data.password, 10);
+
+    // Si dejó de ser estudiante, limpiar curso
+    if (data.role && data.role !== 'ESTUDIANTE' && patch.curso === undefined) {
+      patch.curso = null;
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: patch,
@@ -211,6 +245,56 @@ router.post('/payments', async (req, res, next) => {
       },
     });
     res.json({ exito: true, payment });
+  } catch (err) { next(err); }
+});
+
+// Docentes pendientes de aprobación
+router.get('/teachers/pending', async (_req, res, next) => {
+  try {
+    const pendientes = await prisma.user.findMany({
+      where: { role: Role.DOCENTE, isActive: false },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true, usuario: true, email: true, dni: true, nombre: true,
+        createdAt: true,
+      },
+    });
+    res.json({ exito: true, docentes: pendientes });
+  } catch (err) { next(err); }
+});
+
+router.post('/teachers/:id/approve', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw HttpError.notFound('Docente no encontrado.');
+    if (user.role !== Role.DOCENTE) throw HttpError.badRequest('El usuario no es docente.');
+    if (user.isActive) throw HttpError.badRequest('El docente ya fue aprobado.');
+    const aprobado = await prisma.user.update({
+      where: { id },
+      data: { isActive: true },
+      select: { id: true, usuario: true, nombre: true, email: true, dni: true, isActive: true },
+    });
+    await prisma.notification.create({
+      data: {
+        userId: id,
+        titulo: 'Cuenta aprobada',
+        contenido: 'Un administrador aprobó tu cuenta de docente. Ya podés iniciar sesión.',
+      },
+    });
+    res.json({ exito: true, docente: aprobado });
+  } catch (err) { next(err); }
+});
+
+router.delete('/teachers/:id/reject', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw HttpError.notFound('Docente no encontrado.');
+    if (user.role !== Role.DOCENTE) throw HttpError.badRequest('El usuario no es docente.');
+    if (user.isActive) throw HttpError.badRequest('No se puede rechazar un docente ya aprobado.');
+    await prisma.user.delete({ where: { id } });
+    res.json({ exito: true, mensaje: 'Solicitud de docente rechazada.' });
   } catch (err) { next(err); }
 });
 
