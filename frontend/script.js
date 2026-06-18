@@ -51,6 +51,43 @@ if (hamburger && navLinks) {
     });
 }
 
+// Toggle de tema (dark/light) para la landing — usa misma clave que campus.js
+function syncThemeToggleIcon() {
+    const btn = document.getElementById('themeToggleLanding');
+    if (!btn) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    btn.innerHTML = isDark
+        ? '<i class="fas fa-sun"></i>'
+        : '<i class="fas fa-moon"></i>';
+}
+
+function toggleLandingTheme() {
+    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('et_theme', next); } catch (e) { /* ignore */ }
+    syncThemeToggleIcon();
+}
+
+document.addEventListener('DOMContentLoaded', syncThemeToggleIcon);
+
+// Auto-grow para textareas del landing (queda al tamaño del contenido)
+function autoGrowTextarea(ta) {
+    if (!ta) return;
+    ta.style.height = 'auto';
+    const min = parseInt(getComputedStyle(ta).minHeight, 10) || 80;
+    ta.style.height = Math.max(min, ta.scrollHeight) + 'px';
+}
+function attachAutoGrow(ta) {
+    if (!ta || ta._autoGrowBound) return;
+    ta._autoGrowBound = true;
+    ta.addEventListener('input', () => autoGrowTextarea(ta));
+    autoGrowTextarea(ta);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('textarea').forEach(attachAutoGrow);
+});
+
 // ==========================================
 // 2. GESTIÓN DE MODALES
 // ==========================================
@@ -228,10 +265,16 @@ if (registerForm) {
             .then(response => response.json())
             .then(data => {
                 if (data.exito) {
-                    toastSuccess('¡Registro exitoso! Ya puedes iniciar sesión.');
-                    closeRegisterModal();
-                    this.reset();
-                    openLoginModal();
+                    if (data.pendingApproval) {
+                        toastSuccess(data.mensaje || 'Cuenta de docente creada. Un administrador debe aprobarla antes del primer ingreso.');
+                        closeRegisterModal();
+                        this.reset();
+                    } else {
+                        toastSuccess('¡Registro exitoso! Ya puedes iniciar sesión.');
+                        closeRegisterModal();
+                        this.reset();
+                        openLoginModal();
+                    }
                 } else {
                     toastError(data.mensaje || 'No se pudo completar el registro.');
                 }
@@ -260,13 +303,59 @@ function updateFileName(input) {
 
 
 // A) Solicitud de Inscripción
+const CURSOS_POR_NIVEL = {
+    inicial: ['Sala de 3', 'Sala de 4', 'Sala de 5'],
+    primaria: ['1° grado', '2° grado', '3° grado', '4° grado', '5° grado', '6° grado'],
+    secundaria: ['1° año', '2° año', '3° año', '4° año', '5° año'],
+};
+
+function actualizarCursosInscripcion() {
+    const nivel = document.getElementById('nivel').value;
+    const cursoSel = document.getElementById('curso');
+    if (!cursoSel) return;
+    cursoSel.innerHTML = '';
+    const opciones = CURSOS_POR_NIVEL[nivel];
+    if (!opciones) {
+        cursoSel.innerHTML = '<option value="">Primero seleccioná un nivel</option>';
+        cursoSel.disabled = true;
+        return;
+    }
+    cursoSel.disabled = false;
+    cursoSel.insertAdjacentHTML('beforeend', '<option value="">Seleccionar curso...</option>');
+    opciones.forEach(c => {
+        cursoSel.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`);
+    });
+}
+
 const inscriptionForm = document.getElementById('inscriptionForm');
 if (inscriptionForm) {
     inscriptionForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const nombreEst = document.getElementById('nombre_estudiante').value;
-        toastSuccess(`Solicitud de inscripción para ${nombreEst} enviada. Nos pondremos en contacto en las próximas 48 hs.`);
-        this.reset();
+        const body = {
+            nombreTutor: document.getElementById('nombre').value.trim(),
+            emailTutor: document.getElementById('email').value.trim(),
+            telefonoTutor: document.getElementById('telefono').value.trim(),
+            nombreEstudiante: document.getElementById('nombre_estudiante').value.trim(),
+            nivel: document.getElementById('nivel').value,
+            curso: document.getElementById('curso').value,
+            mensaje: document.getElementById('mensaje').value.trim() || null,
+        };
+        fetch('/api/public/inscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.exito) {
+                    toastSuccess(data.mensaje || 'Solicitud enviada.');
+                    inscriptionForm.reset();
+                    actualizarCursosInscripcion();
+                } else {
+                    toastError(data.mensaje || 'No se pudo enviar la solicitud.');
+                }
+            })
+            .catch(() => toastError('Error al conectar con el servidor.'));
     });
 }
 
@@ -275,11 +364,25 @@ const employmentForm = document.getElementById('employmentForm');
 if (employmentForm) {
     employmentForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const puesto = document.getElementById('cv-puesto').selectedOptions[0]?.text || 'el puesto seleccionado';
-        toastSuccess(`Recibimos tu postulación para ${puesto}. Revisaremos tu CV y te avisaremos por mail.`);
-        this.reset();
-        const fileNameEl = document.getElementById('fileName');
-        if (fileNameEl) fileNameEl.textContent = 'Seleccionar archivo';
+        const fd = new FormData();
+        fd.append('nombre', document.getElementById('cv-nombre').value.trim());
+        fd.append('email', document.getElementById('cv-email').value.trim());
+        fd.append('puesto', document.getElementById('cv-puesto').value);
+        const file = document.getElementById('cv-archivo').files[0];
+        if (file) fd.append('cv', file);
+        fetch('/api/public/employment', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.exito) {
+                    toastSuccess(data.mensaje || 'Postulación enviada.');
+                    employmentForm.reset();
+                    const fileNameEl = document.getElementById('fileName');
+                    if (fileNameEl) fileNameEl.textContent = 'Seleccionar archivo';
+                } else {
+                    toastError(data.mensaje || 'No se pudo enviar la postulación.');
+                }
+            })
+            .catch(() => toastError('Error al conectar con el servidor.'));
     });
 }
 
@@ -301,36 +404,85 @@ const opinionForm = document.getElementById('opinionForm');
 if (opinionForm) {
     opinionForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const nombre = document.getElementById('opinion-nombre').value.trim() || 'Anónimo';
         const texto = document.getElementById('opinion-texto').value.trim();
         const estrellas = ratingValue || 5;
         if (!texto) {
             toastWarning('Escribí tu opinión antes de enviar.');
             return;
         }
-        const display = document.querySelector('.opiniones-display');
-        if (display) {
-            const card = document.createElement('div');
-            card.className = 'opinion-card';
-            card.innerHTML = `
-                <div class="opinion-header">
-                    <span class="opinion-author">${nombre}</span>
-                    <span class="opinion-rating">${'★'.repeat(estrellas)}${'☆'.repeat(5 - estrellas)}</span>
-                </div>
-                <p>"${texto}"</p>
-            `;
-            display.insertBefore(card, display.children[1] || null);
-        }
-        toastSuccess('¡Gracias por compartir tu opinión!');
-        this.reset();
-        ratingValue = 0;
-        document.querySelectorAll('.stars i').forEach(s => {
-            s.classList.remove('fas');
-            s.classList.add('far');
-            s.style.color = '';
-        });
+        const body = {
+            nombre: document.getElementById('opinion-nombre').value.trim() || null,
+            rol: document.getElementById('opinion-rol').value,
+            texto,
+            rating: estrellas,
+        };
+        fetch('/api/public/opinions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.exito) {
+                    toastSuccess(data.mensaje || '¡Gracias por compartir tu opinión!');
+                    opinionForm.reset();
+                    ratingValue = 0;
+                    document.querySelectorAll('.stars i').forEach(s => {
+                        s.classList.remove('fas');
+                        s.classList.add('far');
+                        s.style.color = '';
+                    });
+                } else {
+                    toastError(data.mensaje || 'No se pudo enviar la opinión.');
+                }
+            })
+            .catch(() => toastError('Error al conectar con el servidor.'));
     });
 }
+
+// Mostrar opiniones aprobadas en la landing
+function renderOpinionesAprobadas() {
+    const display = document.querySelector('.opiniones-display');
+    if (!display) return;
+    fetch('/api/public/opinions')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.exito) return;
+            const titulo = display.querySelector('h3');
+            display.innerHTML = '';
+            if (titulo) display.appendChild(titulo);
+            else {
+                const h = document.createElement('h3');
+                h.textContent = 'Últimas opiniones';
+                display.appendChild(h);
+            }
+            if (data.opiniones.length === 0) {
+                const p = document.createElement('p');
+                p.style.color = '#64748b';
+                p.style.textAlign = 'center';
+                p.textContent = 'Aún no hay opiniones publicadas.';
+                display.appendChild(p);
+                return;
+            }
+            data.opiniones.forEach(o => {
+                const card = document.createElement('div');
+                card.className = 'opinion-card';
+                const nombre = o.nombre ? String(o.nombre) : 'Anónimo';
+                const safeNombre = nombre.replace(/[<>&"]/g, '');
+                const safeTexto = String(o.texto).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+                card.innerHTML = `
+                    <div class="opinion-header">
+                        <span class="opinion-author">${safeNombre}</span>
+                        <span class="opinion-rating">${'★'.repeat(o.rating)}${'☆'.repeat(5 - o.rating)}</span>
+                    </div>
+                    <p>"${safeTexto}"</p>
+                `;
+                display.appendChild(card);
+            });
+        })
+        .catch(() => { /* silencioso */ });
+}
+document.addEventListener('DOMContentLoaded', renderOpinionesAprobadas);
 
 // D) Contacto
 const contactForm = document.getElementById('contactForm');
