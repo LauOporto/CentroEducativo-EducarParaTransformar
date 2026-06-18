@@ -62,19 +62,29 @@ router.post('/register', async (req, res, next) => {
     }
 
     const hash = await bcrypt.hash(data.password, 10);
+    const role = tipoToRole[data.tipo];
+    // Los docentes quedan inactivos hasta que un ADMIN los apruebe.
+    const pendingApproval = role === Role.DOCENTE;
     await prisma.user.create({
       data: {
         usuario: data.usuario,
         email: data.email,
         dni: data.dni,
         password: hash,
-        role: tipoToRole[data.tipo],
+        role,
         nombre: data.nombre,
         curso: data.tipo === 'estudiante' ? data.curso ?? null : null,
+        isActive: !pendingApproval,
       },
     });
 
-    res.json({ exito: true, mensaje: '¡Registro exitoso!' });
+    res.json({
+      exito: true,
+      mensaje: pendingApproval
+        ? 'Registro recibido. Tu cuenta de docente está pendiente de aprobación por un administrador.'
+        : '¡Registro exitoso!',
+      pendingApproval,
+    });
   } catch (err) {
     next(err);
   }
@@ -94,6 +104,9 @@ router.post('/login', async (req, res, next) => {
       throw HttpError.unauthorized('El usuario no existe.');
     }
     if (!user.isActive) {
+      if (user.role === Role.DOCENTE) {
+        throw HttpError.unauthorized('Tu cuenta de docente está pendiente de aprobación por un administrador.');
+      }
       throw HttpError.unauthorized('La cuenta está deshabilitada.');
     }
 

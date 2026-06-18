@@ -51,6 +51,12 @@ enum AnnouncementTarget {
   PADRE
 }
 
+enum ModerationStatus {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   usuario   String   @unique
@@ -246,6 +252,53 @@ model ForumReply {
   createdAt DateTime  @default(now())
 
   @@index([postId])
+}
+
+model Inscription {
+  id              Int              @id @default(autoincrement())
+  nombreTutor     String
+  emailTutor      String
+  telefonoTutor   String
+  nombreEstudiante String
+  nivel           String
+  curso           String
+  mensaje         String?
+  status          ModerationStatus @default(PENDIENTE)
+  notaAdmin       String?
+  createdAt       DateTime         @default(now())
+  resolvedAt      DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Opinion {
+  id        Int              @id @default(autoincrement())
+  nombre    String?
+  rol       String
+  texto     String
+  rating    Int
+  status    ModerationStatus @default(PENDIENTE)
+  createdAt DateTime         @default(now())
+  resolvedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model EmploymentApplication {
+  id        Int              @id @default(autoincrement())
+  nombre    String
+  email     String
+  puesto    String
+  cvUrl     String?
+  status    ModerationStatus @default(PENDIENTE)
+  notaAdmin String?
+  createdAt DateTime         @default(now())
+  resolvedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model StudyPlan {

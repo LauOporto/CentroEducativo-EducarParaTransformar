@@ -210,6 +210,162 @@
     document.addEventListener('DOMContentLoaded', syncThemeButton);
 
     /* ============================================================
+       Modal custom para confirm() y prompt() (reemplaza los nativos del browser)
+       ============================================================ */
+    function ensureUxModal() {
+        let modal = document.getElementById('uxModal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'uxModal';
+        modal.className = 'ux-modal';
+        modal.style.display = 'none';
+        modal.innerHTML = `
+            <div class="ux-modal-content">
+                <div class="ux-modal-header">
+                    <div class="ux-modal-icon ux-info"><i class="fas fa-question"></i></div>
+                    <h3 class="ux-modal-title">Confirmar</h3>
+                </div>
+                <p class="ux-modal-message"></p>
+                <input type="text" class="ux-modal-input" style="display:none;" />
+                <div class="ux-modal-actions">
+                    <button type="button" class="ux-modal-cancel">Cancelar</button>
+                    <button type="button" class="ux-modal-ok">Aceptar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    function openUxModal(opts) {
+        return new Promise((resolve) => {
+            const modal = ensureUxModal();
+            const iconEl = modal.querySelector('.ux-modal-icon');
+            const titleEl = modal.querySelector('.ux-modal-title');
+            const msgEl = modal.querySelector('.ux-modal-message');
+            const inputEl = modal.querySelector('.ux-modal-input');
+            const okBtn = modal.querySelector('.ux-modal-ok');
+            const cancelBtn = modal.querySelector('.ux-modal-cancel');
+
+            const ICONS = {
+                info:    { cls: 'ux-info',    icon: 'fa-circle-info' },
+                warning: { cls: 'ux-warning', icon: 'fa-triangle-exclamation' },
+                danger:  { cls: 'ux-danger',  icon: 'fa-circle-exclamation' },
+                success: { cls: 'ux-success', icon: 'fa-circle-check' },
+                question:{ cls: 'ux-info',    icon: 'fa-question' },
+            };
+            const variant = ICONS[opts.variant || 'question'] || ICONS.question;
+            iconEl.className = 'ux-modal-icon ' + variant.cls;
+            iconEl.innerHTML = `<i class="fas ${variant.icon}"></i>`;
+            titleEl.textContent = opts.title || 'Confirmar';
+            msgEl.textContent = opts.message || '';
+
+            okBtn.textContent = opts.okLabel || 'Aceptar';
+            cancelBtn.textContent = opts.cancelLabel || 'Cancelar';
+            okBtn.className = 'ux-modal-ok' + (opts.danger ? ' ux-danger-btn' : '');
+            cancelBtn.style.display = opts.hideCancel ? 'none' : '';
+
+            if (opts.prompt) {
+                inputEl.style.display = '';
+                inputEl.value = opts.defaultValue || '';
+                inputEl.placeholder = opts.placeholder || '';
+                inputEl.type = opts.inputType || 'text';
+                setTimeout(() => inputEl.focus(), 60);
+            } else {
+                inputEl.style.display = 'none';
+                inputEl.value = '';
+                setTimeout(() => okBtn.focus(), 60);
+            }
+
+            modal.style.display = 'flex';
+
+            function close(result) {
+                modal.style.display = 'none';
+                okBtn.onclick = null;
+                cancelBtn.onclick = null;
+                modal.onclick = null;
+                document.removeEventListener('keydown', onKey);
+                resolve(result);
+            }
+            function onKey(e) {
+                if (e.key === 'Escape') close(opts.prompt ? null : false);
+                else if (e.key === 'Enter' && opts.prompt) close(inputEl.value);
+            }
+
+            okBtn.onclick = () => close(opts.prompt ? inputEl.value : true);
+            cancelBtn.onclick = () => close(opts.prompt ? null : false);
+            modal.onclick = (e) => { if (e.target === modal) close(opts.prompt ? null : false); };
+            document.addEventListener('keydown', onKey);
+        });
+    }
+
+    window.uxConfirm = function (message, opts = {}) {
+        return openUxModal({
+            message,
+            title: opts.title || 'Confirmar',
+            variant: opts.variant || (opts.danger ? 'danger' : 'question'),
+            okLabel: opts.okLabel,
+            cancelLabel: opts.cancelLabel,
+            danger: !!opts.danger,
+        });
+    };
+
+    window.uxPrompt = function (message, opts = {}) {
+        return openUxModal({
+            message,
+            title: opts.title || 'Ingresar dato',
+            variant: opts.variant || 'info',
+            prompt: true,
+            defaultValue: opts.defaultValue || '',
+            placeholder: opts.placeholder || '',
+            inputType: opts.inputType || 'text',
+            okLabel: opts.okLabel || 'Guardar',
+            cancelLabel: opts.cancelLabel,
+        });
+    };
+
+    /* ============================================================
+       Auto-grow para textareas (se queda en el tamaño del contenido)
+       ============================================================ */
+    function autoGrowTextarea(ta) {
+        if (!ta || ta.classList.contains('ux-no-grow')) return;
+        ta.style.height = 'auto';
+        const min = parseInt(getComputedStyle(ta).minHeight, 10) || 80;
+        const next = Math.max(min, ta.scrollHeight);
+        ta.style.height = next + 'px';
+    }
+    window.attachAutoGrow = function (ta) {
+        if (!ta || ta._autoGrowBound) return;
+        ta._autoGrowBound = true;
+        ta.addEventListener('input', () => autoGrowTextarea(ta));
+        autoGrowTextarea(ta);
+    };
+    function applyAutoGrowAll() {
+        document.querySelectorAll('textarea').forEach(window.attachAutoGrow);
+    }
+    document.addEventListener('DOMContentLoaded', applyAutoGrowAll);
+    // Cuando se inserta nuevo HTML dinámico, también se pueden auto-grow:
+    const _mo = new MutationObserver((muts) => {
+        muts.forEach(m => {
+            m.addedNodes.forEach(n => {
+                if (n.nodeType !== 1) return;
+                if (n.tagName === 'TEXTAREA') window.attachAutoGrow(n);
+                else if (n.querySelectorAll) n.querySelectorAll('textarea').forEach(window.attachAutoGrow);
+            });
+        });
+    });
+    _mo.observe(document.documentElement, { childList: true, subtree: true });
+
+    window.uxAlert = function (message, opts = {}) {
+        return openUxModal({
+            message,
+            title: opts.title || 'Aviso',
+            variant: opts.variant || 'info',
+            okLabel: opts.okLabel || 'Entendido',
+            hideCancel: true,
+        });
+    };
+
+    /* ============================================================
        Socket.io para tiempo real (chat + bell)
        ============================================================ */
     let _socket = null;

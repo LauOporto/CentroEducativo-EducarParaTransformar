@@ -13,6 +13,7 @@ import { activitiesRouter } from './activities.routes';
 import { studyPlansRouter } from './studyPlans.routes';
 import { forumRouter } from './forum.routes';
 import { adminRouter } from './admin.routes';
+import { moderationPublicRouter, moderationAdminRouter, requireAdmin } from './moderation.routes';
 
 const router = Router();
 
@@ -36,5 +37,7 @@ router.use('/activities', activitiesRouter);
 router.use('/study-plans', studyPlansRouter);
 router.use('/forum', forumRouter);
 router.use('/admin', adminRouter);
+router.use('/public', moderationPublicRouter);
+router.use('/admin', ...requireAdmin(), moderationAdminRouter);
 
 export { router as apiRouter };

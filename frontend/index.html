@@ -6,6 +6,17 @@
     <title>Centro Educativo - Inicio</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        // Aplicar tema guardado antes de pintar para evitar parpadeo
+        (function () {
+            try {
+                var t = localStorage.getItem('et_theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
 </head>
 <body>
     <header>
@@ -30,13 +41,12 @@
                     <h1>Educar Para Transformar</h1>
                 </div>
                 <ul class="nav-links">
-                    <li><a href="#inicio">Inicio</a></li>
                     <li><a href="#nosotros">Quiénes Somos</a></li>
                     <li><a href="#niveles">Niveles Educativos</a></li>
                     <li><a href="#bienestar">Bienestar Estudiantil</a></li>
                     <li><a href="#noticias">Noticias</a></li>
-                    <li><a href="#galeria">Galería</a></li>
-                    <li><a href="#contacto">Contacto</a></li>
+                    <li><a href="#empleo">Empleo</a></li>
+                    <li><a href="#" onclick="toggleLandingTheme(); return false;" class="btn-theme-landing" id="themeToggleLanding" title="Cambiar tema"><i class="fas fa-moon"></i></a></li>
                     <li class="user-menu" id="userMenu" style="display: none;">
                         <a href="#" class="dropbtn"><i class="fas fa-user"></i> <span id="userName"></span> <i class="fas fa-chevron-down"></i></a>
                         <div class="dropdown-content">
@@ -212,7 +222,11 @@
             <form class="form-inscription" id="inscriptionForm">
                 <div class="form-group">
                     <label for="nombre">Nombre del padre/madre/tutor *</label>
-                    <input type="text" id="nombre" name="nombre" required>
+                    <input type="text" id="nombre" name="nombre" required
+                           maxlength="80"
+                           pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .\-]+"
+                           title="Solo se permiten letras, espacios, guiones y apóstrofes."
+                           oninput="this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .\-]/g, '')">
                 </div>
                 <div class="form-group">
                     <label for="email">Email *</label>
@@ -220,15 +234,25 @@
                 </div>
                 <div class="form-group">
                     <label for="telefono">Teléfono *</label>
-                    <input type="tel" id="telefono" name="telefono" required>
+                    <input type="tel" id="telefono" name="telefono" required
+                           inputmode="tel"
+                           maxlength="20"
+                           pattern="[0-9+\-\s()]{6,20}"
+                           title="Solo se permiten números, espacios y los símbolos + - ( )."
+                           placeholder="Ej: (011) 1234-5678"
+                           oninput="this.value = this.value.replace(/[^0-9+\-\s()]/g, '')">
                 </div>
                 <div class="form-group">
                     <label for="nombre_estudiante">Nombre del estudiante *</label>
-                    <input type="text" id="nombre_estudiante" name="nombre_estudiante" required>
+                    <input type="text" id="nombre_estudiante" name="nombre_estudiante" required
+                           maxlength="80"
+                           pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .\-]+"
+                           title="Solo se permiten letras, espacios, guiones y apóstrofes."
+                           oninput="this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .\-]/g, '')">
                 </div>
                 <div class="form-group">
                     <label for="nivel">Nivel educativo *</label>
-                    <select id="nivel" name="nivel" required>
+                    <select id="nivel" name="nivel" required onchange="actualizarCursosInscripcion()">
                         <option value="">Seleccionar nivel</option>
                         <option value="inicial">Educación Inicial</option>
                         <option value="primaria">Educación Primaria</option>
@@ -236,8 +260,10 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="año">Año/Curso</label>
-                    <input type="text" id="año" name="año">
+                    <label for="curso">Año / Curso *</label>
+                    <select id="curso" name="curso" required disabled>
+                        <option value="">Primero seleccioná un nivel</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="mensaje">Mensaje adicional</label>
@@ -251,8 +277,8 @@
     <section id="empleo" class="section">
         <div class="container">
             <h2 class="section-title">Empleo</h2>
-            <div class="employment-content">
-                <p>Si estás interesado en formar parte de nuestro equipo docente y administrativo, puedes dejarnos tu CV.</p>
+            <div class="employment-content" style="max-width: 640px; margin: 0 auto;">
+                <p style="text-align: center; margin-bottom: 20px;">Si estás interesado en formar parte de nuestro equipo docente y administrativo, puedes dejarnos tu CV.</p>
                 <form class="form-employment" id="employmentForm">
                     <div class="form-group">
                         <label for="cv-nombre">Nombre completo *</label>
@@ -324,20 +350,7 @@
             </form>
             <div class="opiniones-display">
                 <h3>Últimas opiniones</h3>
-                <div class="opinion-card">
-                    <div class="opinion-header">
-                        <span class="opinion-author">María González</span>
-                        <span class="opinion-rating">★★★★★</span>
-                    </div>
-                    <p>"Excelente institución. Mis hijos están muy bien cuidados y aprenden mucho. El equipo docente es muy profesional."</p>
-                </div>
-                <div class="opinion-card">
-                    <div class="opinion-header">
-                        <span class="opinion-author">Carlos Rodríguez</span>
-                        <span class="opinion-rating">★★★★☆</span>
-                    </div>
-                    <p>"Muy buena experiencia académica. Solo sugiero mejorar la comunicación con los padres sobre las actividades."</p>
-                </div>
+                <p style="color:#64748b; text-align:center;">Cargando opiniones...</p>
             </div>
         </div>
     </section>
@@ -515,7 +528,29 @@
 
                         <div class="form-group" id="curso-group" style="display: none;">
                             <label for="reg-curso"><i class="fas fa-school" style="color:var(--secondary); margin-right:6px;"></i> Curso / Año *</label>
-                            <input type="text" id="reg-curso" name="curso" maxlength="50" placeholder="Ej: Secundario — 1er Año">
+                            <select id="reg-curso" name="curso">
+                                <option value="">Seleccionar curso...</option>
+                                <optgroup label="Educación Inicial">
+                                    <option value="Inicial — Sala de 3">Sala de 3</option>
+                                    <option value="Inicial — Sala de 4">Sala de 4</option>
+                                    <option value="Inicial — Sala de 5">Sala de 5</option>
+                                </optgroup>
+                                <optgroup label="Educación Primaria">
+                                    <option value="Primaria — 1° grado">1° grado</option>
+                                    <option value="Primaria — 2° grado">2° grado</option>
+                                    <option value="Primaria — 3° grado">3° grado</option>
+                                    <option value="Primaria — 4° grado">4° grado</option>
+                                    <option value="Primaria — 5° grado">5° grado</option>
+                                    <option value="Primaria — 6° grado">6° grado</option>
+                                </optgroup>
+                                <optgroup label="Educación Secundaria">
+                                    <option value="Secundaria — 1° año">1° año</option>
+                                    <option value="Secundaria — 2° año">2° año</option>
+                                    <option value="Secundaria — 3° año">3° año</option>
+                                    <option value="Secundaria — 4° año">4° año</option>
+                                    <option value="Secundaria — 5° año">5° año</option>
+                                </optgroup>
+                            </select>
                         </div>
 
                         <div class="form-group">
