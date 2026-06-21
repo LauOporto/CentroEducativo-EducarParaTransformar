@@ -11,7 +11,7 @@
     "frontend:dev": "pnpm --filter frontend dev"
   },
   "engines": {
-    "node": ">=20",
+    "node": ">=22.13",
     "pnpm": ">=9"
   },
   "packageManager": "pnpm@11.1.1"
