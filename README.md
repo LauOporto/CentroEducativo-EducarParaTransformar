@@ -91,7 +91,18 @@ pnpm --filter backend db:reset       # resetea la base y vuelve a correr migraci
 - **Padre / Tutor** — visualiza el progreso del/los hijo(s), pagos, mensajes y anuncios.
 - **Admin** — administra usuarios, materias, ciclos lectivos y la estructura institucional.
 
-## Estado
+## Funcionalidades principales
 
-En construcción — rama de trabajo: `fabri`.
-# CentroEducativo---II
+- Autenticación por roles (Estudiante, Docente, Padre, Admin), con aprobación manual de cuentas de docente.
+- Panel de administración: gestión de usuarios, vínculos padre-estudiante y aprobación de docentes.
+- Materias, planes de estudio y actividades con entrega y corrección de archivos.
+- Calificaciones y registro de asistencia.
+- Anuncios institucionales y foro de discusión.
+- Mensajería en tiempo real (Socket.IO) y notificaciones.
+- Gestión de pagos/cuotas.
+- Moderación de solicitudes de inscripción, opiniones y postulaciones de empleo recibidas desde la landing pública.
+
+## Integrantes
+
+- Oporto Lautaro
+- Barrabino Franco
