@@ -290,6 +290,27 @@ if (registerForm) {
 // 4. FORMULARIOS DE LA LANDING (toast feedback)
 // ==========================================
 
+// Los formularios de Inscripción, Postulación y Opinión repetían el mismo
+// fetch + manejo de éxito/error; se centraliza acá para no tener que
+// corregir la misma lógica en tres lugares distintos.
+function enviarFormulario(url, payload, { onExito, mensajeErrorDefault = 'No se pudo completar la operación.' } = {}) {
+    const esFormData = payload instanceof FormData;
+    return fetch(url, {
+        method: 'POST',
+        headers: esFormData ? undefined : { 'Content-Type': 'application/json' },
+        body: esFormData ? payload : JSON.stringify(payload),
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.exito) {
+                onExito(data);
+            } else {
+                toastError(data.mensaje || mensajeErrorDefault);
+            }
+        })
+        .catch(() => toastError('Error al conectar con el servidor.'));
+}
+
 // Helper para el input de archivo del CV
 function updateFileName(input) {
     const el = document.getElementById('fileName');
@@ -331,7 +352,7 @@ const inscriptionForm = document.getElementById('inscriptionForm');
 if (inscriptionForm) {
     inscriptionForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const body = {
+        const datosInscripcion = {
             nombreTutor: document.getElementById('nombre').value.trim(),
             emailTutor: document.getElementById('email').value.trim(),
             telefonoTutor: document.getElementById('telefono').value.trim(),
@@ -340,22 +361,14 @@ if (inscriptionForm) {
             curso: document.getElementById('curso').value,
             mensaje: document.getElementById('mensaje').value.trim() || null,
         };
-        fetch('/api/public/inscriptions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.exito) {
-                    toastSuccess(data.mensaje || 'Solicitud enviada.');
-                    inscriptionForm.reset();
-                    actualizarCursosInscripcion();
-                } else {
-                    toastError(data.mensaje || 'No se pudo enviar la solicitud.');
-                }
-            })
-            .catch(() => toastError('Error al conectar con el servidor.'));
+        enviarFormulario('/api/public/inscriptions', datosInscripcion, {
+            mensajeErrorDefault: 'No se pudo enviar la solicitud.',
+            onExito: (data) => {
+                toastSuccess(data.mensaje || 'Solicitud enviada.');
+                inscriptionForm.reset();
+                actualizarCursosInscripcion();
+            },
+        });
     });
 }
 
@@ -364,25 +377,21 @@ const employmentForm = document.getElementById('employmentForm');
 if (employmentForm) {
     employmentForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const fd = new FormData();
-        fd.append('nombre', document.getElementById('cv-nombre').value.trim());
-        fd.append('email', document.getElementById('cv-email').value.trim());
-        fd.append('puesto', document.getElementById('cv-puesto').value);
-        const file = document.getElementById('cv-archivo').files[0];
-        if (file) fd.append('cv', file);
-        fetch('/api/public/employment', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                if (data.exito) {
-                    toastSuccess(data.mensaje || 'Postulación enviada.');
-                    employmentForm.reset();
-                    const fileNameEl = document.getElementById('fileName');
-                    if (fileNameEl) fileNameEl.textContent = 'Seleccionar archivo';
-                } else {
-                    toastError(data.mensaje || 'No se pudo enviar la postulación.');
-                }
-            })
-            .catch(() => toastError('Error al conectar con el servidor.'));
+        const datosPostulacion = new FormData();
+        datosPostulacion.append('nombre', document.getElementById('cv-nombre').value.trim());
+        datosPostulacion.append('email', document.getElementById('cv-email').value.trim());
+        datosPostulacion.append('puesto', document.getElementById('cv-puesto').value);
+        const archivoCv = document.getElementById('cv-archivo').files[0];
+        if (archivoCv) datosPostulacion.append('cv', archivoCv);
+        enviarFormulario('/api/public/employment', datosPostulacion, {
+            mensajeErrorDefault: 'No se pudo enviar la postulación.',
+            onExito: (data) => {
+                toastSuccess(data.mensaje || 'Postulación enviada.');
+                employmentForm.reset();
+                const fileNameEl = document.getElementById('fileName');
+                if (fileNameEl) fileNameEl.textContent = 'Seleccionar archivo';
+            },
+        });
     });
 }
 
@@ -410,33 +419,25 @@ if (opinionForm) {
             toastWarning('Escribí tu opinión antes de enviar.');
             return;
         }
-        const body = {
+        const datosOpinion = {
             nombre: document.getElementById('opinion-nombre').value.trim() || null,
             rol: document.getElementById('opinion-rol').value,
             texto,
             rating: estrellas,
         };
-        fetch('/api/public/opinions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.exito) {
-                    toastSuccess(data.mensaje || '¡Gracias por compartir tu opinión!');
-                    opinionForm.reset();
-                    ratingValue = 0;
-                    document.querySelectorAll('.stars i').forEach(s => {
-                        s.classList.remove('fas');
-                        s.classList.add('far');
-                        s.style.color = '';
-                    });
-                } else {
-                    toastError(data.mensaje || 'No se pudo enviar la opinión.');
-                }
-            })
-            .catch(() => toastError('Error al conectar con el servidor.'));
+        enviarFormulario('/api/public/opinions', datosOpinion, {
+            mensajeErrorDefault: 'No se pudo enviar la opinión.',
+            onExito: (data) => {
+                toastSuccess(data.mensaje || '¡Gracias por compartir tu opinión!');
+                opinionForm.reset();
+                ratingValue = 0;
+                document.querySelectorAll('.stars i').forEach(s => {
+                    s.classList.remove('fas');
+                    s.classList.add('far');
+                    s.style.color = '';
+                });
+            },
+        });
     });
 }
 
