@@ -386,18 +386,26 @@
             if (!data.exito) return;
             const s = data.stats;
             const fmt = (n) => Number(n).toLocaleString('es-AR');
-            document.getElementById('statsGrid').innerHTML = `
-                <div style="background:#ede9fe; border:1px solid #ddd6fe; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#5b21b6; font-weight:600;">USUARIOS TOTALES</div><div style="font-size:2rem; font-weight:700; color:#7c3aed;">${fmt(s.totalUsuarios)}</div></div>
-                <div style="background:#dbeafe; border:1px solid #bfdbfe; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#1e40af; font-weight:600;">ESTUDIANTES ACTIVOS</div><div style="font-size:2rem; font-weight:700; color:#2563eb;">${fmt(s.estudiantesActivos)}</div></div>
-                <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#92400e; font-weight:600;">DOCENTES ACTIVOS</div><div style="font-size:2rem; font-weight:700; color:#d97706;">${fmt(s.docentesActivos)}</div></div>
-                <div style="background:#fce7f3; border:1px solid #fbcfe8; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#9d174d; font-weight:600;">PADRES ACTIVOS</div><div style="font-size:2rem; font-weight:700; color:#db2777;">${fmt(s.padresActivos)}</div></div>
-                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#065f46; font-weight:600;">NOTAS REGISTRADAS</div><div style="font-size:2rem; font-weight:700; color:#10b981;">${fmt(s.notasRegistradas)}</div></div>
-                <div style="background:#fef9c3; border:1px solid #fde047; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#854d0e; font-weight:600;">RECAUDADO</div><div style="font-size:2rem; font-weight:700; color:#ca8a04;">$ ${fmt(Math.round(s.totalRecaudado))}</div></div>
-                <div style="background:#fee2e2; border:1px solid #fecaca; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#991b1b; font-weight:600;">ANUNCIOS</div><div style="font-size:2rem; font-weight:700; color:#ef4444;">${fmt(s.anuncios)}</div></div>
-                <div style="background:#cffafe; border:1px solid #a5f3fc; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#155e75; font-weight:600;">ACTIVIDADES</div><div style="font-size:2rem; font-weight:700; color:#0891b2;">${fmt(s.actividades)}</div></div>
-                <div style="background:#ede9fe; border:1px solid #ddd6fe; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#5b21b6; font-weight:600;">TEMAS DEL FORO</div><div style="font-size:2rem; font-weight:700; color:#7c3aed;">${fmt(s.temasForo)}</div></div>
-                <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#334155; font-weight:600;">MENSAJES</div><div style="font-size:2rem; font-weight:700; color:#475569;">${fmt(s.mensajesIntercambiados)}</div></div>
-            `;
+            const tarjetas = [
+                { etiqueta: 'USUARIOS TOTALES', valor: fmt(s.totalUsuarios), fondo: '#ede9fe', borde: '#ddd6fe', colorEtiqueta: '#5b21b6', colorValor: '#7c3aed' },
+                { etiqueta: 'ESTUDIANTES ACTIVOS', valor: fmt(s.estudiantesActivos), fondo: '#dbeafe', borde: '#bfdbfe', colorEtiqueta: '#1e40af', colorValor: '#2563eb' },
+                { etiqueta: 'DOCENTES ACTIVOS', valor: fmt(s.docentesActivos), fondo: '#fef3c7', borde: '#fde68a', colorEtiqueta: '#92400e', colorValor: '#d97706' },
+                { etiqueta: 'PADRES ACTIVOS', valor: fmt(s.padresActivos), fondo: '#fce7f3', borde: '#fbcfe8', colorEtiqueta: '#9d174d', colorValor: '#db2777' },
+                { etiqueta: 'NOTAS REGISTRADAS', valor: fmt(s.notasRegistradas), fondo: '#ecfdf5', borde: '#a7f3d0', colorEtiqueta: '#065f46', colorValor: '#10b981' },
+                { etiqueta: 'RECAUDADO', valor: '$ ' + fmt(Math.round(s.totalRecaudado)), fondo: '#fef9c3', borde: '#fde047', colorEtiqueta: '#854d0e', colorValor: '#ca8a04' },
+                { etiqueta: 'ANUNCIOS', valor: fmt(s.anuncios), fondo: '#fee2e2', borde: '#fecaca', colorEtiqueta: '#991b1b', colorValor: '#ef4444' },
+                { etiqueta: 'ACTIVIDADES', valor: fmt(s.actividades), fondo: '#cffafe', borde: '#a5f3fc', colorEtiqueta: '#155e75', colorValor: '#0891b2' },
+                { etiqueta: 'TEMAS DEL FORO', valor: fmt(s.temasForo), fondo: '#ede9fe', borde: '#ddd6fe', colorEtiqueta: '#5b21b6', colorValor: '#7c3aed' },
+                { etiqueta: 'MENSAJES', valor: fmt(s.mensajesIntercambiados), fondo: '#f1f5f9', borde: '#cbd5e1', colorEtiqueta: '#334155', colorValor: '#475569' },
+            ];
+            document.getElementById('statsGrid').innerHTML = tarjetas.map(statCard).join('');
+        }
+
+        // Arma el HTML de una tarjeta del dashboard. Se separa de cargarStats()
+        // para que esa función se limite a pedir los datos y armar la lista,
+        // en vez de mezclar la carga con el detalle de cada tarjeta.
+        function statCard({ etiqueta, valor, fondo, borde, colorEtiqueta, colorValor }) {
+            return `<div style="background:${fondo}; border:1px solid ${borde}; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:${colorEtiqueta}; font-weight:600;">${etiqueta}</div><div style="font-size:2rem; font-weight:700; color:${colorValor};">${valor}</div></div>`;
         }
 
         /* ============================================================
@@ -637,6 +645,20 @@
         const STATUS_LABEL = { PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', RECHAZADO: 'Rechazado' };
         const STATUS_COLOR = { PENDIENTE: '#f59e0b', APROBADO: '#10b981', RECHAZADO: '#ef4444' };
 
+        // Las tablas de Inscripciones, Opiniones y Postulaciones renderizan el
+        // mismo badge de estado y los mismos botones de acción; se comparten acá
+        // en vez de repetir el mismo markup en las tres funciones cargarX().
+        function badgeEstadoModeracion(status) {
+            return `<span style="color:${STATUS_COLOR[status]}; font-weight:600;">${STATUS_LABEL[status]}</span>`;
+        }
+
+        function accionesModeracion(id, status, prefijoFuncion) {
+            return status === 'PENDIENTE'
+                ? `<button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolver${prefijoFuncion}(${id}, 'approve')"><i class="fas fa-check"></i></button>
+                    <button class="btn-danger" onclick="resolver${prefijoFuncion}(${id}, 'reject')"><i class="fas fa-times"></i></button>`
+                : `<button class="btn-danger" onclick="borrar${prefijoFuncion}(${id})" title="Eliminar"><i class="fas fa-trash"></i></button>`;
+        }
+
         async function cargarInscripciones() {
             const tbody = document.querySelector('#tablaInsc tbody');
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Cargando...</td></tr>';
@@ -656,16 +678,9 @@
                     <td>${window.escapeHtml(i.nombreEstudiante)}</td>
                     <td>${window.escapeHtml(i.nivel)}<br><span style="color:#64748b; font-size:0.82rem;">${window.escapeHtml(i.curso)}</span></td>
                     <td style="max-width:220px; font-size:0.85rem;">${window.escapeHtml(i.mensaje || '—')}</td>
-                    <td><span style="color:${STATUS_COLOR[i.status]}; font-weight:600;">${STATUS_LABEL[i.status]}</span></td>
+                    <td>${badgeEstadoModeracion(i.status)}</td>
                     <td style="font-size:0.82rem;">${fmtFechaCorta(i.createdAt)}</td>
-                    <td>
-                        ${i.status === 'PENDIENTE' ? `
-                            <button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolverInsc(${i.id}, 'approve')"><i class="fas fa-check"></i></button>
-                            <button class="btn-danger" onclick="resolverInsc(${i.id}, 'reject')"><i class="fas fa-times"></i></button>
-                        ` : `
-                            <button class="btn-danger" onclick="borrarInsc(${i.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
-                        `}
-                    </td>
+                    <td>${accionesModeracion(i.id, i.status, 'Insc')}</td>
                 </tr>
             `).join('');
             refrescarBadgePendientes();
@@ -721,16 +736,9 @@
                     <td>${window.escapeHtml(o.rol)}</td>
                     <td style="max-width:300px; font-size:0.88rem;">"${window.escapeHtml(o.texto)}"</td>
                     <td style="color:#f59e0b;">${'★'.repeat(o.rating)}${'☆'.repeat(5 - o.rating)}</td>
-                    <td><span style="color:${STATUS_COLOR[o.status]}; font-weight:600;">${STATUS_LABEL[o.status]}</span></td>
+                    <td>${badgeEstadoModeracion(o.status)}</td>
                     <td style="font-size:0.82rem;">${fmtFechaCorta(o.createdAt)}</td>
-                    <td>
-                        ${o.status === 'PENDIENTE' ? `
-                            <button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolverOp(${o.id}, 'approve')"><i class="fas fa-check"></i></button>
-                            <button class="btn-danger" onclick="resolverOp(${o.id}, 'reject')"><i class="fas fa-times"></i></button>
-                        ` : `
-                            <button class="btn-danger" onclick="borrarOp(${o.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
-                        `}
-                    </td>
+                    <td>${accionesModeracion(o.id, o.status, 'Op')}</td>
                 </tr>
             `).join('');
             refrescarBadgePendientes();
@@ -772,16 +780,9 @@
                     <td>${window.escapeHtml(p.email)}</td>
                     <td>${window.escapeHtml(p.puesto)}</td>
                     <td>${p.cvUrl ? `<a href="${p.cvUrl}" target="_blank" style="color:#8b5cf6; font-weight:600;"><i class="fas fa-file-pdf"></i> Ver CV</a>` : '<span style="color:#94a3b8;">Sin CV</span>'}</td>
-                    <td><span style="color:${STATUS_COLOR[p.status]}; font-weight:600;">${STATUS_LABEL[p.status]}</span></td>
+                    <td>${badgeEstadoModeracion(p.status)}</td>
                     <td style="font-size:0.82rem;">${fmtFechaCorta(p.createdAt)}</td>
-                    <td>
-                        ${p.status === 'PENDIENTE' ? `
-                            <button class="btn-action" style="padding:6px 10px; font-size:0.8rem;" onclick="resolverEmp(${p.id}, 'approve')"><i class="fas fa-check"></i></button>
-                            <button class="btn-danger" onclick="resolverEmp(${p.id}, 'reject')"><i class="fas fa-times"></i></button>
-                        ` : `
-                            <button class="btn-danger" onclick="borrarEmp(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
-                        `}
-                    </td>
+                    <td>${accionesModeracion(p.id, p.status, 'Emp')}</td>
                 </tr>
             `).join('');
             refrescarBadgePendientes();
