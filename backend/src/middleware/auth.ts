@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import type { Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 
 import { env } from '../config/env';
 import { HttpError } from '../utils/httpError';
@@ -58,3 +58,9 @@ export function requireRole(...allowed: Role[]): RequestHandler {
     next();
   };
 }
+
+// Docentes y administradores comparten permisos en la mayoría de las rutas
+// académicas (asistencia, calificaciones, actividades, anuncios, etc.).
+// Se nombra la combinación una sola vez acá en lugar de repetir
+// requireRole(Role.DOCENTE, Role.ADMIN) en cada archivo de rutas.
+export const requireStaffRole: RequestHandler = requireRole(Role.DOCENTE, Role.ADMIN);

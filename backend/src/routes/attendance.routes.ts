@@ -4,7 +4,7 @@ import { AttendanceStatus, Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireStaffRole } from '../middleware/auth';
 
 const router = Router();
 
@@ -30,7 +30,7 @@ const bulkSchema = z.object({
   ),
 });
 
-router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.post('/', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const data = recordSchema.parse(req.body);
     const result = await prisma.attendance.upsert({
@@ -56,7 +56,7 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req,
   }
 });
 
-router.post('/bulk', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.post('/bulk', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const data = bulkSchema.parse(req.body);
     const fechaDate = new Date(data.fecha);
@@ -139,7 +139,7 @@ router.get('/', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/by-date', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.get('/by-date', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const schema = z.object({
       fecha: z.string().min(8),

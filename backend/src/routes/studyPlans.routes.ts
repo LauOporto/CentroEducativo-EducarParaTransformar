@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireStaffRole } from '../middleware/auth';
 import { upload, publicUrlFor } from '../middleware/upload';
 
 const router = Router();
@@ -41,7 +40,7 @@ const createSchema = z.object({
   contenidos: z.string().min(2),
 });
 
-router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), upload.single('file'), async (req, res, next) => {
+router.post('/', requireAuth, requireStaffRole, upload.single('file'), async (req, res, next) => {
   try {
     const data = createSchema.parse(req.body);
     const created = await prisma.studyPlan.create({

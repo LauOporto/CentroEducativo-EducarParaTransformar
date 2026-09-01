@@ -4,7 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireStaffRole } from '../middleware/auth';
 
 const router = Router();
 
@@ -16,7 +16,7 @@ const createGradeSchema = z.object({
   fecha: z.string().min(1),
 });
 
-router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.post('/', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const data = createGradeSchema.parse(req.body);
 
@@ -42,7 +42,7 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req,
   }
 });
 
-router.get('/mine', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.get('/mine', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const notas = await prisma.grade.findMany({
       where: { docenteId: req.authUser!.id },

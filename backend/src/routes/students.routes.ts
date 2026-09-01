@@ -2,11 +2,11 @@ import { Router } from 'express';
 import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireStaffRole } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (_req, res, next) => {
+router.get('/', requireAuth, requireStaffRole, async (_req, res, next) => {
   try {
     const students = await prisma.user.findMany({
       where: { role: Role.ESTUDIANTE, isActive: true },

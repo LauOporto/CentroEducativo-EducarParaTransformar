@@ -4,7 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireStaffRole } from '../middleware/auth';
 
 const router = Router();
 
@@ -135,7 +135,7 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/:id/pin', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.post('/:id/pin', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const post = await prisma.forumPost.findUnique({ where: { id } });

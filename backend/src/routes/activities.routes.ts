@@ -4,7 +4,7 @@ import { ActivityType, Role, SubmissionStatus } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireRole, requireStaffRole } from '../middleware/auth';
 import { upload, publicUrlFor } from '../middleware/upload';
 
 const router = Router();
@@ -70,7 +70,7 @@ const createSchema = z.object({
   maxScore: z.coerce.number().int().positive().default(10),
 });
 
-router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), upload.single('file'), async (req, res, next) => {
+router.post('/', requireAuth, requireStaffRole, upload.single('file'), async (req, res, next) => {
   try {
     const data = createSchema.parse(req.body);
     const created = await prisma.activity.create({
@@ -143,7 +143,7 @@ router.post('/:id/submit', requireAuth, requireRole(Role.ESTUDIANTE), upload.sin
   }
 });
 
-router.get('/:id/submissions', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.get('/:id/submissions', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const activityId = Number(req.params.id);
     const me = req.authUser!;
@@ -183,7 +183,7 @@ const gradeSchema = z.object({
   feedback: z.string().optional(),
 });
 
-router.post('/submissions/:id/grade', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.post('/submissions/:id/grade', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const submissionId = Number(req.params.id);
     const data = gradeSchema.parse(req.body);

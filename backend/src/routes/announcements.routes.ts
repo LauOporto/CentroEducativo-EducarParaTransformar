@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AnnouncementTarget, Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireStaffRole } from '../middleware/auth';
 
 const router = Router();
 
@@ -52,7 +52,7 @@ const createSchema = z.object({
   targetRole: z.enum(['ALL', 'ESTUDIANTE', 'DOCENTE', 'PADRE']).default('ALL'),
 });
 
-router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.post('/', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const data = createSchema.parse(req.body);
     const created = await prisma.announcement.create({
@@ -89,7 +89,7 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req,
   }
 });
 
-router.delete('/:id', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
+router.delete('/:id', requireAuth, requireStaffRole, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const a = await prisma.announcement.findUnique({ where: { id } });
