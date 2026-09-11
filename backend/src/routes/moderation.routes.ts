@@ -250,9 +250,6 @@ adminRouter.get('/moderation/counts', async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Admin endpoints requieren ADMIN
-adminRouter.use((_req, _res, next) => next()); // placeholder; auth se aplica al montarlo
-
 export { publicRouter as moderationPublicRouter, adminRouter as moderationAdminRouter };
 
 // Helper opcional: middleware para uso desde routes/index.ts

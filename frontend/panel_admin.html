@@ -81,9 +81,6 @@
                 <li><a class="nav-link" onclick="switchView('opiniones', this); cargarOpiniones();"><i class="fas fa-comment-dots"></i> Opiniones <span id="badgeOpiniones" class="chat-list-unread" style="display:none;">0</span></a></li>
                 <li><a class="nav-link" onclick="switchView('empleo', this); cargarPostulaciones();"><i class="fas fa-briefcase"></i> Postulaciones empleo <span id="badgeEmpleo" class="chat-list-unread" style="display:none;">0</span></a></li>
                 <li><a class="nav-link" onclick="switchView('vinculos', this); cargarLinks();"><i class="fas fa-link"></i> Vínculos Padre-Hijo</a></li>
-                <li><a class="nav-link" onclick="switchView('cuotas', this); cargarUsuarios();"><i class="fas fa-money-bill"></i> Cargar Cuota</a></li>
-                <li><a class="nav-link" onclick="switchView('mensajes', this); cargarContactos();"><i class="fas fa-comments"></i> Mensajes</a></li>
-                <li><a class="nav-link" onclick="switchView('anuncios', this); cargarAnuncios();"><i class="fas fa-bullhorn"></i> Anuncios</a></li>
             </ul>
         </aside>
 
@@ -213,67 +210,6 @@
                 </table>
             </section>
 
-            <section id="cuotas" class="view-section">
-                <h3 class="section-title">Cargar nueva cuota</h3>
-                <form onsubmit="crearCuota(event)" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; max-width: 800px;">
-                    <div>
-                        <label style="font-size:0.85rem; font-weight:600;">Estudiante</label>
-                        <select id="cuotaEst" required class="form-select"></select>
-                    </div>
-                    <div>
-                        <label style="font-size:0.85rem; font-weight:600;">Concepto</label>
-                        <input type="text" id="cuotaConcepto" required class="form-input" placeholder="Cuota Mensual - Julio">
-                    </div>
-                    <div>
-                        <label style="font-size:0.85rem; font-weight:600;">Monto</label>
-                        <input type="number" id="cuotaMonto" required min="1" step="0.01" class="form-input" placeholder="45000">
-                    </div>
-                    <div>
-                        <label style="font-size:0.85rem; font-weight:600;">Vencimiento</label>
-                        <input type="date" id="cuotaVenc" required class="form-input">
-                    </div>
-                    <button type="submit" class="btn-action" style="grid-column: 1 / -1; justify-self: end;"><i class="fas fa-money-check"></i> Cargar cuota</button>
-                </form>
-            </section>
-
-            <section id="anuncios" class="view-section">
-                <h3 class="section-title">Anuncios publicados</h3>
-                <details style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;">
-                    <summary style="cursor: pointer; font-weight: 600; color: #0f172a;"><i class="fas fa-plus-circle" style="color:#8b5cf6;"></i> Publicar anuncio</summary>
-                    <form onsubmit="crearAnuncio(event)" style="margin-top: 15px; display: grid; gap: 10px;">
-                        <input type="text" id="anuncioTitulo" placeholder="Título" required class="form-input">
-                        <textarea id="anuncioContenido" placeholder="Contenido..." rows="3" required class="form-input"></textarea>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <label>Para:</label>
-                            <select id="anuncioTarget" class="form-select" style="flex:1;">
-                                <option value="ALL">Toda la comunidad</option>
-                                <option value="ESTUDIANTE">Estudiantes</option>
-                                <option value="DOCENTE">Docentes</option>
-                                <option value="PADRE">Padres</option>
-                            </select>
-                            <button type="submit" class="btn-action"><i class="fas fa-paper-plane"></i> Publicar</button>
-                        </div>
-                    </form>
-                </details>
-                <div id="listaAnuncios"><p style="color:#94a3b8; text-align:center;">Cargando...</p></div>
-            </section>
-
-            <section id="mensajes" class="view-section">
-                <h3 class="section-title">Mensajes</h3>
-                <div class="chat-wrapper">
-                    <div class="chat-sidebar">
-                        <div class="chat-sidebar-header">Conversaciones</div>
-                        <ul class="chat-list" id="chatList"><li class="bell-empty">Cargando...</li></ul>
-                        <details style="border-top: 1px solid #e2e8f0;">
-                            <summary style="padding: 10px 16px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: #8b5cf6;"><i class="fas fa-plus"></i> Nueva conversación</summary>
-                            <ul class="chat-list" id="chatContacts" style="max-height: 200px;"></ul>
-                        </details>
-                    </div>
-                    <div class="chat-main" id="chatMain">
-                        <div class="chat-empty">Elegí una conversación de la izquierda</div>
-                    </div>
-                </div>
-            </section>
         </main>
     </div>
 
@@ -352,7 +288,6 @@
     </div>
 
     <script src="toast.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
     <script src="campus.js"></script>
     <script>
         const ROLE_LABEL = { ESTUDIANTE: 'Estudiante', DOCENTE: 'Docente', PADRE: 'Padre', ADMIN: 'Admin' };
@@ -364,11 +299,6 @@
             cargarStats();
             refrescarBadgePendientes();
             window.initBell();
-            window.connectSocket && window.connectSocket();
-            window.onIncomingMessage = function (m) {
-                if (currentChatId === m.from) openChat(m.from);
-                if (typeof cargarContactos === 'function') cargarContactos();
-            };
         });
 
         function switchView(viewId, element) {
@@ -392,11 +322,7 @@
                 <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#92400e; font-weight:600;">DOCENTES ACTIVOS</div><div style="font-size:2rem; font-weight:700; color:#d97706;">${fmt(s.docentesActivos)}</div></div>
                 <div style="background:#fce7f3; border:1px solid #fbcfe8; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#9d174d; font-weight:600;">PADRES ACTIVOS</div><div style="font-size:2rem; font-weight:700; color:#db2777;">${fmt(s.padresActivos)}</div></div>
                 <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#065f46; font-weight:600;">NOTAS REGISTRADAS</div><div style="font-size:2rem; font-weight:700; color:#10b981;">${fmt(s.notasRegistradas)}</div></div>
-                <div style="background:#fef9c3; border:1px solid #fde047; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#854d0e; font-weight:600;">RECAUDADO</div><div style="font-size:2rem; font-weight:700; color:#ca8a04;">$ ${fmt(Math.round(s.totalRecaudado))}</div></div>
-                <div style="background:#fee2e2; border:1px solid #fecaca; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#991b1b; font-weight:600;">ANUNCIOS</div><div style="font-size:2rem; font-weight:700; color:#ef4444;">${fmt(s.anuncios)}</div></div>
-                <div style="background:#cffafe; border:1px solid #a5f3fc; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#155e75; font-weight:600;">ACTIVIDADES</div><div style="font-size:2rem; font-weight:700; color:#0891b2;">${fmt(s.actividades)}</div></div>
                 <div style="background:#ede9fe; border:1px solid #ddd6fe; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#5b21b6; font-weight:600;">TEMAS DEL FORO</div><div style="font-size:2rem; font-weight:700; color:#7c3aed;">${fmt(s.temasForo)}</div></div>
-                <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:10px; padding:18px;"><div style="font-size:0.82rem; color:#334155; font-weight:600;">MENSAJES</div><div style="font-size:2rem; font-weight:700; color:#475569;">${fmt(s.mensajesIntercambiados)}</div></div>
             `;
         }
 
@@ -442,10 +368,8 @@
             const estudiantes = _usuariosCache.filter(u => u.role === 'ESTUDIANTE' && u.isActive);
             const sp = document.getElementById('vincPadre');
             const se = document.getElementById('vincEstudiante');
-            const sec = document.getElementById('cuotaEst');
             if (sp) sp.innerHTML = padres.map(p => `<option value="${p.id}">${p.nombre} (DNI ${p.dni})</option>`).join('');
             if (se) se.innerHTML = estudiantes.map(e => `<option value="${e.id}">${e.nombre} — ${e.curso || ''}</option>`).join('');
-            if (sec) sec.innerHTML = estudiantes.map(e => `<option value="${e.id}">${e.nombre} — ${e.curso || ''}</option>`).join('');
         }
 
         async function crearUsuario(e) {
@@ -855,141 +779,6 @@
             const r = await window.apiDelete('/api/admin/links/' + id);
             if (r.exito) { toastSuccess('Vínculo eliminado.'); cargarLinks(); }
             else toastError(r.mensaje || 'Error.');
-        }
-
-        /* ============================================================
-           CUOTAS
-           ============================================================ */
-        async function crearCuota(e) {
-            e.preventDefault();
-            const r = await window.apiPost('/api/admin/payments', {
-                estudianteId: document.getElementById('cuotaEst').value,
-                concepto: document.getElementById('cuotaConcepto').value,
-                monto: document.getElementById('cuotaMonto').value,
-                vencimiento: document.getElementById('cuotaVenc').value,
-            });
-            if (r.exito) { toastSuccess('Cuota cargada.'); e.target.reset(); }
-            else toastError(r.mensaje || 'Error.');
-        }
-
-        /* ============================================================
-           ANUNCIOS
-           ============================================================ */
-        async function cargarAnuncios() {
-            const data = await window.apiGet('/api/announcements');
-            const cont = document.getElementById('listaAnuncios');
-            if (!data.exito || !data.anuncios.length) {
-                cont.innerHTML = '<p style="color:#94a3b8; text-align:center;">No hay anuncios.</p>';
-                return;
-            }
-            cont.innerHTML = data.anuncios.map(a => `
-                <div class="campus-card" style="border-left: 4px solid #8b5cf6;">
-                    <h4 class="campus-card-title">${window.escapeHtml(a.titulo)}</h4>
-                    <div class="campus-card-meta">
-                        <span><i class="fas fa-user"></i> ${window.escapeHtml(a.autor)}</span>
-                        <span><i class="fas fa-users"></i> ${a.targetRole}</span>
-                        <span><i class="fas fa-clock"></i> ${window.formatFecha(a.createdAt)}</span>
-                    </div>
-                    <div class="campus-card-body">${window.escapeHtml(a.contenido)}</div>
-                    <button class="btn-danger" style="margin-top:10px;" onclick="borrarAnuncio(${a.id})">Borrar</button>
-                </div>
-            `).join('');
-        }
-
-        async function crearAnuncio(e) {
-            e.preventDefault();
-            const body = {
-                titulo: document.getElementById('anuncioTitulo').value,
-                contenido: document.getElementById('anuncioContenido').value,
-                targetRole: document.getElementById('anuncioTarget').value,
-            };
-            const r = await window.apiPost('/api/announcements', body);
-            if (r.exito) { toastSuccess('Anuncio publicado.'); e.target.reset(); cargarAnuncios(); }
-            else toastError(r.mensaje || 'Error.');
-        }
-
-        async function borrarAnuncio(id) {
-            const ok = await window.uxConfirm('¿Borrar este anuncio definitivamente?', { title: 'Borrar anuncio', danger: true, okLabel: 'Borrar' });
-            if (!ok) return;
-            const r = await window.apiDelete('/api/announcements/' + id);
-            if (r.exito) { toastSuccess('Anuncio borrado.'); cargarAnuncios(); }
-            else toastError(r.mensaje || 'Error.');
-        }
-
-        /* ============================================================
-           MENSAJES (reusa la misma lógica que docente)
-           ============================================================ */
-        let currentChatId = null;
-
-        async function cargarContactos() {
-            const [hilos, contactos] = await Promise.all([
-                window.apiGet('/api/messages/threads'),
-                window.apiGet('/api/messages/contacts'),
-            ]);
-            const list = document.getElementById('chatList');
-            const conts = document.getElementById('chatContacts');
-            if (hilos.exito && hilos.hilos.length) {
-                list.innerHTML = hilos.hilos.map(h => `
-                    <li class="chat-list-item" onclick="openChat(${h.contactId})" data-id="${h.contactId}">
-                        <div class="chat-list-name">${window.escapeHtml(h.contactNombre)} ${h.noLeidos ? `<span class="chat-list-unread">${h.noLeidos}</span>` : ''}</div>
-                        <div class="chat-list-role">${ROLE_LABEL[h.contactRol]}</div>
-                        <div class="chat-list-last">${window.escapeHtml(h.ultimoMensaje)}</div>
-                    </li>
-                `).join('');
-            } else {
-                list.innerHTML = '<li class="bell-empty">Sin conversaciones</li>';
-            }
-            if (contactos.exito) {
-                conts.innerHTML = contactos.contactos.map(c => `
-                    <li class="chat-list-item" onclick="openChat(${c.id})">
-                        <div class="chat-list-name">${window.escapeHtml(c.nombre)}</div>
-                        <div class="chat-list-role">${ROLE_LABEL[c.role]}</div>
-                    </li>
-                `).join('');
-            }
-        }
-
-        async function openChat(contactId) {
-            currentChatId = contactId;
-            document.querySelectorAll('#chatList .chat-list-item').forEach(el => {
-                el.classList.toggle('active', el.dataset.id == contactId);
-            });
-            const main = document.getElementById('chatMain');
-            main.innerHTML = '<div class="chat-empty">Cargando...</div>';
-            const data = await window.apiGet('/api/messages/thread/' + contactId);
-            if (!data.exito) { main.innerHTML = '<div class="chat-empty">Error</div>'; return; }
-            const msgsHtml = data.mensajes.map(m => `
-                <div class="chat-bubble ${m.deMi ? 'chat-bubble-mine' : 'chat-bubble-other'}">
-                    ${window.escapeHtml(m.contenido)}
-                    <div class="chat-bubble-meta">${window.formatFechaHora(m.createdAt)}</div>
-                </div>
-            `).join('');
-            main.innerHTML = `
-                <div class="chat-main-header"><i class="fas fa-user"></i> ${window.escapeHtml(data.contacto.nombre)} <span style="font-size:0.8rem; color:#94a3b8; font-weight:normal;">(${ROLE_LABEL[data.contacto.role]})</span></div>
-                <div class="chat-messages" id="chatMessages">${msgsHtml || '<div class="chat-empty">Sin mensajes</div>'}</div>
-                <form class="chat-composer" onsubmit="enviarMensaje(event)">
-                    <textarea id="chatInput" rows="2" placeholder="Escribí tu mensaje..." required></textarea>
-                    <button type="submit"><i class="fas fa-paper-plane"></i></button>
-                </form>
-            `;
-            const mEl = document.getElementById('chatMessages');
-            mEl.scrollTop = mEl.scrollHeight;
-            window.refreshBell();
-        }
-
-        async function enviarMensaje(e) {
-            e.preventDefault();
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text || !currentChatId) return;
-            const res = await window.apiPost('/api/messages', { receiverId: currentChatId, contenido: text });
-            if (res.exito) {
-                input.value = '';
-                openChat(currentChatId);
-                cargarContactos();
-            } else {
-                toastError(res.mensaje || 'No se pudo enviar.');
-            }
         }
 
         function logout() {

@@ -366,28 +366,6 @@
     };
 
     /* ============================================================
-       Socket.io para tiempo real (chat + bell)
-       ============================================================ */
-    let _socket = null;
-    window.connectSocket = function () {
-        const tk = token();
-        if (!tk) return;
-        if (_socket && _socket.connected) return _socket;
-        if (typeof io === 'undefined') {
-            console.warn('socket.io client no cargado');
-            return;
-        }
-        _socket = io({ auth: { token: tk } });
-        _socket.on('connect', () => console.debug('socket connected'));
-        _socket.on('disconnect', () => console.debug('socket disconnected'));
-        _socket.on('new-message', (msg) => {
-            window.refreshBell && window.refreshBell();
-            if (typeof window.onIncomingMessage === 'function') window.onIncomingMessage(msg);
-        });
-        return _socket;
-    };
-
-    /* ============================================================
        Foros (compartido docente + estudiante + admin)
        Requiere en la página: #forosLista, #foroDetalle.
        Y opcionalmente: form con id foroNuevo (campos materia/titulo/contenido).

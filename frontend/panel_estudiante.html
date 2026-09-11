@@ -66,14 +66,9 @@
         <aside class="sidebar">
             <ul class="sidebar-menu">
                 <li><a class="nav-link active" onclick="switchView('boletin', this)"><i class="fas fa-file-invoice"></i> Boletín Oficial</a></li>
-                <li><a class="nav-link" onclick="switchView('actividades', this); cargarActividades();"><i class="fas fa-tasks"></i> Actividades</a></li>
                 <li><a class="nav-link" onclick="switchView('planes', this); cargarPlanes();"><i class="fas fa-book"></i> Planes de Estudio</a></li>
                 <li><a class="nav-link" onclick="switchView('asistencias', this); cargarMisAsistencias();"><i class="fas fa-clipboard-check"></i> Mis Asistencias</a></li>
-                <li><a class="nav-link" onclick="switchView('anuncios', this); cargarAnuncios();"><i class="fas fa-bullhorn"></i> Anuncios</a></li>
-                <li><a class="nav-link" onclick="switchView('mensajes', this); cargarContactos();"><i class="fas fa-comments"></i> Mensajes</a></li>
                 <li><a class="nav-link" onclick="switchView('foros', this); cargarForos();"><i class="fas fa-comments-dollar"></i> Foros</a></li>
-                <li><a class="nav-link" onclick="switchView('cursado', this)"><i class="fas fa-calendar-alt"></i> Horarios de Cursado</a></li>
-                <li><a class="nav-link" onclick="switchView('libres', this)"><i class="fas fa-edit"></i> Examen Libre</a></li>
             </ul>
         </aside>
 
@@ -94,11 +89,6 @@
                 </table>
             </section>
 
-            <section id="actividades" class="view-section">
-                <h3 class="section-title">Actividades pendientes y entregadas</h3>
-                <div id="listaActividadesEst"><p style="color:#94a3b8; text-align:center;">Cargando actividades...</p></div>
-            </section>
-
             <section id="planes" class="view-section">
                 <h3 class="section-title">Planes de Estudio de mis materias</h3>
                 <div id="listaPlanesEst"><p style="color:#94a3b8; text-align:center;">Cargando planes...</p></div>
@@ -111,11 +101,6 @@
                     <thead><tr><th>Fecha</th><th>Día</th><th style="text-align:center;">Estado</th><th>Observación</th></tr></thead>
                     <tbody><tr><td colspan="4" style="text-align:center; color:#64748b;">Cargando...</td></tr></tbody>
                 </table>
-            </section>
-
-            <section id="anuncios" class="view-section">
-                <h3 class="section-title">Anuncios institucionales</h3>
-                <div id="listaAnunciosEst"><p style="color:#94a3b8; text-align:center;">Cargando anuncios...</p></div>
             </section>
 
             <section id="foros" class="view-section">
@@ -133,67 +118,10 @@
                 <div id="foroDetalle"></div>
             </section>
 
-            <section id="mensajes" class="view-section">
-                <h3 class="section-title">Mensajes con docentes</h3>
-                <div class="chat-wrapper">
-                    <div class="chat-sidebar">
-                        <div class="chat-sidebar-header">Conversaciones</div>
-                        <ul class="chat-list" id="chatList"><li class="bell-empty">Cargando...</li></ul>
-                        <details style="border-top: 1px solid #e2e8f0;">
-                            <summary style="padding: 10px 16px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: #3498db;"><i class="fas fa-plus"></i> Escribir a un docente</summary>
-                            <ul class="chat-list" id="chatContacts" style="max-height: 200px;"></ul>
-                        </details>
-                    </div>
-                    <div class="chat-main" id="chatMain">
-                        <div class="chat-empty">Elegí una conversación de la izquierda</div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="cursado" class="view-section">
-                <h3 class="section-title">Cronograma y Grilla de Cursado Obligatorio</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr><th>Asignatura</th><th>Nivel / División</th><th>Horario Semanal Fijo</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Álgebra y Geometría</td><td>Secundario — 1er Año</td><td>Lunes y Miércoles — 07:30 a 09:30</td></tr>
-                        <tr><td>Literatura</td><td>Secundario — 1er Año</td><td>Lunes y Miércoles — 09:45 a 11:45</td></tr>
-                        <tr><td>Física</td><td>Secundario — 1er Año</td><td>Martes y Jueves — 07:30 a 09:30</td></tr>
-                        <tr><td>Química</td><td>Secundario — 1er Año</td><td>Martes y Jueves — 09:45 a 11:45</td></tr>
-                        <tr><td>Metodología de Sistemas I</td><td>Secundario — 1er Año</td><td>Viernes — 08:00 a 12:00</td></tr>
-                    </tbody>
-                </table>
-            </section>
-
-            <section id="libres" class="view-section">
-                <h3 class="section-title">Inscripción a Mesas de Exámenes Libres</h3>
-                <form onsubmit="registrarExamenLibre(event)">
-                    <div class="form-controls">
-                        <select id="selectLibre" class="form-select" required>
-                            <option value="">Seleccione Asignatura a Rendir...</option>
-                            <option value="Matemáticas Avanzadas">Matemáticas Avanzadas (Mesa Especial)</option>
-                            <option value="Historia Argentina">Historia Argentina (Mesa Libre)</option>
-                            <option value="Física Aplicada">Física Aplicada (Mesa Especial)</option>
-                        </select>
-                        <button type="submit" class="btn-action"><i class="fas fa-file-signature"></i> Confirmar Inscripción</button>
-                    </div>
-                </form>
-                <table class="data-table" id="tablaLibres">
-                    <thead>
-                        <tr><th>Materia Especial/Libre</th><th>Estado de la Solicitud</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Geografía Argentina</td><td><span style="background:#d1fae5; color:#065f46; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:600;">Aprobada por Bedelía</span></td></tr>
-                        <tr><td>Historia Contemporánea</td><td><span style="background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:600;">Pendiente</span></td></tr>
-                    </tbody>
-                </table>
-            </section>
         </main>
     </div>
 
     <script src="toast.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
     <script src="campus.js"></script>
     <script>
         const ME = JSON.parse(localStorage.getItem('usuarioActual') || 'null');
@@ -202,11 +130,6 @@
             document.getElementById('userNameDisplay').textContent = ME.nombre;
             renderizarBoletin();
             window.initBell();
-            window.connectSocket && window.connectSocket();
-            window.onIncomingMessage = function (m) {
-                if (currentChatId === m.from) openChat(m.from);
-                if (typeof cargarContactos === 'function') cargarContactos();
-            };
         });
 
         function switchView(viewId, element) {
@@ -246,95 +169,6 @@
                 console.error(err);
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#c0392b;">Error al conectar con el servidor.</td></tr>';
             });
-        }
-
-        function registrarExamenLibre(e) {
-            e.preventDefault();
-            const materia = document.getElementById('selectLibre').value;
-            document.querySelector('#tablaLibres tbody').innerHTML += `<tr><td>${materia}</td><td><span style="color:#f39c12; font-weight:bold;">Pendiente de Aprobación por Bedelía</span></td></tr>`;
-            document.getElementById('selectLibre').selectedIndex = 0;
-            toastSuccess('Solicitud de examen libre enviada correctamente.');
-        }
-
-        /* ============================================================
-           ACTIVIDADES
-           ============================================================ */
-        async function cargarActividades() {
-            const cont = document.getElementById('listaActividadesEst');
-            try {
-                const data = await window.apiGet('/api/activities');
-                if (!data.exito || !data.actividades.length) {
-                    cont.innerHTML = '<p style="color:#94a3b8; text-align:center;">No hay actividades cargadas todavía.</p>';
-                    return;
-                }
-                const hoy = new Date(); hoy.setHours(0,0,0,0);
-                cont.innerHTML = data.actividades.map(a => {
-                    const dueDate = new Date(a.fechaEntrega + 'T00:00:00');
-                    const vencido = dueDate < hoy && !a.miEntrega;
-                    const yaEntregado = !!a.miEntrega;
-                    let badge = '<span class="campus-badge campus-badge-pendiente">Pendiente</span>';
-                    if (yaEntregado && a.miEntrega.status === 'CALIFICADO') {
-                        badge = `<span class="campus-badge campus-badge-calificado">Calificado: ${a.miEntrega.score}</span>`;
-                    } else if (yaEntregado) {
-                        badge = '<span class="campus-badge campus-badge-entregado">Entregado</span>';
-                    } else if (vencido) {
-                        badge = '<span class="campus-badge campus-badge-vencido">Vencido</span>';
-                    }
-                    return `
-                        <div class="campus-card">
-                            <h4 class="campus-card-title">${window.escapeHtml(a.titulo)} ${badge}</h4>
-                            <div class="campus-card-meta">
-                                <span><i class="fas fa-book"></i> ${window.escapeHtml(a.materia)}</span>
-                                <span><i class="fas fa-user"></i> ${window.escapeHtml(a.docente)}</span>
-                                <span><i class="fas fa-calendar"></i> Entrega: ${window.formatFecha(a.fechaEntrega)}</span>
-                                <span><i class="fas fa-star"></i> Máx: ${a.maxScore}</span>
-                            </div>
-                            <div class="campus-card-body">${window.escapeHtml(a.descripcion)}</div>
-                            ${a.fileUrl ? `<div style="margin-top:8px;"><a href="${a.fileUrl}" target="_blank" style="color:#3498db;"><i class="fas fa-paperclip"></i> Material del docente</a></div>` : ''}
-                            ${a.miEntrega ? `
-                                <div style="margin-top:12px; padding:10px 12px; background:#f0f9ff; border-left:3px solid #3498db; border-radius:4px;">
-                                    <strong>Tu entrega:</strong>
-                                    ${a.miEntrega.fileUrl ? ` <a href="${a.miEntrega.fileUrl}" target="_blank" style="color:#3498db;"><i class="fas fa-paperclip"></i> archivo</a>` : ''}
-                                    ${a.miEntrega.textContent ? `<div style="margin-top:4px;">${window.escapeHtml(a.miEntrega.textContent)}</div>` : ''}
-                                    ${a.miEntrega.feedback ? `<div style="margin-top:6px; color:#475569;"><em>Devolución:</em> ${window.escapeHtml(a.miEntrega.feedback)}</div>` : ''}
-                                </div>
-                            ` : `
-                                <form onsubmit="entregarActividad(event, ${a.id})" enctype="multipart/form-data" style="margin-top:12px; padding:10px 12px; background:#f8fafc; border-radius:6px;">
-                                    <label style="font-size:0.85rem; font-weight:600;">Hacer entrega:</label>
-                                    <textarea placeholder="Texto de tu entrega (opcional si adjuntás archivo)" rows="2" style="width:100%; margin-top:6px; padding:8px; border:1px solid #cbd5e1; border-radius:4px;"></textarea>
-                                    <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                                        <input type="file" style="flex:1;">
-                                        <button type="submit" class="btn-action" style="padding:6px 14px;"><i class="fas fa-upload"></i> Entregar</button>
-                                    </div>
-                                </form>
-                            `}
-                        </div>
-                    `;
-                }).join('');
-            } catch (err) {
-                cont.innerHTML = '<p style="color:#c0392b;">Error al cargar actividades.</p>';
-            }
-        }
-
-        async function entregarActividad(e, activityId) {
-            e.preventDefault();
-            const form = e.target;
-            const text = form.querySelector('textarea').value.trim();
-            const file = form.querySelector('input[type=file]').files[0];
-            if (!text && !file) {
-                toastWarning('Adjuntá un archivo o escribí tu entrega.');
-                return;
-            }
-            const fd = new FormData();
-            if (text) fd.append('textContent', text);
-            if (file) fd.append('file', file);
-            const res = await window.apiUpload('/api/activities/' + activityId + '/submit', fd);
-            if (res.exito) {
-                toastSuccess('Entrega registrada.');
-                cargarActividades();
-            } else {
-                toastError(res.mensaje || 'No se pudo registrar la entrega.');
-            }
         }
 
         /* ============================================================
@@ -399,105 +233,6 @@
                     const d = new Date(r.fecha + 'T00:00:00');
                     return `<tr><td>${window.formatFecha(r.fecha)}</td><td style="text-transform:capitalize;">${d.toLocaleDateString('es-AR', { weekday: 'long' })}</td><td style="text-align:center;"><span style="background:${c.bg}; color:${c.fg}; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:600;">${c.label}</span></td><td>${window.escapeHtml(r.observacion || '—')}</td></tr>`;
                 }).join('');
-        }
-
-        /* ============================================================
-           ANUNCIOS
-           ============================================================ */
-        async function cargarAnuncios() {
-            const cont = document.getElementById('listaAnunciosEst');
-            const data = await window.apiGet('/api/announcements');
-            if (!data.exito || !data.anuncios.length) {
-                cont.innerHTML = '<p style="color:#94a3b8; text-align:center;">No hay anuncios.</p>';
-                return;
-            }
-            cont.innerHTML = data.anuncios.map(a => `
-                <div class="campus-card" style="border-left: 4px solid #3498db;">
-                    <h4 class="campus-card-title"><i class="fas fa-bullhorn" style="color:#3498db;"></i> ${window.escapeHtml(a.titulo)}</h4>
-                    <div class="campus-card-meta">
-                        <span><i class="fas fa-user"></i> ${window.escapeHtml(a.autor)}</span>
-                        <span><i class="fas fa-clock"></i> ${window.formatFecha(a.createdAt)}</span>
-                    </div>
-                    <div class="campus-card-body">${window.escapeHtml(a.contenido)}</div>
-                </div>
-            `).join('');
-        }
-
-        /* ============================================================
-           MENSAJES
-           ============================================================ */
-        let currentChatId = null;
-        const ROLE_LABEL = { ESTUDIANTE: 'Estudiante', DOCENTE: 'Docente', PADRE: 'Padre', ADMIN: 'Admin' };
-
-        async function cargarContactos() {
-            const [hilos, contactos] = await Promise.all([
-                window.apiGet('/api/messages/threads'),
-                window.apiGet('/api/messages/contacts'),
-            ]);
-            const list = document.getElementById('chatList');
-            const conts = document.getElementById('chatContacts');
-            if (hilos.exito && hilos.hilos.length) {
-                list.innerHTML = hilos.hilos.map(h => `
-                    <li class="chat-list-item" onclick="openChat(${h.contactId})" data-id="${h.contactId}">
-                        <div class="chat-list-name">${window.escapeHtml(h.contactNombre)} ${h.noLeidos ? `<span class="chat-list-unread">${h.noLeidos}</span>` : ''}</div>
-                        <div class="chat-list-role">${ROLE_LABEL[h.contactRol]}</div>
-                        <div class="chat-list-last">${window.escapeHtml(h.ultimoMensaje)}</div>
-                    </li>
-                `).join('');
-            } else {
-                list.innerHTML = '<li class="bell-empty">Sin conversaciones</li>';
-            }
-            if (contactos.exito) {
-                conts.innerHTML = contactos.contactos.map(c => `
-                    <li class="chat-list-item" onclick="openChat(${c.id})">
-                        <div class="chat-list-name">${window.escapeHtml(c.nombre)}</div>
-                        <div class="chat-list-role">${ROLE_LABEL[c.role]}</div>
-                    </li>
-                `).join('');
-            }
-        }
-
-        async function openChat(contactId) {
-            currentChatId = contactId;
-            document.querySelectorAll('#chatList .chat-list-item').forEach(el => {
-                el.classList.toggle('active', el.dataset.id == contactId);
-            });
-            const main = document.getElementById('chatMain');
-            main.innerHTML = '<div class="chat-empty">Cargando...</div>';
-            const data = await window.apiGet('/api/messages/thread/' + contactId);
-            if (!data.exito) { main.innerHTML = '<div class="chat-empty">Error</div>'; return; }
-            const msgsHtml = data.mensajes.map(m => `
-                <div class="chat-bubble ${m.deMi ? 'chat-bubble-mine' : 'chat-bubble-other'}">
-                    ${window.escapeHtml(m.contenido)}
-                    <div class="chat-bubble-meta">${window.formatFechaHora(m.createdAt)}</div>
-                </div>
-            `).join('');
-            main.innerHTML = `
-                <div class="chat-main-header"><i class="fas fa-user"></i> ${window.escapeHtml(data.contacto.nombre)} <span style="font-size:0.8rem; color:#94a3b8; font-weight:normal;">(${ROLE_LABEL[data.contacto.role]})</span></div>
-                <div class="chat-messages" id="chatMessages">${msgsHtml || '<div class="chat-empty">Sin mensajes — escribí el primero</div>'}</div>
-                <form class="chat-composer" onsubmit="enviarMensaje(event)">
-                    <textarea id="chatInput" rows="2" placeholder="Escribí tu mensaje..." required></textarea>
-                    <button type="submit"><i class="fas fa-paper-plane"></i></button>
-                </form>
-            `;
-            const mEl = document.getElementById('chatMessages');
-            mEl.scrollTop = mEl.scrollHeight;
-            window.refreshBell();
-        }
-
-        async function enviarMensaje(e) {
-            e.preventDefault();
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text || !currentChatId) return;
-            const res = await window.apiPost('/api/messages', { receiverId: currentChatId, contenido: text });
-            if (res.exito) {
-                input.value = '';
-                openChat(currentChatId);
-                cargarContactos();
-            } else {
-                toastError(res.mensaje || 'No se pudo enviar.');
-            }
         }
 
         function logout() { localStorage.removeItem('usuarioActual'); sessionStorage.removeItem('token'); window.location.href = 'index.html'; }

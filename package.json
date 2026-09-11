@@ -2,13 +2,13 @@
   "name": "educar-para-transformar",
   "version": "0.1.0",
   "private": true,
-  "description": "Campus virtual del colegio Educar para Transformar — monorepo backend (Node/Express/Prisma) + frontend (React/Vite/Tailwind).",
+  "description": "Campus virtual del colegio Educar para Transformar — backend (Node/Express/Prisma) + client (React 18 + Tailwind, en migración desde el frontend estático).",
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
+    "dev": "pnpm --filter backend dev",
+    "build": "pnpm --filter backend build",
     "backend:dev": "pnpm --filter backend dev",
-    "frontend:dev": "pnpm --filter frontend dev"
+    "client:dev": "pnpm --filter client dev",
+    "client:build": "pnpm --filter client build"
   },
   "engines": {
     "node": ">=22.13",

@@ -1,25 +1,11 @@
-import http from 'node:http';
-import { Server as SocketIOServer } from 'socket.io';
-
 import { env } from './config/env';
 import { createApp } from './app';
 import { logger } from './utils/logger';
-import { attachSockets } from './sockets/io';
 
 async function bootstrap() {
   const app = createApp();
-  const server = http.createServer(app);
 
-  const io = new SocketIOServer(server, {
-    cors: {
-      origin: env.CORS_ORIGIN,
-      credentials: true,
-    },
-  });
-
-  attachSockets(io);
-
-  server.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, () => {
     logger.info(
       `🚀 API lista en http://localhost:${env.PORT} (${env.NODE_ENV})`,
     );
@@ -29,7 +15,6 @@ async function bootstrap() {
 
   const shutdown = (signal: string) => {
     logger.info(`Recibido ${signal}, cerrando servidor...`);
-    io.close();
     server.close((err) => {
       if (err) {
         logger.error('Error cerrando el servidor', err);

@@ -41,7 +41,7 @@ Editá `backend/.env` y completá al menos:
   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
   ```
 
-El resto de las variables (`PORT`, `CORS_ORIGIN`, `UPLOAD_DIR`, SMTP) ya tienen valores por defecto razonables para desarrollo local.
+El resto de las variables (`PORT`, `CORS_ORIGIN`, `UPLOAD_DIR`) ya tienen valores por defecto razonables para desarrollo local.
 
 ### 3. Crear la base de datos
 
@@ -86,10 +86,10 @@ pnpm --filter backend db:reset       # resetea la base y vuelve a correr migraci
 
 ## Roles
 
-- **Estudiante** — accede a materias, actividades, notas, asistencia, foros y mensajes.
-- **Docente** — gestiona materias, planes de estudio, actividades, correcciones, asistencia, calificaciones y comunicación.
-- **Padre / Tutor** — visualiza el progreso del/los hijo(s), pagos, mensajes y anuncios.
-- **Admin** — administra usuarios, materias, ciclos lectivos y la estructura institucional.
+- **Estudiante** — accede a su boletín, planes de estudio, asistencia y foros.
+- **Docente** — carga calificaciones y asistencia, publica planes de estudio y participa en los foros.
+- **Padre / Tutor** — visualiza el boletín, las materias y la asistencia de los hijos vinculados a su cuenta.
+- **Admin** — administra usuarios, vínculos padre-hijo, aprobación de cuentas docentes y modera inscripciones, opiniones y postulaciones de empleo.
 
 ## Estado
 
