@@ -17,7 +17,7 @@ Plataforma del campus virtual del colegio "Educar para Transformar". Monorepo co
 - pnpm >= 9 (el repo usa pnpm 11 vía `packageManager`)
 - PostgreSQL 16 corriendo localmente (o accesible por red)
 
-## Setup
+## Instalación y ejecución
 
 ### 1. Instalar dependencias
 
@@ -61,20 +61,21 @@ pnpm --filter backend prisma:seed
 
 El seed crea usuarios de prueba para cada rol (admin, docentes, estudiantes, padres). La contraseña de todos es `123456`; el login acepta `usuario` o `email`. Revisá [backend/prisma/seed.ts](backend/prisma/seed.ts) para ver los usuarios disponibles (ej. `admin` / `123456`).
 
-## Correr el programa
+### 5. Correr el programa
 
 Hay dos formas de levantarlo, según qué estés haciendo.
 
-### Opción A — Desarrollando el frontend (con hot-reload)
+### Opción A — Todo junto, con hot-reload (recomendada para desarrollar)
 
-Dos terminales:
+Un solo comando, una sola terminal:
 
 ```bash
-pnpm run backend:dev   # API en http://localhost:4000
-pnpm run client:dev    # Vite en http://localhost:5173, con hot-reload
+pnpm run dev
 ```
 
-Abrí **http://localhost:5173**. Vite tiene un proxy configurado (`client/vite.config.js`) que reenvía `/api` y `/uploads` al backend en el puerto 4000, así que desde el navegador todo se ve como si fuera un solo origen.
+Esto levanta el backend (`tsx watch`) y Vite en paralelo (`pnpm -r --parallel dev`, corre el script `dev` de cada paquete del workspace a la vez). Abrí **http://localhost:5173**. Vite tiene un proxy configurado (`client/vite.config.js`) que reenvía `/api` y `/uploads` al backend en el puerto 4000, así que desde el navegador todo se ve como si fuera un solo origen.
+
+Si preferís levantarlos en terminales separadas (por ejemplo para ver los logs de cada uno sin que se mezclen), podés correr `pnpm run backend:dev` y `pnpm run client:dev` en dos ventanas distintas — es exactamente lo mismo que hace `pnpm run dev`, solo que no comparten terminal.
 
 ### Opción B — Un solo proceso (como en producción)
 
@@ -83,13 +84,11 @@ pnpm run client:build   # compila client/ a client/dist
 pnpm run backend:dev    # (o pnpm --filter backend start, con el backend ya compilado)
 ```
 
-Abrí **http://localhost:4000** — el backend sirve la API y el build de React desde el mismo puerto y proceso. Usá esta opción para probar el comportamiento real antes de desplegar, o cuando no necesites hot-reload del frontend.
+Abrí **http://localhost:4000** — el backend sirve la API y el build de React desde el mismo puerto y proceso, sin hot-reload del frontend (hay que repetir `client:build` después de cada cambio). Usá esta opción para probar el comportamiento real antes de desplegar.
 
 En ambos casos:
 - **Health check:** http://localhost:4000/health
 - **API:** http://localhost:4000/api
-
-`pnpm run dev` (a nivel raíz) es un alias de `backend:dev`.
 
 ## Otros comandos útiles
 
@@ -110,7 +109,4 @@ pnpm --filter client dev             # solo Vite, sin pasar por el script de ra�
 - **Padre / Tutor** — visualiza el boletín, las materias y la asistencia de los hijos vinculados a su cuenta.
 - **Admin** — administra usuarios, vínculos padre-hijo, aprobación de cuentas docentes y modera inscripciones, opiniones y postulaciones de empleo.
 
-## Estado
 
-En construcción — rama de trabajo: `fabri`.
-# CentroEducativo---II
