@@ -17,12 +17,6 @@ const envSchema = z.object({
 
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().positive().default(20),
-
-  SMTP_HOST: z.string().optional().default(''),
-  SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_USER: z.string().optional().default(''),
-  SMTP_PASS: z.string().optional().default(''),
-  SMTP_FROM: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -6,6 +6,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { notify } from './notifications.routes';
 
 const router = Router();
 
@@ -13,18 +14,14 @@ router.use(requireAuth, requireRole(Role.ADMIN));
 
 router.get('/stats', async (_req, res, next) => {
   try {
-    const [users, byRole, students, teachers, parents, grades, payments, announcements, activities, forumPosts, messages] = await Promise.all([
+    const [users, byRole, students, teachers, parents, grades, forumPosts] = await Promise.all([
       prisma.user.count(),
       prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
       prisma.user.count({ where: { role: Role.ESTUDIANTE, isActive: true } }),
       prisma.user.count({ where: { role: Role.DOCENTE, isActive: true } }),
       prisma.user.count({ where: { role: Role.PADRE, isActive: true } }),
       prisma.grade.count(),
-      prisma.payment.aggregate({ _sum: { monto: true }, where: { status: 'PAGADO' } }),
-      prisma.announcement.count(),
-      prisma.activity.count(),
       prisma.forumPost.count(),
-      prisma.message.count(),
     ]);
     res.json({
       exito: true,
@@ -34,11 +31,7 @@ router.get('/stats', async (_req, res, next) => {
         docentesActivos: teachers,
         padresActivos: parents,
         notasRegistradas: grades,
-        totalRecaudado: Number(payments._sum.monto || 0),
-        anuncios: announcements,
-        actividades: activities,
         temasForo: forumPosts,
-        mensajesIntercambiados: messages,
         porRol: byRole.map((r) => ({ role: r.role, count: r._count._all })),
       },
     });
@@ -221,33 +214,6 @@ router.delete('/links/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-const createPaymentSchema = z.object({
-  estudianteId: z.coerce.number().int().positive(),
-  concepto: z.string().min(2),
-  monto: z.coerce.number().positive(),
-  vencimiento: z.string().min(8),
-});
-
-router.post('/payments', async (req, res, next) => {
-  try {
-    const data = createPaymentSchema.parse(req.body);
-    const link = await prisma.parentStudentLink.findFirst({
-      where: { estudianteId: data.estudianteId },
-      select: { padreId: true },
-    });
-    const payment = await prisma.payment.create({
-      data: {
-        estudianteId: data.estudianteId,
-        padreId: link?.padreId ?? null,
-        concepto: data.concepto,
-        monto: data.monto,
-        vencimiento: new Date(data.vencimiento),
-      },
-    });
-    res.json({ exito: true, payment });
-  } catch (err) { next(err); }
-});
-
 // Docentes pendientes de aprobación
 router.get('/teachers/pending', async (_req, res, next) => {
   try {
@@ -275,12 +241,10 @@ router.post('/teachers/:id/approve', async (req, res, next) => {
       data: { isActive: true },
       select: { id: true, usuario: true, nombre: true, email: true, dni: true, isActive: true },
     });
-    await prisma.notification.create({
-      data: {
-        userId: id,
-        titulo: 'Cuenta aprobada',
-        contenido: 'Un administrador aprobó tu cuenta de docente. Ya podés iniciar sesión.',
-      },
+    await notify({
+      userId: id,
+      titulo: 'Cuenta aprobada',
+      contenido: 'Un administrador aprobó tu cuenta de docente. Ya podés iniciar sesión.',
     });
     res.json({ exito: true, docente: aprobado });
   } catch (err) { next(err); }

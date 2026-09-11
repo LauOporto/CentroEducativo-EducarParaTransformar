@@ -1,6 +1,6 @@
 packages:
   - "backend"
-  - "frontend"
+  - "client"
 
 # Habilita los install scripts nativos que necesitan estas deps:
 # - prisma / @prisma/* descargan engines nativos

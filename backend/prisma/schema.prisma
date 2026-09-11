@@ -1,6 +1,6 @@
 // Educar para Transformar — Campus virtual
 // Schema con auth, calificaciones, vínculo padre-hijo, asistencia,
-// pagos, anuncios, notificaciones, mensajería, actividades y planes.
+// notificaciones, foros y planes de estudio.
 
 generator client {
   provider = "prisma-client-js"
@@ -23,32 +23,6 @@ enum AttendanceStatus {
   AUSENTE
   TARDE
   JUSTIFICADO
-}
-
-enum ActivityType {
-  ACTIVIDAD
-  TRABAJO
-  PARCIAL
-  TAREA
-}
-
-enum SubmissionStatus {
-  PENDIENTE
-  ENTREGADO
-  CALIFICADO
-}
-
-enum PaymentStatus {
-  PENDIENTE
-  PAGADO
-  VENCIDO
-}
-
-enum AnnouncementTarget {
-  ALL
-  ESTUDIANTE
-  DOCENTE
-  PADRE
 }
 
 enum ModerationStatus {
@@ -75,14 +49,7 @@ model User {
   padres         ParentStudentLink[] @relation("EstudianteLinks")
 
   asistencias           Attendance[]
-  pagosEstudiante       Payment[]      @relation("PaymentStudent")
-  pagosPadre            Payment[]      @relation("PaymentParent")
-  anunciosCreados       Announcement[]
   notificaciones        Notification[]
-  mensajesEnviados      Message[]      @relation("MsgSender")
-  mensajesRecibidos     Message[]      @relation("MsgReceiver")
-  actividadesCreadas    Activity[]     @relation("ActivityDocente")
-  entregas              Submission[]
   planesDeEstudio       StudyPlan[]
   forumPosts            ForumPost[]
   forumReplies          ForumReply[]
@@ -132,36 +99,6 @@ model Attendance {
   @@index([fecha])
 }
 
-model Payment {
-  id           Int           @id @default(autoincrement())
-  estudianteId Int
-  estudiante   User          @relation("PaymentStudent", fields: [estudianteId], references: [id], onDelete: Cascade)
-  padreId      Int?
-  padre        User?         @relation("PaymentParent", fields: [padreId], references: [id], onDelete: SetNull)
-  concepto     String
-  monto        Decimal       @db.Decimal(10, 2)
-  vencimiento  DateTime      @db.Date
-  pagadoEn     DateTime?
-  status       PaymentStatus @default(PENDIENTE)
-  createdAt    DateTime      @default(now())
-
-  @@index([estudianteId])
-  @@index([status])
-}
-
-model Announcement {
-  id         Int                @id @default(autoincrement())
-  authorId   Int
-  author     User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  titulo     String
-  contenido  String
-  targetRole AnnouncementTarget @default(ALL)
-  createdAt  DateTime           @default(now())
-
-  @@index([targetRole])
-  @@index([createdAt])
-}
-
 model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int
@@ -173,57 +110,6 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
-}
-
-model Message {
-  id         Int      @id @default(autoincrement())
-  senderId   Int
-  sender     User     @relation("MsgSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiverId Int
-  receiver   User     @relation("MsgReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  contenido  String
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  @@index([senderId, receiverId])
-  @@index([receiverId, isRead])
-}
-
-model Activity {
-  id           Int          @id @default(autoincrement())
-  docenteId    Int
-  docente      User         @relation("ActivityDocente", fields: [docenteId], references: [id], onDelete: Cascade)
-  materia      String
-  titulo       String
-  descripcion  String
-  tipo         ActivityType @default(TAREA)
-  fechaEntrega DateTime
-  maxScore     Int          @default(10)
-  fileUrl      String?
-  createdAt    DateTime     @default(now())
-
-  submissions Submission[]
-
-  @@index([materia])
-  @@index([fechaEntrega])
-}
-
-model Submission {
-  id           Int              @id @default(autoincrement())
-  activityId   Int
-  activity     Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  estudianteId Int
-  estudiante   User             @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
-  textContent  String?
-  fileUrl      String?
-  status       SubmissionStatus @default(ENTREGADO)
-  score        Int?
-  feedback     String?
-  entregadoEn  DateTime         @default(now())
-  calificadoEn DateTime?
-
-  @@unique([activityId, estudianteId])
-  @@index([estudianteId])
 }
 
 model ForumPost {

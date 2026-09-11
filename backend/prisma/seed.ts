@@ -2,10 +2,6 @@ import {
   PrismaClient,
   Role,
   AttendanceStatus,
-  PaymentStatus,
-  AnnouncementTarget,
-  ActivityType,
-  SubmissionStatus,
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -102,15 +98,6 @@ const GRADES: GradeSeed[] = [
   { estudiante: 'iflores', docente: 'csilva',  materia: 'Ciencias Naturales',     instancia: '1er Trimestre', nota: 9, daysAgo: 22 },
 ];
 
-const ANUNCIOS = [
-  { autor: 'admin',    titulo: 'Bienvenida al Ciclo 2026',     contenido: 'Les damos la bienvenida al nuevo ciclo lectivo. Las clases comienzan el lunes a las 7:30hs.', target: 'ALL' },
-  { autor: 'admin',    titulo: 'Reunión de Personal Docente',  contenido: 'Convocatoria a reunión institucional el viernes 12 de junio a las 18:00 hs en el SUM. Asistencia obligatoria.', target: 'DOCENTE' },
-  { autor: 'mlopez',   titulo: 'Trabajo Práctico de Álgebra',  contenido: 'Recuerden traer la guía de ejercicios resuelta para el próximo encuentro.', target: 'ESTUDIANTE' },
-  { autor: 'admin',    titulo: 'Cierre de Inscripciones',      contenido: 'Las inscripciones a actividades extracurriculares cierran el viernes 30. Consulten en secretaría.', target: 'PADRE' },
-  { autor: 'jgarcia',  titulo: 'Festival de Ciencias',         contenido: 'El próximo mes realizaremos el festival anual de ciencias. ¡Anímense a participar!', target: 'ALL' },
-  { autor: 'amartinez', titulo: 'Mesa de Exámenes Libres',     contenido: 'Las mesas de exámenes libres serán del 15 al 20 de junio. Consultar el cronograma en la web.', target: 'ESTUDIANTE' },
-];
-
 async function main() {
   console.log('🌱 Seeding...');
 
@@ -180,106 +167,13 @@ async function main() {
     await prisma.attendance.createMany({ data: asistenciasData });
   }
 
-  // ---- Pagos (5 cuotas mock por estudiante)
-  await prisma.payment.deleteMany({});
-  const pagosData: { estudianteId: number; padreId: number | null; concepto: string; monto: number; vencimiento: Date; pagadoEn: Date | null; status: PaymentStatus }[] = [];
-  const conceptos = [
-    { c: 'Matrícula Ciclo 2026',    venc: dayIso(120), pagado: dayIso(115), st: PaymentStatus.PAGADO,    monto: 50000 },
-    { c: 'Cuota Mensual — Marzo',   venc: dayIso(95),  pagado: dayIso(92),  st: PaymentStatus.PAGADO,    monto: 45000 },
-    { c: 'Cuota Mensual — Abril',   venc: dayIso(65),  pagado: null,        st: PaymentStatus.VENCIDO,   monto: 45000 },
-    { c: 'Cuota Mensual — Mayo',    venc: dayIso(35),  pagado: dayIso(33),  st: PaymentStatus.PAGADO,    monto: 45000 },
-    { c: 'Cuota Mensual — Junio',   venc: dayIso(-5),  pagado: null,        st: PaymentStatus.PENDIENTE, monto: 45000 },
-  ];
-  // Asociamos cada estudiante con su padre, si existe
-  const padreDe = new Map<number, number>();
-  for (const link of LINKS) for (const hijo of link.hijos) padreDe.set(uid(hijo), uid(link.padre));
-
-  for (const est of estudiantes) {
-    const estId = uid(est.usuario);
-    const padreId = padreDe.get(estId) ?? null;
-    for (const c of conceptos) {
-      pagosData.push({ estudianteId: estId, padreId, concepto: c.c, monto: c.monto, vencimiento: c.venc, pagadoEn: c.pagado, status: c.st });
-    }
-  }
-  await prisma.payment.createMany({ data: pagosData });
-
-  // ---- Anuncios
-  await prisma.announcement.deleteMany({});
-  for (const a of ANUNCIOS) {
-    await prisma.announcement.create({
-      data: {
-        authorId: uid(a.autor),
-        titulo: a.titulo,
-        contenido: a.contenido,
-        targetRole: a.target as AnnouncementTarget,
-      },
-    });
-  }
-
   // ---- Notificaciones
   await prisma.notification.deleteMany({});
   await prisma.notification.createMany({
     data: [
       { userId: uid('fbarrabino'), titulo: 'Nueva calificación cargada', contenido: 'María López cargó tu nota de Álgebra (2do Trim).' },
-      { userId: uid('jperez'),     titulo: 'Recordatorio de cuota',       contenido: 'La cuota de Junio vence en 5 días.' },
-      { userId: uid('mlopez'),     titulo: 'Nueva entrega pendiente',     contenido: 'Tenés 3 entregas por revisar.' },
-      { userId: uid('pbarrabino'), titulo: 'Nuevo anuncio',               contenido: 'Bienvenida al Ciclo 2026.' },
-      { userId: uid('rperez'),     titulo: 'Cuota vencida',               contenido: 'La cuota de Abril sigue impaga.' },
-    ],
-  });
-
-  // ---- Mensajes (1 conversación por contexto)
-  await prisma.message.deleteMany({});
-  await prisma.message.createMany({
-    data: [
-      { senderId: uid('pbarrabino'), receiverId: uid('mlopez'),     contenido: 'Hola María, ¿cómo viene Franco con Álgebra?' },
-      { senderId: uid('mlopez'),     receiverId: uid('pbarrabino'), contenido: 'Muy bien, está participando y entregó todos los TPs.' },
-      { senderId: uid('fbarrabino'), receiverId: uid('jgarcia'),    contenido: 'Profe, ¿la entrega del trabajo de Literatura es escrita o exposición?' },
-      { senderId: uid('jgarcia'),    receiverId: uid('fbarrabino'), contenido: 'Es escrita, mínimo 2 carillas.' },
-      { senderId: uid('rperez'),     receiverId: uid('csilva'),     contenido: 'Hola, consultaba por las notas de Química de Juan.' },
-    ],
-  });
-
-  // ---- Actividades + entregas
-  await prisma.activity.deleteMany({});
-  const act1 = await prisma.activity.create({
-    data: {
-      docenteId: uid('mlopez'),
-      materia: 'Álgebra y Geometría',
-      titulo: 'TP1: Sistemas de Ecuaciones',
-      descripcion: 'Resolver los 10 ejercicios del cuadernillo. Entregar PDF escaneado o foto.',
-      tipo: ActivityType.TRABAJO,
-      fechaEntrega: dayIso(-7),
-      maxScore: 10,
-    },
-  });
-  const act2 = await prisma.activity.create({
-    data: {
-      docenteId: uid('jgarcia'),
-      materia: 'Literatura',
-      titulo: 'Análisis de Cuento — "Casa Tomada"',
-      descripcion: 'Análisis de personajes, narrador, simbología. Mínimo 2 carillas.',
-      tipo: ActivityType.ACTIVIDAD,
-      fechaEntrega: dayIso(-3),
-      maxScore: 10,
-    },
-  });
-  const act3 = await prisma.activity.create({
-    data: {
-      docenteId: uid('csilva'),
-      materia: 'Física',
-      titulo: 'Parcial: Cinemática',
-      descripcion: 'Parcial integrador sobre MRU, MRUV y caída libre.',
-      tipo: ActivityType.PARCIAL,
-      fechaEntrega: dayIso(-14),
-      maxScore: 10,
-    },
-  });
-  await prisma.submission.createMany({
-    data: [
-      { activityId: act1.id, estudianteId: uid('fbarrabino'), textContent: 'Adjunto los 10 ejercicios resueltos.', status: SubmissionStatus.CALIFICADO, score: 9, feedback: 'Muy bien resuelto, atención al ejercicio 7.', entregadoEn: dayIso(2), calificadoEn: dayIso(1) },
-      { activityId: act1.id, estudianteId: uid('jperez'),     textContent: 'Resuelto, en el ejercicio 5 tuve dudas.', status: SubmissionStatus.ENTREGADO, entregadoEn: dayIso(1) },
-      { activityId: act2.id, estudianteId: uid('fbarrabino'), textContent: 'El cuento muestra una alegoría del peronismo...', status: SubmissionStatus.ENTREGADO, entregadoEn: dayIso(0) },
+      { userId: uid('jperez'),     titulo: 'Nueva calificación cargada', contenido: 'María López cargó tu nota de Álgebra (2do Trim).' },
+      { userId: uid('pbarrabino'), titulo: 'Nueva calificación de tu hijo', contenido: 'Franco tiene una nueva nota cargada en Álgebra.' },
     ],
   });
 
@@ -312,7 +206,7 @@ async function main() {
   });
 
   console.log('✅ Seed completo. Password de todos los usuarios: 123456');
-  console.log(`   ${SEED_USERS.length} usuarios · ${GRADES.length} notas · ${asistenciasData.length} asistencias · ${pagosData.length} cuotas · ${ANUNCIOS.length} anuncios · 3 actividades · 3 planes`);
+  console.log(`   ${SEED_USERS.length} usuarios · ${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio`);
 }
 
 main()

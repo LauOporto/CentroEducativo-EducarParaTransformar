@@ -5,6 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { notify } from './notifications.routes';
 
 const router = Router();
 
@@ -109,12 +110,10 @@ router.post('/:id/reply', requireAuth, async (req, res, next) => {
     });
 
     if (post.authorId !== req.authUser!.id) {
-      await prisma.notification.create({
-        data: {
-          userId: post.authorId,
-          titulo: 'Nueva respuesta en tu tema',
-          contenido: `"${post.titulo}" tiene una nueva respuesta.`,
-        },
+      await notify({
+        userId: post.authorId,
+        titulo: 'Nueva respuesta en tu tema',
+        contenido: `"${post.titulo}" tiene una nueva respuesta.`,
       });
     }
 
