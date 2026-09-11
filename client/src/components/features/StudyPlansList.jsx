@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { studyPlansService } from '../../services/api/studyPlansService';
 
-export default function StudyPlansList() {
+export default function StudyPlansList({ refreshKey = 0 }) {
   const [planes, setPlanes] = useState(null);
 
   useEffect(() => {
     studyPlansService.list().then((data) => setPlanes(data.exito ? data.planes : []));
-  }, []);
+  }, [refreshKey]);
 
   if (planes === null) return <p className="text-center text-slate-400">Cargando planes…</p>;
   if (planes.length === 0) return <p className="text-center text-slate-400">No hay planes publicados todavía.</p>;

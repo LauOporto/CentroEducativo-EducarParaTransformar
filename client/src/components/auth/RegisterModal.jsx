@@ -2,12 +2,7 @@ import { useState } from 'react';
 import Modal from '../ui/Modal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-
-const CURSOS = [
-  'Inicial — Sala de 3', 'Inicial — Sala de 4', 'Inicial — Sala de 5',
-  'Primaria — 1° grado', 'Primaria — 2° grado', 'Primaria — 3° grado', 'Primaria — 4° grado', 'Primaria — 5° grado', 'Primaria — 6° grado',
-  'Secundaria — 1° año', 'Secundaria — 2° año', 'Secundaria — 3° año', 'Secundaria — 4° año', 'Secundaria — 5° año',
-];
+import { CURSOS } from '../../domain/cursos';
 
 const EMPTY = { tipo: '', nombre: '', email: '', dni: '', curso: '', usuario: '', password: '' };
 

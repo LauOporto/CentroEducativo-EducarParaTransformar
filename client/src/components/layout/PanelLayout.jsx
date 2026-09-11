@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import NotificationBell from '../ui/NotificationBell';
 
-export default function PanelLayout({ title, menuItems, children }) {
+export default function PanelLayout({ title, menuItems, topBar, children }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -60,14 +60,20 @@ export default function PanelLayout({ title, menuItems, children }) {
               >
                 <i className={`fas ${item.icon} w-4 text-center`} />
                 {item.label}
+                {!!item.badge && (
+                  <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">{item.badge}</span>
+                )}
               </NavLink>
             ))}
           </nav>
         </aside>
 
         <main className="flex-1 overflow-y-auto p-8">
-          <div className="mx-auto max-w-5xl rounded-xl border-t-4 border-accent bg-white p-6 shadow-sm dark:bg-slate-900">
-            {children}
+          <div className="mx-auto max-w-5xl">
+            {topBar && <div className="mb-5">{topBar}</div>}
+            <div className="rounded-xl border-t-4 border-accent bg-white p-6 shadow-sm dark:bg-slate-900">
+              {children}
+            </div>
           </div>
         </main>
       </div>

@@ -45,9 +45,12 @@ export function createApp() {
 
   app.use('/api', apiRouter);
 
-  const frontendDir = path.resolve(process.cwd(), '..', 'frontend');
-  app.use(express.static(frontendDir));
-  app.get('/', (_req, res) => res.sendFile(path.join(frontendDir, 'index.html')));
+  const clientDistDir = path.resolve(process.cwd(), '..', 'client', 'dist');
+  app.use(express.static(clientDistDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+    res.sendFile(path.join(clientDistDir, 'index.html'));
+  });
 
   app.use(notFoundHandler);
   app.use(errorHandler);

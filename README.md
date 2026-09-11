@@ -1,13 +1,14 @@
 # Educar para Transformar — Campus Virtual
 
-Plataforma del campus virtual del colegio "Educar para Transformar". Monorepo con backend en Node/Express/Prisma. El frontend (HTML/CSS/JS estático) es servido directamente por el backend — no requiere un servidor de desarrollo aparte.
+Plataforma del campus virtual del colegio "Educar para Transformar". Monorepo con backend en Node/Express/Prisma y frontend en React 18 + Tailwind (Vite). En producción (o corriendo `pnpm run backend:dev` con el cliente ya compilado) el backend sirve directamente el build de `client/` desde un único puerto — no hace falta un servidor aparte para el frontend.
 
 ## Estructura
 
 ```
 .
 ├── backend/    # API REST + servidor (Node + Express + Prisma + PostgreSQL)
-└── frontend/   # Sitio estático (HTML + CSS + JS), servido por el backend
+├── client/     # SPA en React 18 + Tailwind (Vite) — lo que sirve el backend
+└── frontend/   # Sitio estático anterior (HTML + CSS + JS) — en desuso, reemplazado por client/
 ```
 
 ## Requisitos
@@ -24,7 +25,7 @@ Plataforma del campus virtual del colegio "Educar para Transformar". Monorepo co
 pnpm install
 ```
 
-Esto instala las dependencias del workspace `backend` (el `frontend` no tiene `package.json`: son archivos estáticos, no requiere instalación).
+Esto instala las dependencias de `backend` y `client` (el `frontend` viejo no tiene `package.json`: son archivos estáticos que ya no se usan).
 
 ### 2. Configurar variables de entorno
 
@@ -62,17 +63,33 @@ El seed crea usuarios de prueba para cada rol (admin, docentes, estudiantes, pad
 
 ## Correr el programa
 
+Hay dos formas de levantarlo, según qué estés haciendo.
+
+### Opción A — Desarrollando el frontend (con hot-reload)
+
+Dos terminales:
+
 ```bash
-pnpm run backend:dev
+pnpm run backend:dev   # API en http://localhost:4000
+pnpm run client:dev    # Vite en http://localhost:5173, con hot-reload
 ```
 
-Levanta la API con recarga automática (`tsx watch`) y sirve el frontend estático desde el mismo proceso. Abrí:
+Abrí **http://localhost:5173**. Vite tiene un proxy configurado (`client/vite.config.js`) que reenvía `/api` y `/uploads` al backend en el puerto 4000, así que desde el navegador todo se ve como si fuera un solo origen.
 
-- **App:** http://localhost:4000
+### Opción B — Un solo proceso (como en producción)
+
+```bash
+pnpm run client:build   # compila client/ a client/dist
+pnpm run backend:dev    # (o pnpm --filter backend start, con el backend ya compilado)
+```
+
+Abrí **http://localhost:4000** — el backend sirve la API y el build de React desde el mismo puerto y proceso. Usá esta opción para probar el comportamiento real antes de desplegar, o cuando no necesites hot-reload del frontend.
+
+En ambos casos:
 - **Health check:** http://localhost:4000/health
 - **API:** http://localhost:4000/api
 
-`pnpm run dev` (a nivel raíz) hace lo mismo, ya que el único paquete del workspace con script `dev` es `backend`.
+`pnpm run dev` (a nivel raíz) es un alias de `backend:dev`.
 
 ## Otros comandos útiles
 
@@ -82,6 +99,8 @@ pnpm --filter backend build          # compila a backend/dist
 pnpm --filter backend start          # corre la build compilada
 pnpm --filter backend prisma:studio  # explorador visual de la base de datos
 pnpm --filter backend db:reset       # resetea la base y vuelve a correr migraciones + seed
+pnpm run client:build                # compila client/ a client/dist (lo que sirve el backend)
+pnpm --filter client dev             # solo Vite, sin pasar por el script de raíz
 ```
 
 ## Roles
