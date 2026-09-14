@@ -5,6 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
 
 const router = Router();
 
@@ -13,11 +14,14 @@ router.get('/hijos', requireAuth, requireRole(Role.PADRE), async (req, res, next
     const links = await prisma.parentStudentLink.findMany({
       where: { padreId: req.authUser!.id },
       include: {
-        estudiante: { select: { id: true, nombre: true, dni: true, curso: true } },
+        estudiante: { select: { id: true, nombre: true, dni: true, curso: { select: CURSO_SELECT } } },
       },
       orderBy: { id: 'asc' },
     });
-    res.json({ exito: true, hijos: links.map((l) => l.estudiante) });
+    res.json({
+      exito: true,
+      hijos: links.map((l) => ({ ...l.estudiante, curso: formatCursoLabel(l.estudiante.curso) })),
+    });
   } catch (err) {
     next(err);
   }
@@ -42,10 +46,15 @@ router.post('/vincular', requireAuth, requireRole(Role.PADRE), async (req, res, 
       create: { padreId: req.authUser!.id, estudianteId: student.id },
     });
 
+    const estudianteConCurso = await prisma.user.findUnique({
+      where: { id: student.id },
+      select: { id: true, nombre: true, dni: true, curso: { select: CURSO_SELECT } },
+    });
+
     res.json({
       exito: true,
       mensaje: 'Hijo vinculado a tu cuenta.',
-      hijo: { id: student.id, nombre: student.nombre, dni: student.dni, curso: student.curso },
+      hijo: { ...estudianteConCurso, curso: formatCursoLabel(estudianteConCurso?.curso) },
     });
   } catch (err) {
     next(err);

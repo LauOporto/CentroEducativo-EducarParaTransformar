@@ -7,6 +7,7 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, signAccessToken, signRefreshToken, verifyRefreshToken } from '../middleware/auth';
 import { env } from '../config/env';
+import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
 
 const REFRESH_COOKIE = 'et_refresh';
 const refreshCookieOpts = {
@@ -65,6 +66,7 @@ router.post('/register', async (req, res, next) => {
     const role = tipoToRole[data.tipo];
     // Los docentes quedan inactivos hasta que un ADMIN los apruebe.
     const pendingApproval = role === Role.DOCENTE;
+    const cursoId = data.tipo === 'estudiante' ? await resolveCursoId(prisma, data.curso) : null;
     await prisma.user.create({
       data: {
         usuario: data.usuario,
@@ -73,7 +75,8 @@ router.post('/register', async (req, res, next) => {
         password: hash,
         role,
         nombre: data.nombre,
-        curso: data.tipo === 'estudiante' ? data.curso ?? null : null,
+        cursoId,
+        estado: role === Role.ESTUDIANTE ? 'ACTIVO' : null,
         isActive: !pendingApproval,
       },
     });
@@ -185,13 +188,13 @@ router.get('/me', requireAuth, async (req, res, next) => {
         dni: true,
         nombre: true,
         role: true,
-        curso: true,
+        curso: { select: CURSO_SELECT },
       },
     });
     if (!me) throw HttpError.unauthorized('Sesión inválida.');
     res.json({
       exito: true,
-      usuario: { ...me, tipo: roleToTipo[me.role] },
+      usuario: { ...me, curso: formatCursoLabel(me.curso), tipo: roleToTipo[me.role] },
     });
   } catch (err) {
     next(err);

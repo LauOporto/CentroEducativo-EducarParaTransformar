@@ -7,6 +7,7 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { notify } from './notifications.routes';
+import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
 
 const router = Router();
 
@@ -61,10 +62,13 @@ router.get('/users', async (req, res, next) => {
       orderBy: [{ role: 'asc' }, { nombre: 'asc' }],
       select: {
         id: true, usuario: true, email: true, dni: true, nombre: true,
-        role: true, curso: true, isActive: true, createdAt: true,
+        role: true, curso: { select: CURSO_SELECT }, isActive: true, createdAt: true,
       },
     });
-    res.json({ exito: true, usuarios: users });
+    res.json({
+      exito: true,
+      usuarios: users.map((u) => ({ ...u, curso: formatCursoLabel(u.curso) })),
+    });
   } catch (err) { next(err); }
 });
 
@@ -87,6 +91,7 @@ router.post('/users', async (req, res, next) => {
     });
     if (exists) throw HttpError.conflict('Usuario, email o DNI ya existen.');
     const hash = await bcrypt.hash(data.password, 10);
+    const cursoId = data.role === 'ESTUDIANTE' ? await resolveCursoId(prisma, data.curso) : null;
     const user = await prisma.user.create({
       data: {
         usuario: data.usuario,
@@ -94,12 +99,13 @@ router.post('/users', async (req, res, next) => {
         dni: data.dni,
         nombre: data.nombre,
         role: data.role as Role,
-        curso: data.role === 'ESTUDIANTE' ? (data.curso ?? null) : null,
+        cursoId,
+        estado: data.role === 'ESTUDIANTE' ? 'ACTIVO' : null,
         password: hash,
       },
-      select: { id: true, usuario: true, nombre: true, role: true, dni: true, email: true, curso: true, isActive: true },
+      select: { id: true, usuario: true, nombre: true, role: true, dni: true, email: true, curso: { select: CURSO_SELECT }, isActive: true },
     });
-    res.json({ exito: true, usuario: user });
+    res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
   } catch (err) { next(err); }
 });
 
@@ -146,21 +152,21 @@ router.patch('/users/:id', async (req, res, next) => {
     if (data.usuario !== undefined) patch.usuario = data.usuario;
     if (data.dni !== undefined) patch.dni = data.dni;
     if (data.role !== undefined) patch.role = data.role as Role;
-    if (data.curso !== undefined) patch.curso = data.curso;
+    if (data.curso !== undefined) patch.cursoId = await resolveCursoId(prisma, data.curso);
     if (data.isActive !== undefined) patch.isActive = data.isActive;
     if (data.password !== undefined) patch.password = await bcrypt.hash(data.password, 10);
 
     // Si dejó de ser estudiante, limpiar curso
-    if (data.role && data.role !== 'ESTUDIANTE' && patch.curso === undefined) {
-      patch.curso = null;
+    if (data.role && data.role !== 'ESTUDIANTE' && patch.cursoId === undefined) {
+      patch.cursoId = null;
     }
 
     const user = await prisma.user.update({
       where: { id },
       data: patch,
-      select: { id: true, usuario: true, nombre: true, role: true, dni: true, email: true, curso: true, isActive: true },
+      select: { id: true, usuario: true, nombre: true, role: true, dni: true, email: true, curso: { select: CURSO_SELECT }, isActive: true },
     });
-    res.json({ exito: true, usuario: user });
+    res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
   } catch (err) { next(err); }
 });
 
@@ -183,11 +189,14 @@ router.get('/links', async (_req, res, next) => {
     const links = await prisma.parentStudentLink.findMany({
       include: {
         padre: { select: { id: true, nombre: true, dni: true } },
-        estudiante: { select: { id: true, nombre: true, dni: true, curso: true } },
+        estudiante: { select: { id: true, nombre: true, dni: true, curso: { select: CURSO_SELECT } } },
       },
       orderBy: { id: 'desc' },
     });
-    res.json({ exito: true, links });
+    res.json({
+      exito: true,
+      links: links.map((l) => ({ ...l, estudiante: { ...l.estudiante, curso: formatCursoLabel(l.estudiante.curso) } })),
+    });
   } catch (err) { next(err); }
 });
 

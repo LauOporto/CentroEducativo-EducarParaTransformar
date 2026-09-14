@@ -31,6 +31,59 @@ enum ModerationStatus {
   RECHAZADO
 }
 
+enum EstadoAlumno {
+  ACTIVO
+  INACTIVO
+  EGRESADO
+}
+
+// ---- Estructura académica (Módulo Alumnos / Profesores / Administración) ----
+
+model NivelEducativo {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique // Inicial | Primario | Secundario
+
+  cursos Curso[]
+}
+
+model Curso {
+  id      Int  @id @default(autoincrement())
+  nombre  String
+  nivelId Int
+  nivel   NivelEducativo @relation(fields: [nivelId], references: [id], onDelete: Restrict)
+
+  alumnos       User[]
+  materiaCursos MateriaCurso[]
+
+  @@unique([nombre, nivelId])
+  @@index([nivelId])
+}
+
+model Materia {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique
+
+  materiaCursos MateriaCurso[]
+}
+
+// Asignación Profesor–Materia–Curso: una materia puede dictarse en
+// distintos cursos, y en cada curso puede estar a cargo de un profesor
+// distinto.
+model MateriaCurso {
+  id        Int      @id @default(autoincrement())
+  materiaId Int
+  materia   Materia  @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+  cursoId   Int
+  curso     Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  docenteId Int
+  docente   User     @relation("DocenteMateriaCurso", fields: [docenteId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@unique([materiaId, cursoId, docenteId])
+  @@index([cursoId])
+  @@index([docenteId])
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   usuario   String   @unique
@@ -39,9 +92,18 @@ model User {
   password  String
   role      Role
   nombre    String
-  curso     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  // Ficha de alumno (RF-9) — solo se completan para role = ESTUDIANTE
+  legajo          String?       @unique
+  apellido        String?
+  fechaNacimiento DateTime?     @db.Date
+  domicilio       String?
+  telefono        String?
+  estado          EstadoAlumno?
+  cursoId         Int?
+  curso           Curso?        @relation(fields: [cursoId], references: [id], onDelete: SetNull)
 
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")
@@ -53,8 +115,10 @@ model User {
   planesDeEstudio       StudyPlan[]
   forumPosts            ForumPost[]
   forumReplies          ForumReply[]
+  materiasDictadas      MateriaCurso[]      @relation("DocenteMateriaCurso")
 
   @@index([role])
+  @@index([cursoId])
 }
 
 model Grade {
