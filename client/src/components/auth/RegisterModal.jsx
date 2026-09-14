@@ -2,13 +2,14 @@ import { useState } from 'react';
 import Modal from '../ui/Modal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { CURSOS } from '../../domain/cursos';
+import { useCursos } from '../../hooks/useCursos';
 
 const EMPTY = { tipo: '', nombre: '', email: '', dni: '', curso: '', usuario: '', password: '' };
 
 export default function RegisterModal({ open, onClose, onSwitchToLogin }) {
   const { register } = useAuth();
   const toast = useToast();
+  const { cursos } = useCursos();
   const [form, setForm] = useState(EMPTY);
 
   const submit = async (e) => {
@@ -20,7 +21,7 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin }) {
       if (!data.pendingApproval) onSwitchToLogin();
       else onClose();
     } else {
-      toast.error(data.mensaje || 'No se pudo completar el registro.');
+      toast.error(data.message || data.mensaje || 'No se pudo completar el registro.');
     }
   };
 
@@ -70,7 +71,7 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin }) {
             className="col-span-2 rounded-lg border border-slate-300 p-2.5 dark:border-slate-600 dark:bg-slate-800"
           >
             <option value="">Curso / año…</option>
-            {CURSOS.map((c) => <option key={c} value={c}>{c}</option>)}
+            {cursos.map((c) => <option key={c.id} value={c.etiqueta}>{c.etiqueta}</option>)}
           </select>
         )}
         <input

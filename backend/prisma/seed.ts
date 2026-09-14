@@ -7,13 +7,29 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+// ---- Estructura académica: Niveles y Cursos ----
+// Debe coincidir con client/src/domain/cursos.js (catálogo mostrado en
+// los formularios de registro y de alta de usuario).
+const NIVELES = ['Inicial', 'Primaria', 'Secundaria'] as const;
+
+const CURSOS_POR_NIVEL: Record<(typeof NIVELES)[number], string[]> = {
+  Inicial: ['Sala de 3', 'Sala de 4', 'Sala de 5'],
+  Primaria: ['1° grado', '2° grado', '3° grado', '4° grado', '5° grado', '6° grado'],
+  Secundaria: ['1° año', '2° año', '3° año', '4° año', '5° año'],
+};
+
 type UserSeed = {
   usuario: string;
   email: string;
   dni: string;
   nombre: string;
   role: Role;
-  curso: string | null;
+  curso: string | null; // "<Nivel> — <Curso>", resuelto a cursoId al insertar
+  legajo?: string;
+  apellido?: string;
+  fechaNacimiento?: Date;
+  domicilio?: string;
+  telefono?: string;
 };
 
 const SEED_USERS: UserSeed[] = [
@@ -24,14 +40,14 @@ const SEED_USERS: UserSeed[] = [
   { usuario: 'csilva',    email: 'c.silva@et.edu.ar',    dni: '20000003', nombre: 'Carolina Silva',  role: Role.DOCENTE, curso: null },
   { usuario: 'amartinez', email: 'a.martinez@et.edu.ar', dni: '20000004', nombre: 'Andrés Martínez', role: Role.DOCENTE, curso: null },
 
-  { usuario: 'fbarrabino', email: 'f.barrabino@et.edu.ar', dni: '40000001', nombre: 'Franco Barrabino',   role: Role.ESTUDIANTE, curso: 'Secundario — 1er Año' },
-  { usuario: 'jperez',     email: 'j.perez@et.edu.ar',     dni: '40000002', nombre: 'Juan Pérez',         role: Role.ESTUDIANTE, curso: 'Secundario — 1er Año' },
-  { usuario: 'mgomez',     email: 'm.gomez@et.edu.ar',     dni: '40000003', nombre: 'María Gómez',        role: Role.ESTUDIANTE, curso: 'Primario — 6to Grado' },
-  { usuario: 'lferreyra',  email: 'l.ferreyra@et.edu.ar',  dni: '40000004', nombre: 'Lucía Ferreyra',     role: Role.ESTUDIANTE, curso: 'Secundario — 2do Año' },
-  { usuario: 'srodriguez', email: 's.rodriguez@et.edu.ar', dni: '40000005', nombre: 'Sofía Rodríguez',    role: Role.ESTUDIANTE, curso: 'Secundario — 3er Año' },
-  { usuario: 'tmoreno',    email: 't.moreno@et.edu.ar',    dni: '40000006', nombre: 'Tomás Moreno',       role: Role.ESTUDIANTE, curso: 'Primario — 5to Grado' },
-  { usuario: 'vsanchez',   email: 'v.sanchez@et.edu.ar',   dni: '40000007', nombre: 'Valentina Sánchez',  role: Role.ESTUDIANTE, curso: 'Secundario — 1er Año' },
-  { usuario: 'iflores',    email: 'i.flores@et.edu.ar',    dni: '40000008', nombre: 'Ignacio Flores',     role: Role.ESTUDIANTE, curso: 'Primario — 6to Grado' },
+  { usuario: 'fbarrabino', email: 'f.barrabino@et.edu.ar', dni: '40000001', nombre: 'Franco Barrabino',   role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0001', apellido: 'Barrabino', fechaNacimiento: new Date('2011-03-14'), domicilio: 'Av. Sarmiento 1450, Resistencia', telefono: '3624000001' },
+  { usuario: 'jperez',     email: 'j.perez@et.edu.ar',     dni: '40000002', nombre: 'Juan Pérez',         role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0002', apellido: 'Pérez', fechaNacimiento: new Date('2011-06-02'), domicilio: 'Ruta 63 Km 4, Resistencia', telefono: '3624000002' },
+  { usuario: 'mgomez',     email: 'm.gomez@et.edu.ar',     dni: '40000003', nombre: 'María Gómez',        role: Role.ESTUDIANTE, curso: 'Primaria — 6° grado', legajo: 'LEG-0003', apellido: 'Gómez', fechaNacimiento: new Date('2014-01-22'), domicilio: 'Calle 9 de Julio 220, Resistencia', telefono: '3624000003' },
+  { usuario: 'lferreyra',  email: 'l.ferreyra@et.edu.ar',  dni: '40000004', nombre: 'Lucía Ferreyra',     role: Role.ESTUDIANTE, curso: 'Secundaria — 2° año', legajo: 'LEG-0004', apellido: 'Ferreyra', fechaNacimiento: new Date('2010-09-30'), domicilio: 'Av. 25 de Mayo 880, Resistencia', telefono: '3624000004' },
+  { usuario: 'srodriguez', email: 's.rodriguez@et.edu.ar', dni: '40000005', nombre: 'Sofía Rodríguez',    role: Role.ESTUDIANTE, curso: 'Secundaria — 3° año', legajo: 'LEG-0005', apellido: 'Rodríguez', fechaNacimiento: new Date('2009-11-11'), domicilio: 'Calle Pellegrini 340, Resistencia', telefono: '3624000005' },
+  { usuario: 'tmoreno',    email: 't.moreno@et.edu.ar',    dni: '40000006', nombre: 'Tomás Moreno',       role: Role.ESTUDIANTE, curso: 'Primaria — 5° grado', legajo: 'LEG-0006', apellido: 'Moreno', fechaNacimiento: new Date('2015-04-18'), domicilio: 'Calle Necochea 512, Resistencia', telefono: '3624000006' },
+  { usuario: 'vsanchez',   email: 'v.sanchez@et.edu.ar',   dni: '40000007', nombre: 'Valentina Sánchez',  role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0007', apellido: 'Sánchez', fechaNacimiento: new Date('2011-07-25'), domicilio: 'Av. Alberdi 1290, Resistencia', telefono: '3624000007' },
+  { usuario: 'iflores',    email: 'i.flores@et.edu.ar',    dni: '40000008', nombre: 'Ignacio Flores',     role: Role.ESTUDIANTE, curso: 'Primaria — 6° grado', legajo: 'LEG-0008', apellido: 'Flores', fechaNacimiento: new Date('2014-02-09'), domicilio: 'Calle Güemes 78, Resistencia', telefono: '3624000008' },
 
   { usuario: 'pbarrabino', email: 'p.barrabino@et.edu.ar', dni: '30000001', nombre: 'Patricia Barrabino', role: Role.PADRE, curso: null },
   { usuario: 'rperez',     email: 'r.perez@et.edu.ar',     dni: '30000002', nombre: 'Roberto Pérez',      role: Role.PADRE, curso: null },
@@ -101,12 +117,55 @@ const GRADES: GradeSeed[] = [
 async function main() {
   console.log('🌱 Seeding...');
 
+  // ---- Niveles educativos y Cursos ----
+  const nivelIdByNombre = new Map<string, number>();
+  for (const nombre of NIVELES) {
+    const nivel = await prisma.nivelEducativo.upsert({
+      where: { nombre },
+      update: {},
+      create: { nombre },
+    });
+    nivelIdByNombre.set(nombre, nivel.id);
+  }
+
+  const cursoIdByLabel = new Map<string, number>();
+  for (const nivelNombre of NIVELES) {
+    for (const cursoNombre of CURSOS_POR_NIVEL[nivelNombre]) {
+      const curso = await prisma.curso.upsert({
+        where: { nombre_nivelId: { nombre: cursoNombre, nivelId: nivelIdByNombre.get(nivelNombre)! } },
+        update: {},
+        create: { nombre: cursoNombre, nivelId: nivelIdByNombre.get(nivelNombre)! },
+      });
+      cursoIdByLabel.set(`${nivelNombre} — ${cursoNombre}`, curso.id);
+    }
+  }
+
   const passwordHash = await bcrypt.hash('123456', 10);
   for (const u of SEED_USERS) {
+    const cursoId = u.curso ? cursoIdByLabel.get(u.curso) ?? null : null;
+    const ficha = {
+      cursoId,
+      estado: u.role === Role.ESTUDIANTE ? ('ACTIVO' as const) : null,
+      legajo: u.legajo ?? null,
+      apellido: u.apellido ?? null,
+      fechaNacimiento: u.fechaNacimiento ?? null,
+      domicilio: u.domicilio ?? null,
+      telefono: u.telefono ?? null,
+    };
     await prisma.user.upsert({
       where: { usuario: u.usuario },
-      update: {},
-      create: { ...u, password: passwordHash },
+      // Actualiza también a usuarios ya existentes (de seeds anteriores)
+      // para que reciban los campos nuevos de la ficha académica.
+      update: { ...ficha },
+      create: {
+        usuario: u.usuario,
+        email: u.email,
+        dni: u.dni,
+        nombre: u.nombre,
+        role: u.role,
+        password: passwordHash,
+        ...ficha,
+      },
     });
   }
 
@@ -115,6 +174,40 @@ async function main() {
     byUsername.set(u.usuario, u.id);
   }
   const uid = (u: string) => byUsername.get(u)!;
+
+  // ---- Materias y asignación Profesor–Materia–Curso ----
+  // Se derivan de las combinaciones (materia, docente, curso del alumno)
+  // que ya aparecen en GRADES, para que RF-11 tenga datos reales.
+  const cursoLabelByUsername = new Map(SEED_USERS.map((u) => [u.usuario, u.curso]));
+  const materiaIdByNombre = new Map<string, number>();
+  const seenAsignaciones = new Set<string>();
+
+  for (const g of GRADES) {
+    const cursoLabel = cursoLabelByUsername.get(g.estudiante);
+    const cursoId = cursoLabel ? cursoIdByLabel.get(cursoLabel) : undefined;
+    if (!cursoId) continue;
+
+    let materiaId = materiaIdByNombre.get(g.materia);
+    if (!materiaId) {
+      const materia = await prisma.materia.upsert({
+        where: { nombre: g.materia },
+        update: {},
+        create: { nombre: g.materia },
+      });
+      materiaId = materia.id;
+      materiaIdByNombre.set(g.materia, materiaId);
+    }
+
+    const key = `${materiaId}-${cursoId}-${uid(g.docente)}`;
+    if (seenAsignaciones.has(key)) continue;
+    seenAsignaciones.add(key);
+
+    await prisma.materiaCurso.upsert({
+      where: { materiaId_cursoId_docenteId: { materiaId, cursoId, docenteId: uid(g.docente) } },
+      update: {},
+      create: { materiaId, cursoId, docenteId: uid(g.docente) },
+    });
+  }
 
   for (const link of LINKS) {
     for (const hijo of link.hijos) {
@@ -206,7 +299,11 @@ async function main() {
   });
 
   console.log('✅ Seed completo. Password de todos los usuarios: 123456');
-  console.log(`   ${SEED_USERS.length} usuarios · ${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio`);
+  console.log(
+    `   ${SEED_USERS.length} usuarios · ${nivelIdByNombre.size} niveles · ${cursoIdByLabel.size} cursos · ` +
+    `${materiaIdByNombre.size} materias · ${seenAsignaciones.size} asignaciones materia-curso-docente · ` +
+    `${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio`,
+  );
 }
 
 main()

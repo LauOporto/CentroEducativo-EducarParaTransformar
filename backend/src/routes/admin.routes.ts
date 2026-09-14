@@ -7,6 +7,8 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { notify } from './notifications.routes';
+import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
+import { dniSchema, estadoAlumnoSchema, fechaNacimientoSchema, legajoSchema, telefonoSchema } from '../utils/validators';
 
 const router = Router();
 
@@ -61,32 +63,61 @@ router.get('/users', async (req, res, next) => {
       orderBy: [{ role: 'asc' }, { nombre: 'asc' }],
       select: {
         id: true, usuario: true, email: true, dni: true, nombre: true,
-        role: true, curso: true, isActive: true, createdAt: true,
+        role: true, curso: { select: CURSO_SELECT }, isActive: true, createdAt: true,
+        legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
       },
     });
-    res.json({ exito: true, usuarios: users });
+    res.json({
+      exito: true,
+      usuarios: users.map((u) => ({ ...u, curso: formatCursoLabel(u.curso) })),
+    });
   } catch (err) { next(err); }
 });
 
-const createUserSchema = z.object({
-  usuario: z.string().min(3).max(40),
-  email: z.string().email(),
-  dni: z.string().min(6).max(15),
-  nombre: z.string().min(2),
-  role: z.enum(['ESTUDIANTE', 'DOCENTE', 'PADRE', 'ADMIN']),
-  curso: z.string().optional().nullable(),
-  password: z.string().min(6),
-});
+const createUserSchema = z
+  .object({
+    usuario: z.string().min(3).max(40),
+    email: z.string().email(),
+    dni: dniSchema,
+    nombre: z.string().min(2),
+    role: z.enum(['ESTUDIANTE', 'DOCENTE', 'PADRE', 'ADMIN']),
+    curso: z.string().optional().nullable(),
+    password: z.string().min(6),
+    // Ficha de alumno (RF-9) — obligatorios solo cuando role = ESTUDIANTE.
+    legajo: legajoSchema.optional().nullable(),
+    apellido: z.string().trim().min(2).max(60).optional().nullable(),
+    fechaNacimiento: fechaNacimientoSchema.optional().nullable(),
+    domicilio: z.string().trim().min(3).max(200).optional().nullable(),
+    telefono: telefonoSchema.optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role !== 'ESTUDIANTE') return;
+    const requeridos = ['legajo', 'apellido', 'fechaNacimiento', 'domicilio', 'telefono', 'curso'] as const;
+    for (const campo of requeridos) {
+      if (!data[campo]) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: 'Obligatorio para un alumno.' });
+      }
+    }
+  });
 
 router.post('/users', async (req, res, next) => {
   try {
     const data = createUserSchema.parse(req.body);
     const exists = await prisma.user.findFirst({
-      where: { OR: [{ usuario: data.usuario }, { email: data.email }, { dni: data.dni }] },
+      where: {
+        OR: [
+          { usuario: data.usuario },
+          { email: data.email },
+          { dni: data.dni },
+          ...(data.legajo ? [{ legajo: data.legajo }] : []),
+        ],
+      },
       select: { id: true },
     });
-    if (exists) throw HttpError.conflict('Usuario, email o DNI ya existen.');
+    if (exists) throw HttpError.conflict('Usuario, email, DNI o legajo ya existen.');
     const hash = await bcrypt.hash(data.password, 10);
+    const esAlumno = data.role === 'ESTUDIANTE';
+    const cursoId = esAlumno ? await resolveCursoId(prisma, data.curso) : null;
     const user = await prisma.user.create({
       data: {
         usuario: data.usuario,
@@ -94,12 +125,22 @@ router.post('/users', async (req, res, next) => {
         dni: data.dni,
         nombre: data.nombre,
         role: data.role as Role,
-        curso: data.role === 'ESTUDIANTE' ? (data.curso ?? null) : null,
+        cursoId,
+        estado: esAlumno ? 'ACTIVO' : null,
+        legajo: esAlumno ? data.legajo : null,
+        apellido: esAlumno ? data.apellido : null,
+        fechaNacimiento: esAlumno ? data.fechaNacimiento : null,
+        domicilio: esAlumno ? data.domicilio : null,
+        telefono: esAlumno ? data.telefono : null,
         password: hash,
       },
-      select: { id: true, usuario: true, nombre: true, role: true, dni: true, email: true, curso: true, isActive: true },
+      select: {
+        id: true, usuario: true, nombre: true, role: true, dni: true, email: true,
+        curso: { select: CURSO_SELECT }, isActive: true,
+        legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
+      },
     });
-    res.json({ exito: true, usuario: user });
+    res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
   } catch (err) { next(err); }
 });
 
@@ -107,11 +148,17 @@ const updateUserSchema = z.object({
   nombre: z.string().min(2).optional(),
   email: z.string().email().optional(),
   usuario: z.string().min(3).max(40).optional(),
-  dni: z.string().min(6).max(15).optional(),
+  dni: dniSchema.optional(),
   role: z.enum(['ESTUDIANTE', 'DOCENTE', 'PADRE', 'ADMIN']).optional(),
   curso: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   password: z.string().min(6).optional(),
+  legajo: legajoSchema.nullable().optional(),
+  apellido: z.string().trim().min(2).max(60).nullable().optional(),
+  fechaNacimiento: fechaNacimientoSchema.nullable().optional(),
+  domicilio: z.string().trim().min(3).max(200).nullable().optional(),
+  telefono: telefonoSchema.nullable().optional(),
+  estado: estadoAlumnoSchema.nullable().optional(),
 });
 
 router.patch('/users/:id', async (req, res, next) => {
@@ -120,7 +167,7 @@ router.patch('/users/:id', async (req, res, next) => {
     const data = updateUserSchema.parse(req.body);
 
     // Verificar colisiones en campos únicos
-    if (data.usuario || data.email || data.dni) {
+    if (data.usuario || data.email || data.dni || data.legajo) {
       const conflicting = await prisma.user.findFirst({
         where: {
           NOT: { id },
@@ -128,14 +175,16 @@ router.patch('/users/:id', async (req, res, next) => {
             ...(data.usuario ? [{ usuario: data.usuario }] : []),
             ...(data.email ? [{ email: data.email }] : []),
             ...(data.dni ? [{ dni: data.dni }] : []),
+            ...(data.legajo ? [{ legajo: data.legajo }] : []),
           ],
         },
-        select: { id: true, usuario: true, email: true, dni: true },
+        select: { id: true, usuario: true, email: true, dni: true, legajo: true },
       });
       if (conflicting) {
         if (conflicting.usuario === data.usuario) throw HttpError.conflict('Ese nombre de usuario ya está tomado.');
         if (conflicting.email === data.email) throw HttpError.conflict('Ese email ya está registrado.');
         if (conflicting.dni === data.dni) throw HttpError.conflict('Ese DNI ya está registrado.');
+        if (conflicting.legajo === data.legajo) throw HttpError.conflict('Ese legajo ya está registrado.');
         throw HttpError.conflict('Conflicto con otro usuario.');
       }
     }
@@ -146,21 +195,34 @@ router.patch('/users/:id', async (req, res, next) => {
     if (data.usuario !== undefined) patch.usuario = data.usuario;
     if (data.dni !== undefined) patch.dni = data.dni;
     if (data.role !== undefined) patch.role = data.role as Role;
-    if (data.curso !== undefined) patch.curso = data.curso;
+    if (data.curso !== undefined) patch.cursoId = await resolveCursoId(prisma, data.curso);
     if (data.isActive !== undefined) patch.isActive = data.isActive;
     if (data.password !== undefined) patch.password = await bcrypt.hash(data.password, 10);
+    if (data.legajo !== undefined) patch.legajo = data.legajo;
+    if (data.apellido !== undefined) patch.apellido = data.apellido;
+    if (data.fechaNacimiento !== undefined) patch.fechaNacimiento = data.fechaNacimiento;
+    if (data.domicilio !== undefined) patch.domicilio = data.domicilio;
+    if (data.telefono !== undefined) patch.telefono = data.telefono;
+    if (data.estado !== undefined) patch.estado = data.estado;
 
-    // Si dejó de ser estudiante, limpiar curso
-    if (data.role && data.role !== 'ESTUDIANTE' && patch.curso === undefined) {
-      patch.curso = null;
+    // Si dejó de ser estudiante, limpiar curso y estado (la ficha de
+    // alumno queda huérfana; legajo/apellido/etc. se conservan como
+    // historial y no bloquean nada porque dejan de ser obligatorios).
+    if (data.role && data.role !== 'ESTUDIANTE') {
+      if (patch.cursoId === undefined) patch.cursoId = null;
+      if (patch.estado === undefined) patch.estado = null;
     }
 
     const user = await prisma.user.update({
       where: { id },
       data: patch,
-      select: { id: true, usuario: true, nombre: true, role: true, dni: true, email: true, curso: true, isActive: true },
+      select: {
+        id: true, usuario: true, nombre: true, role: true, dni: true, email: true,
+        curso: { select: CURSO_SELECT }, isActive: true,
+        legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
+      },
     });
-    res.json({ exito: true, usuario: user });
+    res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
   } catch (err) { next(err); }
 });
 
@@ -168,7 +230,12 @@ router.delete('/users/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (id === req.authUser!.id) throw HttpError.badRequest('No podés borrar tu propia cuenta.');
-    await prisma.user.update({ where: { id }, data: { isActive: false } });
+    const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+    if (!target) throw HttpError.notFound('Usuario no encontrado.');
+    await prisma.user.update({
+      where: { id },
+      data: { isActive: false, estado: target.role === Role.ESTUDIANTE ? 'INACTIVO' : undefined },
+    });
     res.json({ exito: true, mensaje: 'Usuario desactivado.' });
   } catch (err) { next(err); }
 });
@@ -183,11 +250,14 @@ router.get('/links', async (_req, res, next) => {
     const links = await prisma.parentStudentLink.findMany({
       include: {
         padre: { select: { id: true, nombre: true, dni: true } },
-        estudiante: { select: { id: true, nombre: true, dni: true, curso: true } },
+        estudiante: { select: { id: true, nombre: true, dni: true, curso: { select: CURSO_SELECT } } },
       },
       orderBy: { id: 'desc' },
     });
-    res.json({ exito: true, links });
+    res.json({
+      exito: true,
+      links: links.map((l) => ({ ...l, estudiante: { ...l.estudiante, curso: formatCursoLabel(l.estudiante.curso) } })),
+    });
   } catch (err) { next(err); }
 });
 

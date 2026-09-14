@@ -3,6 +3,7 @@ import RequireRole from './RequireRole';
 import LandingPage from '../pages/public/LandingPage';
 
 import EstudianteShell from '../pages/estudiante/EstudianteShell';
+import PerfilPage from '../pages/estudiante/PerfilPage';
 import BoletinPage from '../pages/estudiante/BoletinPage';
 import PlanesPage from '../pages/estudiante/PlanesPage';
 import AsistenciasPage from '../pages/estudiante/AsistenciasPage';
@@ -27,6 +28,7 @@ import InscripcionesPage from '../pages/admin/InscripcionesPage';
 import OpinionesPage from '../pages/admin/OpinionesPage';
 import EmpleoPage from '../pages/admin/EmpleoPage';
 import VinculosPage from '../pages/admin/VinculosPage';
+import AcademicoPage from '../pages/admin/AcademicoPage';
 
 export default function AppRoutes() {
   return (
@@ -42,6 +44,7 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<BoletinPage />} />
+        <Route path="perfil" element={<PerfilPage />} />
         <Route path="planes" element={<PlanesPage />} />
         <Route path="asistencias" element={<AsistenciasPage />} />
         <Route path="foros" element={<ForosPage />} />
@@ -87,6 +90,7 @@ export default function AppRoutes() {
         <Route path="opiniones" element={<OpinionesPage />} />
         <Route path="empleo" element={<EmpleoPage />} />
         <Route path="vinculos" element={<VinculosPage />} />
+        <Route path="academico" element={<AcademicoPage />} />
       </Route>
     </Routes>
   );

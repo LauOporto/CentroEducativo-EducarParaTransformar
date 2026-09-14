@@ -41,6 +41,7 @@ export default function UsuariosPage() {
     { key: 'nombre', label: 'Nombre' },
     { key: 'role', label: 'Rol', render: (u) => ROLE_LABEL[u.role] },
     { key: 'dni', label: 'DNI' },
+    { key: 'legajo', label: 'Legajo', render: (u) => u.legajo || '—' },
     { key: 'email', label: 'Email' },
     { key: 'curso', label: 'Curso', render: (u) => u.curso || '—' },
     {

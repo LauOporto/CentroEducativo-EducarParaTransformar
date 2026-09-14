@@ -1,8 +1,7 @@
-export const CURSOS = [
-  'Inicial — Sala de 3', 'Inicial — Sala de 4', 'Inicial — Sala de 5',
-  'Primaria — 1° grado', 'Primaria — 2° grado', 'Primaria — 3° grado', 'Primaria — 4° grado', 'Primaria — 5° grado', 'Primaria — 6° grado',
-  'Secundaria — 1° año', 'Secundaria — 2° año', 'Secundaria — 3° año', 'Secundaria — 4° año', 'Secundaria — 5° año',
-];
+// El catálogo de cursos ya no es una lista estática: sale de la base de
+// datos vía GET /api/cursos (ver hooks/useCursos.js), para que lo que
+// el Administrador da de alta en Académico se refleje en los
+// formularios de registro y de alta de usuario sin tocar código.
 
 export const ROLES_ADMIN = [
   { value: 'ESTUDIANTE', label: 'Estudiante' },

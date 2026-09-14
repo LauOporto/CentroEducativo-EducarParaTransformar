@@ -1,0 +1,338 @@
+================================================================================
+CHECKLIST DE REQUERIMIENTOS — PROYECTO "TRANSFORMAR PARA EDUCAR"
+Equipo FLCODE (Barrabino / Oporto)
+Contraste entre el Plan de Trabajo (documento) y el estado real del código
+Fecha de análisis: 14/09/2026
+================================================================================
+
+NOTA IMPORTANTE SOBRE EL REPOSITORIO
+--------------------------------------------------------------------------------
+El repo contiene DOS implementaciones:
+  - backend/ + client/   -> Implementación ACTIVA (Node/Express + Prisma +
+    PostgreSQL + React 18/Vite/Tailwind). Es la que se evaluó a continuación.
+  - frontend/            -> Sitio estático anterior, EN DESUSO según el propio
+    README del proyecto (HTML/CSS/JS plano, reemplazado por client/).
+
+El sistema actualmente construido es un "campus virtual académico" (notas,
+asistencia, foros, planes de estudio, sitio institucional) pero NO incluye
+ningún módulo de deportes, transporte ni comedor, que el Plan de Trabajo
+considera un pilar central del proyecto (RF-14, RF-18 a RF-22, RF-30 a RF-33).
+
+Leyenda de estado:
+  [OK]     Implementado y cumple lo pedido
+  [PARCIAL] Implementado de forma incompleta o distinta a lo especificado
+  [FALTA]  No implementado / no encontrado en el código
+
+================================================================================
+REQUERIMIENTOS FUNCIONALES (RF-1 a RF-34)
+================================================================================
+
+--- Módulo Público e Institucional ---
+
+[OK]      RF-1  Menú público con 5 secciones (Quiénes Somos, Niveles
+          Educativos, Bienestar Estudiantil, Noticias, Empleo).
+          Evidencia: client/src/components/landing/{Nosotros,Niveles,
+          Bienestar,Noticias,EmpleoForm}.jsx
+
+[PARCIAL] RF-2  Formulario público de opiniones (4 campos: Nombre,
+          Identificación, Comentario, Valoración 1-5).
+          Evidencia: modelo Opinion (nombre?, rol, texto, rating, status) +
+          OpinionesSection.jsx / StarRating.jsx.
+          Falta: no existe el campo "Identificación" (DNI u otro dato
+          identificatorio del que opina).
+
+[OK]      RF-3  Formulario "Solicitud de Inscripción" (7 campos).
+          Evidencia: modelo Inscription (nombreTutor, emailTutor,
+          telefonoTutor, nombreEstudiante, nivel, curso, mensaje) +
+          InscripcionForm.jsx -> POST /api/public/inscriptions.
+
+[OK]      RF-4.1 Registro de usuario (6 campos + campo extra "curso" para
+          Estudiante).
+          Evidencia: modelo User + RegisterModal.jsx -> POST /api/auth/register.
+
+[PARCIAL] RF-4.2 Login (2 campos + campo extra "curso/año" para Estudiante).
+          Evidencia: POST /api/auth/login funciona con usuario/contraseña.
+          No se confirmó el campo extra de curso/año en el login del
+          estudiante (no aplicaría con el modelo actual, ya que el curso
+          ya queda fijado en el registro).
+
+[OK]      RF-5  Redirección post-login con menú según rol.
+          Evidencia: client/src/app/AppRoutes.jsx + RequireRole.jsx,
+          Shells por rol (EstudianteShell, DocenteShell, PadreShell,
+          AdminShell).
+
+[FALTA]   RF-6  Header con 4 elementos de contacto (teléfono, email,
+          WhatsApp, redes sociales).
+          Evidencia: PublicHeader.jsx y Footer.jsx solo muestran teléfono
+          y email hardcodeados. No hay botón de WhatsApp ni enlaces a
+          redes sociales.
+
+[PARCIAL] RF-7  Vista pública de Galería de imágenes.
+          Evidencia: Galeria.jsx existe y se ve, pero son 4 URLs de
+          Unsplash hardcodeadas en el componente. No hay carga ni
+          administración real de imágenes desde el panel Admin.
+
+--- Módulo Alumnos ---
+
+[OK]      RF-8  Docente carga calificaciones (materia, instancia, nota 1-10,
+          fecha); alumno/padre consultan en solo lectura.
+          Evidencia: modelo Grade + validación Zod (nota entero 1-10) en
+          backend/src/routes/grades.routes.ts; CalificacionesPage.jsx
+          (docente) y BoletinPage.jsx (alumno/padre).
+
+[FALTA]   RF-9  Ficha de alumno con 11 campos obligatorios (Legajo, DNI,
+          Nombre, Apellido, Fecha de nacimiento, Domicilio, Teléfono,
+          Correo, Nivel educativo, Curso, Estado).
+          Evidencia: el modelo User solo tiene id, usuario, email, dni,
+          password, role, nombre, curso (string libre), isActive.
+          Faltan: Legajo, Apellido separado, Fecha de nacimiento,
+          Domicilio, Teléfono, Nivel educativo como entidad propia.
+
+[FALTA]   RF-10 Un alumno pertenece a un único curso, y un curso a un
+          único nivel educativo.
+          Evidencia: no existen entidades "Curso" ni "Nivel educativo"
+          relacionales; "curso" es un campo de texto libre en User, sin
+          validación estructural de niveles.
+
+[PARCIAL] RF-11 Consultar, por alumno, el listado de materias cursadas con
+          su profesor a cargo.
+          Evidencia: existe de forma indirecta vía Grade/ForumPost
+          (materia como texto libre asociada a un docenteId), y
+          MateriasPage.jsx (panel Padre). No hay una entidad formal de
+          "asignación materia-curso-profesor" que sustente el listado.
+
+--- Módulo Profesores ---
+
+[FALTA]   RF-12 Ficha de profesor con 8 campos obligatorios (Legajo, DNI,
+          Nombre, Apellido, Especialidad, Correo, Teléfono, Estado).
+          Evidencia: el modelo User (rol DOCENTE) no tiene Legajo,
+          Especialidad, Apellido ni Teléfono.
+
+[FALTA]   RF-13 Asignar a un profesor una o varias materias, indicando
+          curso(s) y nivel(es), permitiendo distintos profesores por curso
+          para una misma materia.
+          Evidencia: no existe entidad de asignación profesor-materia-curso;
+          solo se infiere informalmente por los registros que un docente
+          cargó (Grade, StudyPlan, ForumPost).
+
+[FALTA]   RF-14 Asignar a cada actividad deportiva un único profesor
+          responsable.
+          Evidencia: no existe módulo de deportes en ninguna parte del
+          código.
+
+--- Módulo Administración ---
+
+[FALTA]   RF-15 ABM de niveles educativos, cursos, materias, deportes,
+          horarios, recorridos de transporte y turnos de comedor.
+          Evidencia: el panel Admin solo tiene ABM de Usuarios y de
+          vínculos padre-hijo; no existen las entidades mencionadas.
+
+[OK]      RF-16 Admin gestiona usuarios y permisos según 4 roles
+          (Alumno, Padre/Tutor, Profesor, Administrador).
+          Evidencia: enum Role (ESTUDIANTE/DOCENTE/PADRE/ADMIN),
+          UsuariosPage.jsx, middleware requireRole en backend/src/middleware/auth.ts.
+
+[OK]      RF-17 Admin registra y resuelve (aprueba/rechaza) solicitudes de
+          inscripción del formulario público.
+          Evidencia: backend/src/routes/moderation.routes.ts +
+          InscripcionesPage.jsx (panel Admin).
+
+--- Inscripciones y reglas de negocio (deportes / transporte / comedor) ---
+
+[FALTA]   RF-18 Máximo 2 deportes simultáneos por alumno.
+[FALTA]   RF-19 Inscripción a 1 de 4 recorridos de transporte.
+[FALTA]   RF-20 Inscripción al servicio de comedor.
+[FALTA]   RF-21 Validación de solapamiento horario entre deportes.
+[FALTA]   RF-22 Rechazo de inscripciones duplicadas (deporte/transporte/comedor).
+          Evidencia (para los 5 anteriores): búsqueda exhaustiva en todo
+          el repo — no existe modelo, ruta ni componente relacionado con
+          deportes, transporte o comedor. Es el bloque de funcionalidad
+          más grande pendiente del proyecto.
+
+[PARCIAL] RF-23 Padre/Tutor consulta, solo de sus hijos, los profesores
+          por materia y los deportes en que participan.
+          Evidencia: MateriasPage.jsx (panel Padre) cubre la parte de
+          materias/profesores; la parte de deportes no existe (ver RF-14/18).
+
+[FALTA]   RF-24 Padre/Tutor con uno o varios hijos inscribe a su(s) hijo(s)
+          al cursado.
+          Evidencia: solo existe vinculación padre-hijo por DNI
+          (POST /api/parent/vincular), no una funcionalidad de
+          "inscripción al cursado" en sí.
+
+--- Módulo de Reportes ---
+
+[FALTA]   RF-25 Reporte "Por Alumno" (curso, materias, profesores,
+          deportes, horarios, transporte, comedor).
+[FALTA]   RF-26 Reporte "Por Docente" (cursos a cargo por nivel y horarios).
+[FALTA]   RF-27 Reporte "Listado de alumnos por curso".
+[FALTA]   RF-28 Reporte "Listado de alumnos por materia".
+[FALTA]   RF-29 Reporte "Listado de docentes por nivel educativo".
+[FALTA]   RF-30 Reporte "Listado de alumnos por deporte".
+[FALTA]   RF-31 Reporte "Listado de alumnos por deporte y por nivel".
+[FALTA]   RF-32 Reporte "Listado de alumnos por deporte, nivel, horario y
+          profesor a cargo".
+[FALTA]   RF-33 Reporte "Listado de alumnos por recorrido de transporte".
+          Evidencia (para los 9 reportes): solo existe
+          GET /api/admin/stats con 6 contadores simples, mostrados como
+          tiles en DashboardPage.jsx. No hay reportes parametrizables,
+          filtrables ni exportables (no hay librerías de export como
+          jspdf/xlsx en client/package.json).
+
+--- Desafío ---
+
+[PARCIAL] RF-34 Asistencia diaria en 4 estados (Presente, Ausente, Tarde,
+          Justificado) + notificación automática al tutor tras 3
+          inasistencias no justificadas consecutivas.
+          Evidencia: el modelo Attendance sí soporta los 4 estados
+          (enum), pero la pantalla de carga del docente
+          (AsistenciaPage.jsx) solo ofrece 3 opciones en la UI
+          (presente/ausente/tarde) — "Justificado" solo es alcanzable
+          llamando la API directamente.
+          Falta: no existe en ningún archivo del backend el cálculo de
+          inasistencias consecutivas ni el disparo de notificación
+          automática asociado (aunque sí existe un sistema genérico de
+          notificaciones reutilizable: notifications.routes.ts).
+
+================================================================================
+REQUERIMIENTOS NO FUNCIONALES (RNF-35 a RNF-47)
+================================================================================
+
+[OK]      RNF-35 Diseño responsivo de 320px a 1920px.
+          Evidencia: Tailwind CSS con clases sm:/md:/lg: en los
+          componentes (PublicHeader, InscripcionForm, etc.).
+
+[FALTA]   RNF-36 Carga de la página de inicio en <= 3s con conexión de
+          10 Mbps.
+          Estado: no medido/no verificado — no hay evidencia de pruebas
+          de performance en el repo.
+
+[FALTA]   RNF-37 Funcionamiento sin errores en las 2 últimas versiones de
+          Chrome, Firefox y Edge.
+          Estado: no verificado — no hay pruebas de compatibilidad
+          cross-browser documentadas.
+
+[OK]      RNF-38 Cifrado de contraseñas con bcrypt.
+          Evidencia: bcrypt.hash(...,10) / bcrypt.compare en
+          auth.routes.ts y admin.routes.ts.
+
+[FALTA]   RNF-39 Sesión con token de expiración máx. 24h e invalidación
+          tras 30 min de inactividad.
+          Evidencia: el access token expira a los 15 min, PERO el
+          cliente (httpClient.js) lo renueva automáticamente en
+          silencio mediante una cookie de refresh de 7 días. En la
+          práctica la sesión no se invalida por inactividad —
+          contradice lo pedido en RNF-39.
+
+[PARCIAL] RNF-40 Validación de formularios: obligatorios, email con
+          formato válido, DNI 7-8 dígitos, teléfono solo dígitos,
+          longitud de campos.
+          Evidencia: Zod valida obligatoriedad y formato de email
+          correctamente en el backend.
+          Falta: el backend NO valida el formato de DNI (solo
+          longitud de string genérica z.string().min(6).max(15), sin
+          regex numérica de 7-8 dígitos) ni el de teléfono (solo
+          longitud, sin exigir solo dígitos). Esas reglas solo existen
+          como atributo HTML "pattern" en el frontend (RegisterModal.jsx),
+          por lo que se pueden evadir llamando la API directamente.
+
+[OK]      RNF-41 Persistencia server-side de usuarios, inscripciones,
+          calificaciones y comunicados.
+          Evidencia: PostgreSQL + Prisma, con migraciones versionadas en
+          backend/prisma/migrations/.
+
+[PARCIAL] RNF-42 Usuario sin experiencia completa tareas principales en
+          <5 min con mensajes de ayuda visibles.
+          Evidencia: hay feedback visual (toasts) en la mayoría de los
+          formularios (ToastContext.jsx), pero no hay una prueba de
+          usabilidad documentada que confirme el tiempo de 5 minutos.
+
+[PARCIAL] RNF-43 Modificaciones de datos de alumno/profesor se reflejan
+          de inmediato en todos los módulos, sin duplicados.
+          Evidencia: al ser una única base relacional (fuente única de
+          verdad) el diseño lo favorece, pero como los datos de la
+          ficha del alumno/profesor están incompletos (ver RF-9/RF-12),
+          esto no puede verificarse plenamente sobre los campos que
+          exige el enunciado.
+
+[OK]      RNF-44 Restricción de acceso por rol autenticado.
+          Evidencia: requireAuth + requireRole(...) en
+          backend/src/middleware/auth.ts, aplicado por ruta en todos
+          los routers.
+
+[FALTA]   RNF-45 Reportes de hasta 500 registros en <= 5s.
+          Estado: no aplica / no verificable — no existen los reportes
+          gerenciales sobre los que se debería medir (ver RF-25 a RF-33).
+
+[FALTA]   RNF-46 Log de auditoría (usuario, fecha y hora de cada alta,
+          modificación o baja sobre alumnos, profesores e inscripciones).
+          Evidencia: solo existe backend/src/utils/logger.ts, un logger
+          de consola para errores no controlados, sin persistencia ni
+          trazabilidad de acciones por usuario.
+
+[PARCIAL] RNF-47 Cumplimiento de la Ley 25.326: acceso a datos sensibles
+          (DNI, domicilio, teléfono, email) restringido a Admin y al
+          Padre/Tutor correspondiente.
+          Evidencia: existe restricción de acceso por rol (RNF-44) y
+          las rutas de grades/attendance ya filtran por vínculo
+          padre-hijo, pero no hay una política explícita ni revisión
+          documentada de cumplimiento legal sobre datos sensibles, y
+          varios de esos campos (domicilio, teléfono) ni siquiera
+          existen todavía en el modelo de datos (ver RF-9/RF-12).
+
+================================================================================
+RESUMEN NUMÉRICO
+================================================================================
+
+Requerimientos Funcionales (34 totales, contando RF-4.1/RF-4.2 como RF-4):
+  OK      : 7   (RF-1, RF-3, RF-4, RF-5, RF-8, RF-16, RF-17)
+  PARCIAL : 5   (RF-2, RF-7, RF-11, RF-23, RF-34)
+  FALTA   : 22  (RF-6, RF-9, RF-10, RF-12 a RF-15, RF-18 a RF-22, RF-24
+                a RF-33)
+
+Requerimientos No Funcionales (13 totales):
+  OK      : 4   (RNF-35, RNF-38, RNF-41, RNF-44)
+  PARCIAL : 4   (RNF-40, RNF-42, RNF-43, RNF-47)
+  FALTA   : 5   (RNF-36, RNF-37, RNF-39, RNF-45, RNF-46)
+
+================================================================================
+BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
+================================================================================
+
+1. Módulo de Deportes / Transporte / Comedor completo (RF-14, RF-18 a
+   RF-22, RF-23 parcial, parte de RF-25/30-33). No existe absolutamente
+   nada de esto todavía: ni modelos, ni rutas, ni pantallas.
+
+2. Entidades académicas estructurales: Curso, Nivel Educativo y Materia
+   como tablas relacionales propias (hoy son texto libre). De esto
+   dependen RF-9, RF-10, RF-11, RF-12, RF-13 y buena parte de los
+   reportes.
+
+3. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
+   contadores en un dashboard; faltan los 9 reportes filtrables
+   exigidos, y por lo tanto tampoco se puede verificar RNF-45.
+
+4. Fichas completas de Alumno y Profesor (RF-9, RF-12): faltan varios
+   campos obligatorios (Legajo, Apellido, Fecha de nacimiento,
+   Domicilio, Teléfono, Especialidad, Nivel educativo).
+
+5. Notificación automática por 3 inasistencias consecutivas (parte de
+   RF-34) — el patrón Factory Method previsto en el diseño (Notificacion
+   / NotificacionFactory) tampoco está implementado en el código, aunque
+   sí hay un sistema de notificaciones genérico reutilizable como base.
+
+6. Auditoría (RNF-46) y ajustes de seguridad de sesión (RNF-39): falta
+   una tabla/registro de auditoría y limitar la sesión por inactividad
+   (hoy se renueva indefinidamente vía refresh token).
+
+7. Validaciones de servidor más estrictas (RNF-40): DNI (7-8 dígitos) y
+   teléfono (solo dígitos) hoy solo se validan en el frontend, no en el
+   backend — se pueden evadir llamando la API directamente.
+
+8. Gestión real de contenido público: WhatsApp/redes sociales en el
+   header (RF-6), galería administrable (RF-7) y noticias administrables
+   desde el panel Admin (hoy son datos hardcodeados en el frontend).
+
+================================================================================
+Fin del documento.
+================================================================================

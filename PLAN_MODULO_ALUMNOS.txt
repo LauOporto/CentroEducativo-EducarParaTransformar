@@ -1,0 +1,472 @@
+================================================================================
+PLAN DE TRABAJO — MÓDULO ALUMNOS
+Proyecto: Centro Educativo "Educar para Transformar" (Equipo FLCODE)
+Base: TP-Metodologia-2 (TUP 2026) + estado real del código (backend/ + client/)
+Fecha: 14/09/2026
+================================================================================
+
+--------------------------------------------------------------------------------
+1. QUÉ PIDE EL TP SOBRE EL MÓDULO ALUMNOS (resumen normativo)
+--------------------------------------------------------------------------------
+
+Ficha de alumno — campos mínimos obligatorios:
+  1. Legajo
+  2. DNI
+  3. Nombre
+  4. Apellido
+  5. Fecha de nacimiento
+  6. Domicilio
+  7. Teléfono
+  8. Correo electrónico
+  9. Nivel educativo
+  10. Curso
+  11. Estado del alumno
+
+Reglas de negocio directamente relacionadas con este módulo:
+  - Un alumno pertenece a un único curso.
+  - Un curso pertenece a un único nivel educativo.
+  - Un alumno puede cursar diferentes materias.
+  - Una materia puede ser dictada por distintos profesores según el curso.
+  - Consultar, para cada alumno, sus materias y el profesor a cargo de cada una.
+  - Un padre puede tener uno o varios hijos asociados.
+  - Un padre solo puede consultar/gestionar información de SUS hijos:
+      · Profesores por materia
+      · Deportes en que participa (depende del módulo de inscripciones,
+        fuera de este alcance)
+      · Inscribir a su hijo al cursado
+
+--------------------------------------------------------------------------------
+2. QUÉ HAY HOY EN EL CÓDIGO (diagnóstico)
+--------------------------------------------------------------------------------
+
+Backend (Prisma — backend/prisma/schema.prisma):
+  - Un único modelo `User` con role ESTUDIANTE/DOCENTE/PADRE/ADMIN.
+  - Campos de alumno hoy disponibles: id, usuario, email, dni, nombre,
+    curso (STRING LIBRE), isActive.
+  - NO existen como entidades: Legajo, Apellido (separado de "nombre"),
+    Fecha de nacimiento, Domicilio, Teléfono, Estado (solo hay isActive
+    boolean, no un estado con más semántica), Nivel educativo, Curso
+    (relacional), Materia.
+  - `Grade.materia` es también un string libre (no FK a una entidad Materia).
+
+  Rutas relacionadas:
+  - GET /api/students (backend/src/routes/students.routes.ts) — devuelve
+    id, nombre, dni, curso de alumnos activos. Es de solo lectura y muy
+    básico, pensado para que un docente elija a quién cargar una nota.
+  - Admin ABM de alumnos: NO existe endpoint específico — se maneja con
+    el ABM genérico de usuarios (POST/PATCH/DELETE /api/admin/users) en
+    backend/src/routes/admin.routes.ts, que solo administra los campos
+    básicos de User (no legajo, apellido, domicilio, etc.).
+  - GET /api/parent/hijos (backend/src/routes/parent.routes.ts) — lista
+    los hijos vinculados a un padre.
+
+Frontend (client/):
+  - client/src/domain/materias.js — catálogo de materias y horarios
+    HARDCODEADO en el frontend (no viene de la base de datos, no está
+    asociado a curso/profesor real).
+  - client/src/pages/padre/MateriasPage.jsx — hoy muestra un resumen de
+    NOTAS por materia (vía Grade), no la relación materia→profesor real.
+  - client/src/pages/admin/UsuariosPage.jsx — ABM genérico de usuarios,
+    sin ficha extendida de alumno.
+  - NO existe ninguna página de "Mi perfil / Mi ficha" para el alumno.
+  - NO existe ninguna página de "materias que cursa con profesor a
+    cargo" respaldada por datos reales.
+  - NO existe funcionalidad de "inscribir a mi hijo al cursado" desde
+    el panel Padre (solo existe "vincular" un hijo por DNI).
+
+Conclusión del diagnóstico:
+  El módulo Alumnos hoy es, en esencia, un CRUD de usuarios con rol
+  ESTUDIANTE y muy pocos campos. Los datos estructurales de los que
+  depende (Nivel, Curso, Materia, y la asignación Profesor–Materia–
+  Curso) NO EXISTEN todavía en ninguna parte del sistema. Esto también
+  bloquea, aguas abajo, al Módulo Profesores y a varios reportes
+  (Listado de alumnos por curso, por materia, etc.), así que conviene
+  resolverlo ahora, con una mirada que sirva a los tres módulos.
+
+--------------------------------------------------------------------------------
+3. POR DÓNDE ARRANCAR (recomendación)
+--------------------------------------------------------------------------------
+
+ARRANCAR POR EL MODELO DE DATOS, no por las pantallas.
+
+Motivo: la ficha completa del alumno (RF-9), la relación alumno-curso-
+nivel (RF-10) y el listado de materias con su profesor (RF-11) son todas
+consultas que dependen de que existan las entidades Nivel Educativo,
+Curso y Materia como tablas relacionales con sus relaciones bien
+definidas. Si se empieza por el frontend o por agregar campos sueltos
+a User, se termina reescribiendo la pantalla cuando el modelo cambie.
+
+Orden recomendado dentro del propio modelo de datos:
+  1º Nivel Educativo (Inicial / Primario / Secundario) — es la base de
+     todo lo demás (RF-10 depende de esto).
+  2º Curso (pertenece a un Nivel) — depende de (1).
+  3º Materia + asignación Materia-Curso-Profesor — depende de (2) y del
+     universo de Users con rol DOCENTE (ya existe).
+  4º Ficha extendida del alumno (legajo, apellido, fecha de nacimiento,
+     domicilio, teléfono, estado) + relación a Curso por FK en lugar de
+     string libre.
+
+Con eso resuelto, backend (endpoints) y frontend (pantallas) se apoyan
+en un modelo estable y no hay que retrabajar.
+
+--------------------------------------------------------------------------------
+4. DECISIONES DE DISEÑO A TOMAR ANTES DE CODEAR
+--------------------------------------------------------------------------------
+
+a) ¿Ficha de alumno como extensión de `User` o como tabla aparte?
+   Recomendado: agregar los campos nuevos directamente a `User` como
+   columnas NULLABLE (igual que ya se hizo con `curso`), reservados
+   para role=ESTUDIANTE. Es el patrón que el código ya usa y evita una
+   relación 1:1 adicional. Alternativa más "pura" (tabla `Alumno`
+   separada) es más correcta a largo plazo, pero implica más cambios en
+   auth/JWT y en todas las queries actuales que hacen `prisma.user...`.
+   Para el alcance del TP, extender User es más rápido y consistente.
+
+b) `curso` pasa de ser String a ser una FK (`cursoId -> Curso.id`).
+   Esto es un cambio de tipo de columna: requiere migración de datos
+   (mapear los strings de curso existentes al Curso real, o resetear
+   los datos de seed).
+
+c) ¿Qué pasa con `Grade.materia` y `client/src/domain/materias.js`?
+   Para que RF-11 muestre el profesor real a cargo de cada materia, la
+   fuente de verdad de "materias" tiene que salir de la base de datos
+   (tabla Materia + MateriaCurso), no del archivo estático. Decidir si
+   esto se resuelve ahora (dentro de Módulo Alumnos, porque RF-11 vive
+   ahí) o se pospone al Módulo Profesores — se recomienda resolverlo
+   ahora en conjunto, ya que RF-11 no se puede cumplir sin eso.
+
+d) Campo "Estado del alumno": ¿reemplaza a `isActive` o convive con él?
+   Recomendado: un enum `EstadoAlumno` (ACTIVO / INACTIVO / EGRESADO)
+   más expresivo que el booleano actual, usado solo para role=ESTUDIANTE;
+   `isActive` se mantiene para el resto de los roles (login habilitado).
+
+--------------------------------------------------------------------------------
+5. PLAN DE TRABAJO POR FASES
+--------------------------------------------------------------------------------
+
+FASE 1 — Modelo de datos (backend/prisma/schema.prisma)  ***COMPLETADA (14/09/2026)***
+  Tareas:
+  [x] 1.1 Crear modelo `NivelEducativo` (id, nombre único: Inicial/
+      Primaria/Secundaria).
+  [x] 1.2 Crear modelo `Curso` (id, nombre, nivelId -> NivelEducativo,
+      @@unique([nombre, nivelId])).
+  [x] 1.3 Crear modelo `Materia` (id, nombre único).
+  [x] 1.4 Crear modelo `MateriaCurso` (id, materiaId, cursoId, docenteId,
+      @@unique([materiaId, cursoId, docenteId])) — implementa "una
+      materia puede ser dictada por distintos profesores según el
+      curso" (RF-13/RF-11).
+  [x] 1.5 Modificar `User`: se agregaron `legajo String? @unique`,
+      `apellido String?`, `fechaNacimiento DateTime? @db.Date`,
+      `domicilio String?`, `telefono String?`, `estado EstadoAlumno?`
+      (nuevo enum ACTIVO/INACTIVO/EGRESADO), y se reemplazó
+      `curso String?` por `cursoId Int?` con relación a `Curso`.
+  [ ] 1.6 Migrar `Grade.materia` (string) a `Grade.materiaId` (FK a
+      Materia) — DEFERIDO deliberadamente (ver nota abajo).
+  [x] 1.7 Migración generada y aplicada:
+      backend/prisma/migrations/20260914141459_modulo_alumnos_academico/
+      (se generó con `prisma migrate diff` + `prisma migrate deploy`
+      porque `migrate dev` requiere confirmación interactiva que no
+      está disponible en este entorno; el resultado es equivalente).
+  [x] 1.8 `backend/prisma/seed.ts` actualizado: crea los 3 niveles y 14
+      cursos (mismo catálogo que client/src/domain/cursos.js), 14
+      materias y 20 asignaciones Materia-Curso-Profesor derivadas de las
+      notas de ejemplo, y completa legajo/apellido/fecha de nacimiento/
+      domicilio/teléfono/estado para los 8 estudiantes de prueba.
+
+  NOTA — compatibilidad hacia atrás (decisión tomada durante la
+  implementación, no estaba en el plan original):
+  Para no romper en el momento el registro de usuarios (RF-4.1) ni el
+  ABM de usuarios del panel Admin (que hoy envían/muestran el curso
+  como el string "Nivel — Curso", ej. "Secundaria — 1° año"), se creó
+  un helper backend/src/utils/cursoLabel.ts que:
+    - Al escribir: recibe ese mismo string, busca el Curso real por
+      (nombre, nivel) y guarda `cursoId` (rechaza con 400 si no existe
+      ese curso en la base — ya no se puede escribir un curso
+      inventado).
+    - Al leer: arma de nuevo el string "Nivel — Curso" a partir de la
+      relación, para que las pantallas actuales seguir funcionando sin
+      cambios.
+  Se actualizaron con este helper: backend/src/routes/auth.routes.ts
+  (register y /me), admin.routes.ts (users y links), students.routes.ts
+  y parent.routes.ts. Esto es intencionalmente una capa de transición:
+  en la Fase 3 (frontend) el input de texto libre se reemplaza por un
+  <select> que consuma /api/cursos y se elimina este shim en favor de
+  mandar `cursoId` directamente.
+
+  Sobre el punto 1.6 (Grade.materia): se decidió NO migrarlo en esta
+  fase porque impacta Calificaciones, Asistencias, Foro y Planes de
+  Estudio (todos usan `materia` como string libre), que son de otros
+  módulos y ya funcionan hoy. La nueva tabla `Materia`/`MateriaCurso`
+  ya cubre lo que el Módulo Alumnos necesita (RF-11, listar materias
+  con profesor a cargo) sin tocar esos módulos. Revisar este punto
+  cuando se trabaje el Módulo Profesores/Calificaciones.
+
+  Verificación realizada: `tsc --noEmit` sin errores; servidor levantado
+  localmente y probado con curl — login, /api/auth/me, /api/admin/users,
+  /api/students y /api/parent/hijos devuelven el curso correctamente
+  formateado; alta de usuario con curso válido funciona, con curso
+  inexistente se rechaza con 400 y mensaje claro.
+
+FASE 2 — Backend: endpoints  ***COMPLETADA (14/09/2026)***
+
+  DESVÍO respecto al plan original (decisión tomada al implementar):
+  en vez de duplicar la creación/edición de usuarios en un nuevo
+  POST/PATCH/DELETE /api/students, se extendió el ABM que YA existía en
+  `backend/src/routes/admin.routes.ts` (POST/PATCH/DELETE /api/admin/
+  users) con los campos de la ficha de alumno. Motivo: alta y edición de
+  un alumno son, en el fondo, alta y edición de un `User` — tener dos
+  endpoints distintos para lo mismo hubiera violado el principio de
+  "única fuente de verdad" que el propio Plan de Trabajo define. El
+  router `/api/students` quedó dedicado a CONSULTA (ficha, listado,
+  materias) y a la auto-edición limitada del propio alumno.
+
+  [x] 2.1 `backend/src/routes/students.routes.ts` (reescrito):
+      - GET  /api/students             lista básica (DOCENTE/ADMIN, ya
+        existía, se le agregó `legajo`).
+      - GET  /api/students/:id         ficha completa. Permisos: ADMIN/
+        DOCENTE sin restricción; ESTUDIANTE solo la propia (403 si no);
+        PADRE solo si hay `ParentStudentLink` con ese alumno (403 si no).
+      - GET  /api/students/:id/materias  materias que cursa + profesor a
+        cargo (join Curso -> MateriaCurso -> Materia/User). Cubre RF-11.
+        Mismos permisos que arriba. Si el alumno no tiene curso asignado
+        todavía, devuelve lista vacía con un mensaje explicativo.
+      - PATCH /api/students/me         el propio alumno actualiza SOLO
+        email/telefono/domicilio (nunca legajo, curso, estado ni DNI —
+        esos tres últimos ni siquiera están en el schema de este
+        endpoint, así que aunque los mande, Zod los descarta).
+  [x] 2.2 Alta/edición/baja completa de alumno — en `admin.routes.ts`
+      (ver desvío arriba), no en un router nuevo:
+      - POST /api/admin/users   ahora acepta legajo, apellido,
+        fechaNacimiento, domicilio, telefono; son OBLIGATORIOS cuando
+        `role=ESTUDIANTE` (validado con `.superRefine`, devuelve 400 con
+        el detalle de qué campo falta).
+      - PATCH /api/admin/users/:id   mismos campos, opcionales, más
+        `estado` (ACTIVO/INACTIVO/EGRESADO). Si cambia a legajo
+        duplicado, devuelve 409 con mensaje claro (mismo patrón que ya
+        existía para usuario/email/dni).
+      - DELETE /api/admin/users/:id   baja lógica: además de
+        `isActive=false` (como ya hacía), ahora también pone
+        `estado=INACTIVO` cuando el usuario es ESTUDIANTE.
+  [x] 2.2b Nuevos routers de catálogo académico, montados en
+      `backend/src/routes/index.ts`:
+      - backend/src/routes/niveles.routes.ts   GET (cualquier logueado),
+        POST/PATCH/DELETE (ADMIN). DELETE rechaza con 409 si el nivel
+        tiene cursos (evita perder la jerarquía Nivel->Curso sin darse
+        cuenta).
+      - backend/src/routes/cursos.routes.ts    GET **público** (sin
+        login — lo necesita el formulario de registro, RF-4.1, que se
+        completa antes de tener cuenta), POST/PATCH/DELETE (ADMIN).
+        DELETE rechaza con 409 si el curso tiene alumnos o materias
+        asignadas.
+      - backend/src/routes/materias.routes.ts  GET (cualquier logueado),
+        POST/PATCH/DELETE de Materia (ADMIN); más el sub-recurso de
+        asignación Profesor-Materia-Curso: GET /asignaciones (ADMIN ve
+        todas y puede filtrar, DOCENTE solo ve las suyas — se ignora
+        cualquier `docenteId` que mande en la query), POST
+        /asignaciones y DELETE /asignaciones/:id (ADMIN). Esto ya cubre
+        el backend de RF-13, aunque su pantalla en el panel Profesores
+        queda para cuando se trabaje ese módulo.
+  [x] 2.3 Validación con Zod (`backend/src/utils/validators.ts`, nuevo):
+      `dniSchema` (regex `^\d{7,8}$`), `telefonoSchema` (regex
+      `^\d{6,20}$`, solo dígitos), `fechaNacimientoSchema` (no futura),
+      `legajoSchema`, `estadoAlumnoSchema`. Se aplicó `dniSchema` no
+      solo en los endpoints nuevos sino también en el registro público
+      (`auth.routes.ts`) y en `admin.routes.ts`, porque es el mismo
+      campo `User.dni` en los tres — dejarlo validado distinto según la
+      puerta de entrada hubiera sido inconsistente. RNF-40 queda así
+      resuelto para DNI y teléfono (quedan pendientes de RNF-40 los
+      otros campos genéricos que ya estaban bien, sin cambios).
+  [x] 2.4 Reglas de acceso (RNF-44/RNF-47) implementadas en
+      `assertCanAccessStudent()` dentro de students.routes.ts, reusada
+      por la ficha y por el listado de materias.
+  [x] 2.5 `backend/src/routes/parent.routes.ts` +
+      `POST /api/parent/hijos/:id/inscribir-cursado` (RF-24). Regla de
+      negocio agregada (no estaba explícita en el plan, se definió al
+      implementar): solo funciona si el alumno TODAVÍA no tiene curso
+      asignado; si ya tiene, devuelve 409 pidiendo que el cambio se
+      gestione por Dirección/Admin. Evita que un padre reasigne a su
+      hijo de curso libremente a mitad de año.
+
+  Verificación realizada: `tsc --noEmit` sin errores; servidor levantado
+  localmente y probado end-to-end con curl (login por cada rol, ficha
+  vista por admin/docente/propio alumno/padre vinculado, 403 al padre
+  no vinculado, RF-11 con datos reales del seed, auto-edición de
+  contacto con validación de teléfono, alta de alumno con y sin ficha
+  completa, DNI inválido rechazado, flujo completo de inscribir-cursado
+  —incluye el caso "ya tiene curso, rechazado"—, y CRUD + guardas de
+  borrado de niveles/cursos/materias/asignaciones). Los usuarios y
+  entidades de prueba creados durante las pruebas se desactivaron o se
+  borraron al terminar; no quedaron residuos en la base.
+
+FASE 3 — Frontend: servicios y pantallas  ***COMPLETADA (14/09/2026)***
+
+  DESVÍO respecto al plan original: 3.6 (eliminar domain/materias.js)
+  NO se hizo. Al revisar el código se encontró que ese archivo lo usa
+  `CalificacionesPage.jsx` (docente) para el selector de materia al
+  cargar una nota — es un catálogo estático de materias+horario por
+  nivel, un problema del Módulo Profesores/Calificaciones, no del
+  Módulo Alumnos. Tocarlo hubiera sido scope creep. Lo que sí se
+  reemplazó por datos reales de la API fue `domain/cursos.js` (el
+  `CURSOS` estático), que si pertenecía de lleno a este módulo.
+
+  [x] 3.1 `client/src/services/api/studentsService.js` — agregado
+      get(id), getMaterias(id), updateMe(payload). (create/update/
+      remove NO se agregaron acá: ver la nota de "desvío" en la Fase 2 —
+      esas operaciones ya viven en adminService, que ya las tenía).
+  [x] 3.2 Nuevos servicios: cursosService.js, nivelesService.js,
+      materiasService.js (list/create/update/remove + asignaciones).
+  [x] Nuevo hook `client/src/hooks/useCursos.js` — reemplaza el antiguo
+      `CURSOS` estático de domain/cursos.js con datos reales de
+      GET /api/cursos.
+  [x] 3.3 Panel Admin:
+      - `UserForm.jsx` y `EditUserModal.jsx` ahora piden la ficha
+        completa (legajo, apellido, fecha de nacimiento, teléfono,
+        domicilio) cuando el rol es ESTUDIANTE, con el `<select>` de
+        curso poblado desde la API. `UsuariosPage.jsx` muestra la
+        columna Legajo.
+      - Nueva página `client/src/pages/admin/AcademicoPage.jsx` con 4
+        pestañas (Niveles / Cursos / Materias / Materia→Curso→Profesor),
+        alta+edición+baja para las tres primeras, alta+baja para la
+        asignación (edición de una asignación no tiene mucho sentido:
+        se borra y se crea de nuevo). Ruta `/admin/academico`, ítem de
+        menú "Académico" en `AdminShell.jsx`.
+  [x] 3.4 Panel Alumno: nueva página `PerfilPage.jsx`
+      (`/estudiante/perfil`, ítem de menú "Mi Perfil") con la ficha de
+      solo lectura a la izquierda, la lista de materias+profesor
+      (RF-11) a la derecha, y un formulario para que el alumno edite su
+      propio email/teléfono/domicilio (PATCH /api/students/me).
+  [x] 3.5 Panel Padre (`MateriasPage.jsx`): se agregó la sección
+      "Materias que está cursando" (RF-11, vía
+      GET /api/students/:id/materias) arriba del resumen de notas que
+      ya existía (que se conservó tal cual). Si el hijo seleccionado
+      todavía no tiene curso, se muestra el formulario "Inscribir al
+      cursado" (RF-24) en su lugar. Para esto se extendió el contexto
+      que `PadreShell.jsx` pasa por `<Outlet>` (antes solo `hijoId`,
+      ahora también `hijos` y `refrescarHijos`) para no tener que
+      volver a pedir la lista de hijos en cada página.
+  [ ] 3.6 (deliberadamente NO hecho — ver desvío arriba).
+
+  Corrección de un bug preexistente encontrado de paso: varios
+  `toast.error(res.mensaje || ...)` en el frontend leían un campo
+  `mensaje` que el backend nunca envía en sus respuestas de error (el
+  campo real es `message` — ver `errorHandler.ts`), así que los
+  mensajes de error específicos del servidor (ej. "Ese legajo ya está
+  registrado") nunca se mostraban, solo el texto genérico de fallback.
+  Se corrigió en los archivos tocados en esta fase: UserForm.jsx,
+  EditUserModal.jsx, RegisterModal.jsx, PerfilPage.jsx, MateriasPage.jsx
+  (padre). No se tocaron otros archivos con el mismo problema que están
+  fuera del alcance de este módulo.
+
+  Verificación realizada: `vite build` sin errores. Se probó en un
+  navegador real (Chrome, con el backend y el frontend corriendo en
+  local) el flujo completo:
+    - Admin: alta de alumno con ficha completa (con curso real elegido
+      de la API), búsqueda, edición (incluido cambiar el estado a
+      Egresado y confirmar que el `<select>` de curso precarga bien el
+      valor actual), las 4 pestañas de Académico con datos reales del
+      seed.
+    - Alumno (fbarrabino): "Mi Perfil" muestra la ficha y las 6 materias
+      de Secundaria 1er año con su profesor real; edición de teléfono
+      guardada correctamente.
+    - Padre (pbarrabino): con un hijo que ya tenía curso (Franco) se ve
+      la lista de materias+profesor; con un hijo sin curso (creado para
+      la prueba) aparece el formulario de inscripción, y al inscribirlo
+      la vista cambia sola (sin recargar la página) a mostrar el curso
+      nuevo y sus materias.
+  Se revisó la consola del navegador: sin errores propios del código
+  (solo un breve corte de red coincidente con un reinicio de la sesión
+  de herramientas, y los warnings de "future flags" de React Router que
+  ya traía el proyecto). Todos los usuarios y vínculos creados para las
+  pruebas quedaron desactivados o eliminados al terminar.
+
+FASE 4 — Reportes que dependen de este modelo (si el tiempo lo permite)
+  4.1 "Listado de alumnos por curso" (RF-27) y "Listado de alumnos por
+      materia" (RF-28) ya quedan desbloqueados por el modelo de la
+      Fase 1 — son el primer par de reportes lógicos para implementar
+      apenas esté el modelo, porque no dependen de deportes/transporte.
+
+FASE 5 — Pruebas
+  5.1 Backend: pruebas de los endpoints nuevos con Postman/Jest —
+      casos: alta de alumno con legajo duplicado (debe rechazar), DNI
+      con formato inválido (debe rechazar), padre consultando hijo no
+      vinculado (debe dar 403), alumno editando su propio curso (debe
+      dar 403).
+  5.2 Frontend: probar manualmente el flujo ABM completo desde el panel
+      Admin, y la vista de materias desde el panel Alumno y Padre.
+
+--------------------------------------------------------------------------------
+6. QUÉ FALTA IMPLEMENTAR (checklist puntual del Módulo Alumnos)
+--------------------------------------------------------------------------------
+
+MODELO DE DATOS
+  [x] Entidad NivelEducativo
+  [x] Entidad Curso (FK a NivelEducativo)
+  [x] Entidad Materia
+  [x] Entidad/tabla de asignación Materia-Curso-Profesor (MateriaCurso)
+  [x] Campos de ficha en User: legajo, apellido, fechaNacimiento,
+      domicilio, telefono, estado (enum)
+  [x] Migrar `curso` de string libre a FK `cursoId -> Curso` (con shim
+      de compatibilidad en la API mientras no se actualice el frontend)
+  [ ] (Opcional/recomendado, deferido) Migrar `Grade.materia` de string
+      a FK — pertenece a Módulo Profesores/Calificaciones
+
+BACKEND
+  [x] Endpoints CRUD completos de alumno (ficha completa) — alta/edición
+      en admin.routes.ts (POST/PATCH /api/admin/users), consulta en
+      students.routes.ts (GET /api/students/:id)
+  [x] Endpoint de materias-por-alumno con profesor a cargo (RF-11) —
+      GET /api/students/:id/materias
+  [x] Endpoints CRUD de Nivel/Curso/Materia (para Admin) — niveles.
+      routes.ts, cursos.routes.ts, materias.routes.ts (+ asignaciones
+      Materia-Curso-Profesor, base de RF-13)
+  [x] Endpoint de inscripción al cursado desde el panel Padre (RF-24) —
+      POST /api/parent/hijos/:id/inscribir-cursado
+  [x] Validación de formato de DNI (7-8 dígitos) y teléfono (solo
+      dígitos) en el backend — backend/src/utils/validators.ts,
+      aplicado en auth.routes.ts, admin.routes.ts y students.routes.ts
+  [x] Reglas de autorización específicas: padre solo ve a sus hijos
+      vinculados, alumno solo su propia ficha y solo puede editar
+      contacto (nunca curso/estado/legajo)
+
+FRONTEND
+  [x] Página "Mi perfil" para el Alumno (ficha + edición de contacto) —
+      client/src/pages/estudiante/PerfilPage.jsx
+  [x] Ficha completa de alumno en el ABM de usuarios del panel Admin —
+      UserForm.jsx / EditUserModal.jsx (curso real vía API)
+  [x] Página de gestión de Niveles/Cursos/Materias en el panel Admin —
+      client/src/pages/admin/AcademicoPage.jsx (incluye asignación
+      Materia-Curso-Profesor)
+  [x] Vista de materias con profesor real (RF-11) en Alumno y Padre —
+      client/src/components/features/MateriasCursoList.jsx. (El
+      catálogo estático que sí seguía en uso,
+      client/src/domain/materias.js, es del selector de materia del
+      docente al cargar notas — no de este módulo; se dejó intacto)
+  [x] Acción "Inscribir a mi hijo al cursado" en el panel Padre —
+      dentro de MateriasPage.jsx (padre), cuando el hijo no tiene curso
+
+FUERA DE ALCANCE DE ESTE MÓDULO (pertenecen a otros módulos, pero
+dependen de lo mismo o están relacionados — para tener presente):
+  - Módulo de deportes/transporte/comedor y sus reglas de negocio
+    (máx. 2 deportes, sin superposición horaria, sin duplicados) — es
+    el bloque más grande pendiente del proyecto en general, no de este
+    módulo puntual.
+  - Reportes RF-25, RF-26, RF-29 a RF-33 (dependen también de deportes/
+    transporte o del módulo Profesores).
+  - Notificación automática por 3 inasistencias consecutivas (RF-34) —
+    pertenece al módulo de asistencias, no al de alumnos en sí.
+
+--------------------------------------------------------------------------------
+7. RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+
+Empezar por: backend/prisma/schema.prisma — agregar NivelEducativo,
+Curso, Materia y la ficha extendida del alumno, en ese orden, y correr
+la migración. Recién después construir los endpoints (Fase 2) y por
+último las pantallas (Fase 3). Este orden evita retrabajo, porque tanto
+el Módulo Profesores como varios reportes (RF-27, RF-28, y en el futuro
+RF-25/26/29) van a apoyarse en las mismas tablas de Nivel/Curso/Materia
+que se creen acá.
+
+================================================================================
+Fin del documento.
+================================================================================
