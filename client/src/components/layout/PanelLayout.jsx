@@ -27,13 +27,18 @@ export default function PanelLayout({ title, menuItems, topBar, children }) {
               <i className="fas fa-user-circle text-lg" /> {user?.nombre}
               <i className="fas fa-chevron-down text-xs" />
             </button>
-            <div className="invisible absolute right-0 z-20 mt-2 w-44 rounded-lg border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 dark:border-slate-700 dark:bg-slate-800">
-              <button
-                onClick={logout}
-                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:hover:bg-slate-700"
-              >
-                <i className="fas fa-sign-out-alt" /> Cerrar sesión
-              </button>
+            {/* pt-2 (en vez de mt-2 en el panel) evita el "hueco" entre el botón y el
+                menú: ese padding sigue siendo parte del área hoverable, así el mouse
+                no pierde el :hover al bajar desde el botón hasta "Cerrar sesión". */}
+            <div className="invisible absolute right-0 top-full z-20 w-44 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
+              <div className="rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                <button
+                  onClick={logout}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+                >
+                  <i className="fas fa-sign-out-alt" /> Cerrar sesión
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -298,29 +298,86 @@ FASE 2 — Backend: endpoints  ***COMPLETADA (14/09/2026)***
   entidades de prueba creados durante las pruebas se desactivaron o se
   borraron al terminar; no quedaron residuos en la base.
 
-FASE 3 — Frontend: servicios y pantallas
-  3.1 `client/src/services/api/studentsService.js` — agregar
-      get(id), create, update, remove, getMaterias(id).
-  3.2 Nuevos servicios `nivelesService.js`, `cursosService.js`,
-      `materiasService.js`.
-  3.3 Panel Admin:
-      - Reemplazar/ampliar `UsuariosPage.jsx` (o crear
-        `client/src/pages/admin/AlumnosPage.jsx` dedicada) con ABM de
-        ficha completa de alumno (los 11 campos).
-      - Nueva página `client/src/pages/admin/AcademicoPage.jsx` (o 3
-        pestañas) para ABM de Niveles, Cursos y Materias, y para asignar
-        Materia-Curso-Profesor.
-  3.4 Panel Alumno: nueva página "Mi perfil" (ficha de solo lectura) y
-      actualizar la vista de materias para que use
-      GET /api/students/:id/materias en lugar de
-      `client/src/domain/materias.js`.
-  3.5 Panel Padre (`MateriasPage.jsx`): mismo cambio que 3.4 pero para
-      el hijo seleccionado (usar `hijoId` del `HijoSelector.jsx` ya
-      existente). Agregar acción "Inscribir al cursado" si el hijo
-      todavía no tiene curso asignado.
-  3.6 Eliminar `client/src/domain/materias.js` una vez migrada toda
-      referencia (o dejarlo solo como fallback de datos de horario si
-      MateriaCurso no llega a modelar horarios en esta iteración).
+FASE 3 — Frontend: servicios y pantallas  ***COMPLETADA (14/09/2026)***
+
+  DESVÍO respecto al plan original: 3.6 (eliminar domain/materias.js)
+  NO se hizo. Al revisar el código se encontró que ese archivo lo usa
+  `CalificacionesPage.jsx` (docente) para el selector de materia al
+  cargar una nota — es un catálogo estático de materias+horario por
+  nivel, un problema del Módulo Profesores/Calificaciones, no del
+  Módulo Alumnos. Tocarlo hubiera sido scope creep. Lo que sí se
+  reemplazó por datos reales de la API fue `domain/cursos.js` (el
+  `CURSOS` estático), que si pertenecía de lleno a este módulo.
+
+  [x] 3.1 `client/src/services/api/studentsService.js` — agregado
+      get(id), getMaterias(id), updateMe(payload). (create/update/
+      remove NO se agregaron acá: ver la nota de "desvío" en la Fase 2 —
+      esas operaciones ya viven en adminService, que ya las tenía).
+  [x] 3.2 Nuevos servicios: cursosService.js, nivelesService.js,
+      materiasService.js (list/create/update/remove + asignaciones).
+  [x] Nuevo hook `client/src/hooks/useCursos.js` — reemplaza el antiguo
+      `CURSOS` estático de domain/cursos.js con datos reales de
+      GET /api/cursos.
+  [x] 3.3 Panel Admin:
+      - `UserForm.jsx` y `EditUserModal.jsx` ahora piden la ficha
+        completa (legajo, apellido, fecha de nacimiento, teléfono,
+        domicilio) cuando el rol es ESTUDIANTE, con el `<select>` de
+        curso poblado desde la API. `UsuariosPage.jsx` muestra la
+        columna Legajo.
+      - Nueva página `client/src/pages/admin/AcademicoPage.jsx` con 4
+        pestañas (Niveles / Cursos / Materias / Materia→Curso→Profesor),
+        alta+edición+baja para las tres primeras, alta+baja para la
+        asignación (edición de una asignación no tiene mucho sentido:
+        se borra y se crea de nuevo). Ruta `/admin/academico`, ítem de
+        menú "Académico" en `AdminShell.jsx`.
+  [x] 3.4 Panel Alumno: nueva página `PerfilPage.jsx`
+      (`/estudiante/perfil`, ítem de menú "Mi Perfil") con la ficha de
+      solo lectura a la izquierda, la lista de materias+profesor
+      (RF-11) a la derecha, y un formulario para que el alumno edite su
+      propio email/teléfono/domicilio (PATCH /api/students/me).
+  [x] 3.5 Panel Padre (`MateriasPage.jsx`): se agregó la sección
+      "Materias que está cursando" (RF-11, vía
+      GET /api/students/:id/materias) arriba del resumen de notas que
+      ya existía (que se conservó tal cual). Si el hijo seleccionado
+      todavía no tiene curso, se muestra el formulario "Inscribir al
+      cursado" (RF-24) en su lugar. Para esto se extendió el contexto
+      que `PadreShell.jsx` pasa por `<Outlet>` (antes solo `hijoId`,
+      ahora también `hijos` y `refrescarHijos`) para no tener que
+      volver a pedir la lista de hijos en cada página.
+  [ ] 3.6 (deliberadamente NO hecho — ver desvío arriba).
+
+  Corrección de un bug preexistente encontrado de paso: varios
+  `toast.error(res.mensaje || ...)` en el frontend leían un campo
+  `mensaje` que el backend nunca envía en sus respuestas de error (el
+  campo real es `message` — ver `errorHandler.ts`), así que los
+  mensajes de error específicos del servidor (ej. "Ese legajo ya está
+  registrado") nunca se mostraban, solo el texto genérico de fallback.
+  Se corrigió en los archivos tocados en esta fase: UserForm.jsx,
+  EditUserModal.jsx, RegisterModal.jsx, PerfilPage.jsx, MateriasPage.jsx
+  (padre). No se tocaron otros archivos con el mismo problema que están
+  fuera del alcance de este módulo.
+
+  Verificación realizada: `vite build` sin errores. Se probó en un
+  navegador real (Chrome, con el backend y el frontend corriendo en
+  local) el flujo completo:
+    - Admin: alta de alumno con ficha completa (con curso real elegido
+      de la API), búsqueda, edición (incluido cambiar el estado a
+      Egresado y confirmar que el `<select>` de curso precarga bien el
+      valor actual), las 4 pestañas de Académico con datos reales del
+      seed.
+    - Alumno (fbarrabino): "Mi Perfil" muestra la ficha y las 6 materias
+      de Secundaria 1er año con su profesor real; edición de teléfono
+      guardada correctamente.
+    - Padre (pbarrabino): con un hijo que ya tenía curso (Franco) se ve
+      la lista de materias+profesor; con un hijo sin curso (creado para
+      la prueba) aparece el formulario de inscripción, y al inscribirlo
+      la vista cambia sola (sin recargar la página) a mostrar el curso
+      nuevo y sus materias.
+  Se revisó la consola del navegador: sin errores propios del código
+  (solo un breve corte de red coincidente con un reinicio de la sesión
+  de herramientas, y los warnings de "future flags" de React Router que
+  ya traía el proyecto). Todos los usuarios y vínculos creados para las
+  pruebas quedaron desactivados o eliminados al terminar.
 
 FASE 4 — Reportes que dependen de este modelo (si el tiempo lo permite)
   4.1 "Listado de alumnos por curso" (RF-27) y "Listado de alumnos por
@@ -372,12 +429,20 @@ BACKEND
       contacto (nunca curso/estado/legajo)
 
 FRONTEND
-  [ ] Página "Mi perfil" para el Alumno (ficha de solo lectura)
-  [ ] Página de gestión de alumnos con ficha completa en el panel Admin
-  [ ] Página de gestión de Niveles/Cursos/Materias en el panel Admin
-  [ ] Vista de materias con profesor real (reemplazar
-      client/src/domain/materias.js hardcodeado)
-  [ ] Acción "Inscribir a mi hijo al cursado" en el panel Padre
+  [x] Página "Mi perfil" para el Alumno (ficha + edición de contacto) —
+      client/src/pages/estudiante/PerfilPage.jsx
+  [x] Ficha completa de alumno en el ABM de usuarios del panel Admin —
+      UserForm.jsx / EditUserModal.jsx (curso real vía API)
+  [x] Página de gestión de Niveles/Cursos/Materias en el panel Admin —
+      client/src/pages/admin/AcademicoPage.jsx (incluye asignación
+      Materia-Curso-Profesor)
+  [x] Vista de materias con profesor real (RF-11) en Alumno y Padre —
+      client/src/components/features/MateriasCursoList.jsx. (El
+      catálogo estático que sí seguía en uso,
+      client/src/domain/materias.js, es del selector de materia del
+      docente al cargar notas — no de este módulo; se dejó intacto)
+  [x] Acción "Inscribir a mi hijo al cursado" en el panel Padre —
+      dentro de MateriasPage.jsx (padre), cuando el hijo no tiene curso
 
 FUERA DE ALCANCE DE ESTE MÓDULO (pertenecen a otros módulos, pero
 dependen de lo mismo o están relacionados — para tener presente):

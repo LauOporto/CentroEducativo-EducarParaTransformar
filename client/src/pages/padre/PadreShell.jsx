@@ -31,7 +31,7 @@ export default function PadreShell() {
       menuItems={MENU}
       topBar={<HijoSelector hijos={hijos} hijoId={hijoId} onChange={setHijoId} onVinculado={cargarHijos} />}
     >
-      <Outlet context={{ hijoId }} />
+      <Outlet context={{ hijoId, hijos, refrescarHijos: cargarHijos }} />
     </PanelLayout>
   );
 }
