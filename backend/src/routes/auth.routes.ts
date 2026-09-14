@@ -8,6 +8,7 @@ import { HttpError } from '../utils/httpError';
 import { requireAuth, signAccessToken, signRefreshToken, verifyRefreshToken } from '../middleware/auth';
 import { env } from '../config/env';
 import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
+import { dniSchema } from '../utils/validators';
 
 const REFRESH_COOKIE = 'et_refresh';
 const refreshCookieOpts = {
@@ -40,7 +41,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   usuario: z.string().min(3).max(40),
   password: z.string().min(6),
-  dni: z.string().min(6).max(15),
+  dni: dniSchema,
   curso: z.string().optional().nullable(),
 });
 

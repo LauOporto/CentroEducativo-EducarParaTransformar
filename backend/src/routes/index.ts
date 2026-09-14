@@ -10,6 +10,9 @@ import { studyPlansRouter } from './studyPlans.routes';
 import { forumRouter } from './forum.routes';
 import { adminRouter } from './admin.routes';
 import { moderationPublicRouter, moderationAdminRouter, requireAdmin } from './moderation.routes';
+import { nivelesRouter } from './niveles.routes';
+import { cursosRouter } from './cursos.routes';
+import { materiasRouter } from './materias.routes';
 
 const router = Router();
 
@@ -31,5 +34,8 @@ router.use('/forum', forumRouter);
 router.use('/admin', adminRouter);
 router.use('/public', moderationPublicRouter);
 router.use('/admin', ...requireAdmin(), moderationAdminRouter);
+router.use('/niveles', nivelesRouter);
+router.use('/cursos', cursosRouter);
+router.use('/materias', materiasRouter);
 
 export { router as apiRouter };

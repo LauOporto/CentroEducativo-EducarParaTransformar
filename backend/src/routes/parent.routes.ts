@@ -6,8 +6,16 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
+import { dniSchema } from '../utils/validators';
 
 const router = Router();
+
+async function assertHijoVinculado(padreId: number, estudianteId: number) {
+  const link = await prisma.parentStudentLink.findUnique({
+    where: { padreId_estudianteId: { padreId, estudianteId } },
+  });
+  if (!link) throw HttpError.forbidden('Ese alumno no está vinculado a tu cuenta.');
+}
 
 router.get('/hijos', requireAuth, requireRole(Role.PADRE), async (req, res, next) => {
   try {
@@ -27,7 +35,7 @@ router.get('/hijos', requireAuth, requireRole(Role.PADRE), async (req, res, next
   }
 });
 
-const linkSchema = z.object({ dni: z.string().min(6).max(15) });
+const linkSchema = z.object({ dni: dniSchema });
 
 router.post('/vincular', requireAuth, requireRole(Role.PADRE), async (req, res, next) => {
   try {
@@ -55,6 +63,43 @@ router.post('/vincular', requireAuth, requireRole(Role.PADRE), async (req, res, 
       exito: true,
       mensaje: 'Hijo vinculado a tu cuenta.',
       hijo: { ...estudianteConCurso, curso: formatCursoLabel(estudianteConCurso?.curso) },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// RF-24: el padre inscribe a su hijo al cursado. Solo se permite si el
+// hijo todavía no tiene un curso asignado; un cambio de curso posterior
+// requiere pasar por Administración (evita que un padre mueva a su hijo
+// de curso por su cuenta a mitad de año).
+const inscribirCursadoSchema = z.object({ cursoId: z.coerce.number().int().positive() });
+
+router.post('/hijos/:id/inscribir-cursado', requireAuth, requireRole(Role.PADRE), async (req, res, next) => {
+  try {
+    const estudianteId = Number(req.params.id);
+    await assertHijoVinculado(req.authUser!.id, estudianteId);
+
+    const { cursoId } = inscribirCursadoSchema.parse(req.body);
+    const curso = await prisma.curso.findUnique({ where: { id: cursoId } });
+    if (!curso) throw HttpError.badRequest('El curso indicado no existe.');
+
+    const estudiante = await prisma.user.findUnique({ where: { id: estudianteId } });
+    if (!estudiante || estudiante.role !== Role.ESTUDIANTE) throw HttpError.notFound('Alumno no encontrado.');
+    if (estudiante.cursoId) {
+      throw HttpError.conflict('El alumno ya está inscripto en un curso. Para cambiarlo, contactá a la Dirección.');
+    }
+
+    const actualizado = await prisma.user.update({
+      where: { id: estudianteId },
+      data: { cursoId, estado: 'ACTIVO' },
+      select: { id: true, nombre: true, dni: true, curso: { select: CURSO_SELECT } },
+    });
+
+    res.json({
+      exito: true,
+      mensaje: 'Alumno inscripto al cursado.',
+      hijo: { ...actualizado, curso: formatCursoLabel(actualizado.curso) },
     });
   } catch (err) {
     next(err);

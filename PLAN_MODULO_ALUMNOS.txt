@@ -207,37 +207,96 @@ FASE 1 — Modelo de datos (backend/prisma/schema.prisma)  ***COMPLETADA (14/09/
   formateado; alta de usuario con curso válido funciona, con curso
   inexistente se rechaza con 400 y mensaje claro.
 
-FASE 2 — Backend: endpoints
-  2.1 Nuevo router `backend/src/routes/students.routes.ts` (ampliar el
-      existente):
-      - GET  /api/students            (ya existe, ampliar el `select`)
-      - GET  /api/students/:id        ficha completa (ADMIN/DOCENTE, o
-        el propio alumno / su padre vinculado)
-      - POST /api/students            alta con ficha completa (ADMIN)
-      - PATCH /api/students/:id       edición de ficha (ADMIN)
-      - DELETE /api/students/:id      baja lógica -> estado INACTIVO
-      - GET  /api/students/:id/materias  listado de materias que cursa
-        + profesor a cargo (join Curso -> MateriaCurso -> Materia/User)
-        → cubre RF-11 y sirve de base a RF-23.
-  2.2 Nuevos routers de catálogo (para Nivel/Curso/Materia), pensados
-      para reutilizarse también desde Módulo Administración:
-      - backend/src/routes/niveles.routes.ts   (CRUD, solo ADMIN)
-      - backend/src/routes/cursos.routes.ts    (CRUD, solo ADMIN;
-        GET público/autenticado para poblar selects)
-      - backend/src/routes/materias.routes.ts  (CRUD + asignación a
-        curso/profesor, solo ADMIN)
-  2.3 Validación con Zod: legajo obligatorio único, DNI con regex
-      `^\d{7,8}$` (hoy no se valida el formato — ver Plan de Trabajo
-      general, RNF-40), teléfono con regex de solo dígitos, fecha de
-      nacimiento no futura.
-  2.4 Reglas de acceso (RNF-44/RNF-47): un Padre solo puede leer la
-      ficha/materias de los hijos vinculados en `ParentStudentLink`; un
-      Alumno solo puede leer/editar su propia ficha (y no todos los
-      campos: no debería poder cambiarse el curso o el estado).
-  2.5 Actualizar `backend/src/routes/parent.routes.ts` con
-      `POST /api/parent/hijos/:id/inscribir-cursado` (asigna/confirma
-      el `cursoId` del hijo) para cubrir RF-24 ("inscribir a su hijo al
-      cursado").
+FASE 2 — Backend: endpoints  ***COMPLETADA (14/09/2026)***
+
+  DESVÍO respecto al plan original (decisión tomada al implementar):
+  en vez de duplicar la creación/edición de usuarios en un nuevo
+  POST/PATCH/DELETE /api/students, se extendió el ABM que YA existía en
+  `backend/src/routes/admin.routes.ts` (POST/PATCH/DELETE /api/admin/
+  users) con los campos de la ficha de alumno. Motivo: alta y edición de
+  un alumno son, en el fondo, alta y edición de un `User` — tener dos
+  endpoints distintos para lo mismo hubiera violado el principio de
+  "única fuente de verdad" que el propio Plan de Trabajo define. El
+  router `/api/students` quedó dedicado a CONSULTA (ficha, listado,
+  materias) y a la auto-edición limitada del propio alumno.
+
+  [x] 2.1 `backend/src/routes/students.routes.ts` (reescrito):
+      - GET  /api/students             lista básica (DOCENTE/ADMIN, ya
+        existía, se le agregó `legajo`).
+      - GET  /api/students/:id         ficha completa. Permisos: ADMIN/
+        DOCENTE sin restricción; ESTUDIANTE solo la propia (403 si no);
+        PADRE solo si hay `ParentStudentLink` con ese alumno (403 si no).
+      - GET  /api/students/:id/materias  materias que cursa + profesor a
+        cargo (join Curso -> MateriaCurso -> Materia/User). Cubre RF-11.
+        Mismos permisos que arriba. Si el alumno no tiene curso asignado
+        todavía, devuelve lista vacía con un mensaje explicativo.
+      - PATCH /api/students/me         el propio alumno actualiza SOLO
+        email/telefono/domicilio (nunca legajo, curso, estado ni DNI —
+        esos tres últimos ni siquiera están en el schema de este
+        endpoint, así que aunque los mande, Zod los descarta).
+  [x] 2.2 Alta/edición/baja completa de alumno — en `admin.routes.ts`
+      (ver desvío arriba), no en un router nuevo:
+      - POST /api/admin/users   ahora acepta legajo, apellido,
+        fechaNacimiento, domicilio, telefono; son OBLIGATORIOS cuando
+        `role=ESTUDIANTE` (validado con `.superRefine`, devuelve 400 con
+        el detalle de qué campo falta).
+      - PATCH /api/admin/users/:id   mismos campos, opcionales, más
+        `estado` (ACTIVO/INACTIVO/EGRESADO). Si cambia a legajo
+        duplicado, devuelve 409 con mensaje claro (mismo patrón que ya
+        existía para usuario/email/dni).
+      - DELETE /api/admin/users/:id   baja lógica: además de
+        `isActive=false` (como ya hacía), ahora también pone
+        `estado=INACTIVO` cuando el usuario es ESTUDIANTE.
+  [x] 2.2b Nuevos routers de catálogo académico, montados en
+      `backend/src/routes/index.ts`:
+      - backend/src/routes/niveles.routes.ts   GET (cualquier logueado),
+        POST/PATCH/DELETE (ADMIN). DELETE rechaza con 409 si el nivel
+        tiene cursos (evita perder la jerarquía Nivel->Curso sin darse
+        cuenta).
+      - backend/src/routes/cursos.routes.ts    GET **público** (sin
+        login — lo necesita el formulario de registro, RF-4.1, que se
+        completa antes de tener cuenta), POST/PATCH/DELETE (ADMIN).
+        DELETE rechaza con 409 si el curso tiene alumnos o materias
+        asignadas.
+      - backend/src/routes/materias.routes.ts  GET (cualquier logueado),
+        POST/PATCH/DELETE de Materia (ADMIN); más el sub-recurso de
+        asignación Profesor-Materia-Curso: GET /asignaciones (ADMIN ve
+        todas y puede filtrar, DOCENTE solo ve las suyas — se ignora
+        cualquier `docenteId` que mande en la query), POST
+        /asignaciones y DELETE /asignaciones/:id (ADMIN). Esto ya cubre
+        el backend de RF-13, aunque su pantalla en el panel Profesores
+        queda para cuando se trabaje ese módulo.
+  [x] 2.3 Validación con Zod (`backend/src/utils/validators.ts`, nuevo):
+      `dniSchema` (regex `^\d{7,8}$`), `telefonoSchema` (regex
+      `^\d{6,20}$`, solo dígitos), `fechaNacimientoSchema` (no futura),
+      `legajoSchema`, `estadoAlumnoSchema`. Se aplicó `dniSchema` no
+      solo en los endpoints nuevos sino también en el registro público
+      (`auth.routes.ts`) y en `admin.routes.ts`, porque es el mismo
+      campo `User.dni` en los tres — dejarlo validado distinto según la
+      puerta de entrada hubiera sido inconsistente. RNF-40 queda así
+      resuelto para DNI y teléfono (quedan pendientes de RNF-40 los
+      otros campos genéricos que ya estaban bien, sin cambios).
+  [x] 2.4 Reglas de acceso (RNF-44/RNF-47) implementadas en
+      `assertCanAccessStudent()` dentro de students.routes.ts, reusada
+      por la ficha y por el listado de materias.
+  [x] 2.5 `backend/src/routes/parent.routes.ts` +
+      `POST /api/parent/hijos/:id/inscribir-cursado` (RF-24). Regla de
+      negocio agregada (no estaba explícita en el plan, se definió al
+      implementar): solo funciona si el alumno TODAVÍA no tiene curso
+      asignado; si ya tiene, devuelve 409 pidiendo que el cambio se
+      gestione por Dirección/Admin. Evita que un padre reasigne a su
+      hijo de curso libremente a mitad de año.
+
+  Verificación realizada: `tsc --noEmit` sin errores; servidor levantado
+  localmente y probado end-to-end con curl (login por cada rol, ficha
+  vista por admin/docente/propio alumno/padre vinculado, 403 al padre
+  no vinculado, RF-11 con datos reales del seed, auto-edición de
+  contacto con validación de teléfono, alta de alumno con y sin ficha
+  completa, DNI inválido rechazado, flujo completo de inscribir-cursado
+  —incluye el caso "ya tiene curso, rechazado"—, y CRUD + guardas de
+  borrado de niveles/cursos/materias/asignaciones). Los usuarios y
+  entidades de prueba creados durante las pruebas se desactivaron o se
+  borraron al terminar; no quedaron residuos en la base.
 
 FASE 3 — Frontend: servicios y pantallas
   3.1 `client/src/services/api/studentsService.js` — agregar
@@ -295,16 +354,22 @@ MODELO DE DATOS
       a FK — pertenece a Módulo Profesores/Calificaciones
 
 BACKEND
-  [ ] Endpoints CRUD completos de alumno (ficha completa) — hoy solo
-      existe un listado mínimo de solo lectura
-  [ ] Endpoint de materias-por-alumno con profesor a cargo (RF-11)
-  [ ] Endpoints CRUD de Nivel/Curso/Materia (para Admin)
-  [ ] Endpoint de inscripción al cursado desde el panel Padre (RF-24,
-      parte "inscribir a su hijo")
-  [ ] Validación de formato de DNI (7-8 dígitos) y teléfono (solo
-      dígitos) en el backend — hoy solo existe en el frontend
-  [ ] Reglas de autorización específicas: padre solo ve a sus hijos,
-      alumno no puede modificar su propio curso/estado
+  [x] Endpoints CRUD completos de alumno (ficha completa) — alta/edición
+      en admin.routes.ts (POST/PATCH /api/admin/users), consulta en
+      students.routes.ts (GET /api/students/:id)
+  [x] Endpoint de materias-por-alumno con profesor a cargo (RF-11) —
+      GET /api/students/:id/materias
+  [x] Endpoints CRUD de Nivel/Curso/Materia (para Admin) — niveles.
+      routes.ts, cursos.routes.ts, materias.routes.ts (+ asignaciones
+      Materia-Curso-Profesor, base de RF-13)
+  [x] Endpoint de inscripción al cursado desde el panel Padre (RF-24) —
+      POST /api/parent/hijos/:id/inscribir-cursado
+  [x] Validación de formato de DNI (7-8 dígitos) y teléfono (solo
+      dígitos) en el backend — backend/src/utils/validators.ts,
+      aplicado en auth.routes.ts, admin.routes.ts y students.routes.ts
+  [x] Reglas de autorización específicas: padre solo ve a sus hijos
+      vinculados, alumno solo su propia ficha y solo puede editar
+      contacto (nunca curso/estado/legajo)
 
 FRONTEND
   [ ] Página "Mi perfil" para el Alumno (ficha de solo lectura)
