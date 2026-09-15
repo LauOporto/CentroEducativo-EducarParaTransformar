@@ -1,0 +1,457 @@
+================================================================================
+PLAN DE TRABAJO — MÓDULO ADMINISTRADOR (parte pendiente de RF-15)
+Proyecto: Centro Educativo "Educar para Transformar" (Equipo FLCODE)
+Base: TP-Metodologia-2 (TUP 2026) + estado real del código (backend/ + client/)
+Fecha: 15/09/2026
+================================================================================
+
+ALCANCE EXACTO DE ESTE DOCUMENTO
+--------------------------------------------------------------------------------
+Esto cubre SOLO la parte de RF-15 que todavía falta: ABM de Deportes, grupos
+de deporte (deporte + nivel educativo + horario + profesor responsable —
+RF-14), Recorridos de Transporte y Turnos de Comedor.
+
+Explícitamente NO forma parte de este documento (no tocar):
+  - Niveles / Cursos / Materias — ya resueltos en el Módulo Alumnos
+    (PLAN_MODULO_ALUMNOS.txt), viven en niveles.routes.ts, cursos.routes.ts,
+    materias.routes.ts y AcademicoPage.jsx.
+  - RF-16, RF-17, RNF-44 (permisos, solicitudes de inscripción, control de
+    acceso por rol) — ya implementados (adminRouter, moderation.routes.ts).
+  - RF-18 a RF-24 (máximo 2 deportes por alumno, 1 de 4 recorridos de
+    transporte, solapamiento horario, duplicados, inscripción real del
+    alumno/padre a estos servicios) — es el módulo de "Inscripciones a
+    servicios", se hace DESPUÉS de este. Este documento solo deja el
+    catálogo administrable (el ABM), no la inscripción de alumnos a él.
+  - RF-25 a RF-33 (Motor de Reportes) y RF-34 (Notificaciones) — módulos
+    aparte, mencionados acá solo como contexto de las decisiones de diseño.
+
+--------------------------------------------------------------------------------
+1. QUÉ PIDE EL TP SOBRE ESTO (resumen normativo)
+--------------------------------------------------------------------------------
+
+RF-14 — Asignar a cada actividad deportiva un único profesor responsable.
+
+RF-15 — ABM (Alta, Baja, Modificación) de: niveles educativos, cursos,
+materias [YA RESUELTOS], deportes, horarios, recorridos de transporte y
+turnos de comedor.
+
+De la lectura conjunta de RF-14/15 con los reportes que dependen de esto
+(RF-30 a RF-33, fuera de alcance pero informan el modelo):
+  - "Listado de alumnos por deporte" (RF-30)
+  - "Listado de alumnos por deporte y por nivel" (RF-31)
+  - "Listado de alumnos por deporte, nivel, horario y profesor a cargo"
+    (RF-32)
+  - "Listado de alumnos por recorrido de transporte" (RF-33)
+
+Esto confirma que un "deporte" no es una entidad plana: la unidad real de
+agrupamiento es deporte + nivel + horario + profesor (una especie de
+"comisión" o "grupo" de esa actividad, análoga a lo que MateriaCurso es
+para materia + curso + profesor). RF-32 exige poder filtrar/reportar
+exactamente por esa combinación, así que el modelo tiene que sostenerla
+como entidad propia, no como texto libre.
+
+Transporte y Comedor, en cambio, no tienen ese mismo nivel de composición
+en el TP: son catálogos simples (RF-19: "1 de 4 recorridos"; RF-20:
+"inscripción al servicio de comedor", sin sub-agrupamiento por
+nivel/horario/profesor mencionado en ningún RF). Se modelan como ABM plano.
+
+--------------------------------------------------------------------------------
+2. QUÉ HAY HOY EN EL CÓDIGO (diagnóstico)
+--------------------------------------------------------------------------------
+
+Backend (backend/prisma/schema.prisma — leído completo hoy):
+  - NO existe ningún modelo de Deporte, GrupoDeporte, RecorridoTransporte
+    ni TurnoComedor. Confirmado también por CHECKLIST_REQUERIMIENTOS.txt
+    (RF-14, RF-15, RF-18 a RF-22 en [FALTA], sin evidencia en ningún
+    archivo del repo).
+  - El patrón ya establecido y probado para "actividad + nivel/curso +
+    profesor responsable" es MateriaCurso (backend/prisma/schema.prisma:
+    72-85): tabla de asignación con FKs a las tres entidades, más un
+    @@unique compuesto para evitar asignaciones duplicadas y @@index en
+    las FKs que se filtran seguido. Se replica ese estilo acá.
+  - No existe ningún modelo con un campo de horario como texto libre en
+    el schema actual (MateriaCurso no tiene horario). Es un campo nuevo
+    a introducir por primera vez en este módulo.
+
+  Rutas (backend/src/routes/ — leídas: niveles, cursos, materias, admin,
+  students, parent):
+  - materias.routes.ts es la referencia más cercana al patrón necesario:
+    router raíz con GET (lectura, cualquier logueado) + POST/PATCH/DELETE
+    de la entidad simple (Materia, ADMIN), y un sub-recurso
+    /asignaciones montado en el MISMO router con su propio GET (con
+    filtros por query, permisos distintos para DOCENTE vs ADMIN) y
+    POST/DELETE (ADMIN). Todo con Zod (z.coerce.number() para ids desde
+    query/body) y HttpError.badRequest/conflict/notFound.
+  - cursos.routes.ts y niveles.routes.ts muestran el patrón más simple
+    (ABM plano de una sola entidad): GET público o solo-auth según el
+    caso, router.use(requireAuth, requireRole(Role.ADMIN)) antes de
+    POST/PATCH/DELETE, valida existencia de la entidad referenciada
+    antes de crear, y en DELETE cuenta dependencias antes de borrar
+    (conflict 409 si hay hijos, para no romper integridad referencial
+    "a mano" sin depender solo de onDelete: Restrict).
+  - admin.routes.ts no tiene nada de deportes/transporte/comedor; es
+    ABM de usuarios, vínculos padre-hijo y aprobación de docentes. No
+    hace falta tocarlo.
+  - backend/src/utils/validators.ts solo tiene validadores de ficha de
+    alumno (DNI, teléfono, fecha de nacimiento, legajo, estado). No hay
+    ningún validador reusable para "horario" — se resuelve con un
+    z.string() acotado dentro del propio router nuevo, no amerita un
+    validador global (no se repite en otro lado todavía).
+  - backend/src/routes/index.ts es el punto donde se montan todos los
+    routers (niveles, cursos, materias ya están ahí como ejemplo directo
+    de qué agregar).
+
+  Frontend:
+  - client/src/pages/admin/AcademicoPage.jsx (leído completo) es la
+    referencia de UI: un componente por pestaña (NivelesSection,
+    CursosSection, MateriasSection, AsignacionesSection), todas con el
+    mismo esqueleto (cargar() con Promise.all, form controlado, tabla
+    vía <DataTable/>, toasts con el mismo patrón res.exito / res.message
+    || res.mensaje). AcademicoPage arma las pestañas con un array TABS
+    y un switch simple de tab activo.
+  - client/src/services/api/materiasService.js (y cursosService.js,
+    nivelesService.js) son wrappers finitos de httpClient con un método
+    por endpoint — no hay lógica, solo mapeo 1:1 a rutas REST.
+  - client/src/pages/admin/AdminShell.jsx (leído completo): array `menu`
+    plano con {to, label, icon, badge}, cada ítem apunta a una ruta bajo
+    /admin/*. Hoy NO hay ningún ítem para deportes/transporte/comedor,
+    ni ruta en el router de la app para eso (falta confirmar AppRoutes,
+    pero por el checklist se sabe que no existe ninguna pantalla).
+  - No existe client/src/services/api/deportesService.js,
+    transporteService.js ni comedorService.js. No existe
+    client/src/pages/admin/ServiciosPage.jsx ni nada equivalente.
+
+Conclusión del diagnóstico:
+  Este bloque parte de cero, igual que Niveles/Cursos/Materias partían
+  de cero antes de la fase anterior. La diferencia es que ahora ya
+  existe un patrón consolidado y probado en el propio repo (niveles +
+  cursos + materias/asignaciones) que se puede replicar casi
+  literalmente, tanto en backend (mismo estilo de router, Zod, HttpError)
+  como en frontend (mismo esqueleto de sección + pestañas + servicios
+  finitos). No hay nada que migrar ni ningún shim de compatibilidad
+  como el que hizo falta con `cursoId` en el Módulo Alumnos: son
+  entidades 100% nuevas, sin datos previos que preservar.
+
+--------------------------------------------------------------------------------
+3. POR DÓNDE ARRANCAR (recomendación)
+--------------------------------------------------------------------------------
+
+Igual que en el Módulo Alumnos: MODELO DE DATOS primero, no pantallas.
+
+Orden recomendado:
+  1º Deporte (catálogo simple) + GrupoDeporte (deporte + nivel + horario +
+     profesor) — es la pieza con más relaciones y la única con lógica de
+     "grupo" (RF-14/RF-30-32), conviene resolverla primero mientras el
+     patrón de MateriaCurso está fresco.
+  2º RecorridoTransporte — catálogo plano, sin relaciones a nivel/curso/
+     profesor.
+  3º TurnoComedor — catálogo plano, igual de simple que (2).
+
+Con el modelo cerrado, los endpoints (Fase 2) son prácticamente
+mecánicos por lo consolidado del patrón, y las pantallas (Fase 3) se arman
+copiando el esqueleto de AcademicoPage.jsx.
+
+--------------------------------------------------------------------------------
+4. DECISIONES DE DISEÑO A TOMAR ANTES DE CODEAR
+--------------------------------------------------------------------------------
+
+a) Modelo de datos — Deporte y GrupoDeporte.
+
+   Deporte es un catálogo simple, igual que Materia:
+
+     model Deporte {
+       id     Int    @id @default(autoincrement())
+       nombre String @unique
+       grupos GrupoDeporte[]
+     }
+
+   GrupoDeporte replica el estilo de MateriaCurso (deporte + nivel +
+   horario + profesor), con horario como campo propio porque acá SÍ
+   forma parte de la clave del "grupo" (a diferencia de MateriaCurso,
+   que no lo necesita porque el horario de una materia depende del
+   curso, no se administra acá):
+
+     model GrupoDeporte {
+       id        Int            @id @default(autoincrement())
+       deporteId Int
+       deporte   Deporte        @relation(fields: [deporteId], references: [id], onDelete: Cascade)
+       nivelId   Int
+       nivel     NivelEducativo @relation(fields: [nivelId], references: [id], onDelete: Restrict)
+       horario   String         // texto libre acotado, ej. "Lunes y Miércoles 14:00–15:30"
+       docenteId Int
+       docente   User           @relation("DocenteGrupoDeporte", fields: [docenteId], references: [id], onDelete: Restrict)
+       createdAt DateTime       @default(now())
+
+       @@unique([deporteId, nivelId, horario])
+       @@index([nivelId])
+       @@index([docenteId])
+     }
+
+   Por qué nivel y no curso: el enunciado dice explícitamente "deporte +
+   nivel educativo + horario + profesor" (a diferencia de Materia, que
+   se ata a Curso). Los deportes se organizan por nivel (ej. todos los
+   alumnos de Secundario que juegan al fútbol los martes), no por curso
+   individual — tiene sentido pedagógico/organizativo y es lo que pide
+   RF-31/RF-32 ("por deporte y por nivel", "por deporte, nivel, horario
+   y profesor"), nunca "por curso".
+
+   Por qué @@unique([deporteId, nivelId, horario]) y no incluye
+   docenteId (a diferencia de MateriaCurso, que sí incluye docenteId en
+   su unique): en MateriaCurso puede haber MÁS DE UN docente dando la
+   misma materia en el mismo curso en teoría (aunque en la práctica no
+   pasa) porque el unique real de negocio ahí es materia+curso+docente.
+   Acá, en cambio, RF-14 dice "único profesor responsable" por actividad
+   — un mismo deporte+nivel+horario no debería tener dos profesores
+   distintos a cargo simultáneamente, así que el unique se define sobre
+   deporte+nivel+horario (sin docente), y el POST simplemente falla con
+   409 si ya existe esa combinación, sin importar qué docente se mande.
+   Si más adelante se necesitara permitir el mismo deporte+nivel en dos
+   horarios distintos con el mismo o distinto profesor, ya está cubierto
+   (el horario forma parte de la clave).
+
+   docenteId valida contra User con role=DOCENTE, igual que
+   materiaId/cursoId/docenteId en asignacionSchema de materias.routes.ts.
+
+   Validación de horario: no existe hoy ningún validador de horario en
+   el repo (ni en validators.ts ni como campo de otro modelo). Se
+   resuelve como z.string().trim().min(3).max(80) directamente en el
+   router nuevo — no amerita agregarlo a validators.ts todavía porque no
+   se reutiliza en ningún otro lado (RecorridoTransporte y TurnoComedor,
+   si llevan horario, lo definen igual, pero son schemas independientes;
+   no hay lógica de parseo/validación de formato horario real, es texto
+   libre como el "curso" original en RF-4.1 antes de tener FK).
+
+b) Modelo de datos — RecorridoTransporte y TurnoComedor.
+
+   Catálogos planos, sin relación a nivel/curso/profesor (el TP no la
+   pide para estos dos — ver punto 1). Mismo estilo que Materia/Deporte:
+
+     model RecorridoTransporte {
+       id        Int      @id @default(autoincrement())
+       nombre    String   @unique   // ej. "Recorrido Norte"
+       horario   String             // ej. "Salida 07:00 / Regreso 17:30"
+       createdAt DateTime @default(now())
+     }
+
+     model TurnoComedor {
+       id        Int      @id @default(autoincrement())
+       nombre    String   @unique   // ej. "Primer turno"
+       horario   String             // ej. "12:00 a 13:00"
+       createdAt DateTime @default(now())
+     }
+
+   Se define un @unique en `nombre` (como Materia/Deporte) en vez de un
+   compuesto, porque no hay una segunda dimensión (nivel/profesor) que
+   los acompañe según el TP.
+
+   Nota deliberada: NO se agrega ninguna relación de estos dos modelos a
+   User/alumno en esta tarea (eso es la inscripción de alumnos, RF-19/
+   RF-20, fuera de alcance). Quedan como catálogos "sueltos" hasta que el
+   módulo de inscripciones los consuma.
+
+c) ¿Un router /api/deportes con sub-recurso /grupos, o routers separados?
+
+   Deportes: se replica el patrón de materias.routes.ts — un solo router
+   backend/src/routes/deportes.routes.ts con:
+     GET    /api/deportes                (cualquier logueado)
+     POST   /api/deportes                (ADMIN)
+     PATCH  /api/deportes/:id            (ADMIN)
+     DELETE /api/deportes/:id            (ADMIN, 409 si tiene grupos)
+     GET    /api/deportes/grupos         (cualquier logueado, con filtros
+            opcionales ?deporteId&nivelId&docenteId por query — un
+            DOCENTE puede eventualmente querer ver "mis grupos", igual
+            que /materias/asignaciones deja ver "mis asignaciones";
+            para ADMIN no se restringe)
+     POST   /api/deportes/grupos         (ADMIN)
+     DELETE /api/deportes/grupos/:id     (ADMIN)
+   Motivo: es exactamente la misma relación de composición que
+   Materia/MateriaCurso (entidad simple + su tabla de asignación), y ya
+   está resuelto así en el propio código con buen resultado. Usar el
+   mismo router para ambos recursos evita crear un archivo nuevo por
+   cada sub-entidad y mantiene consistencia con lo que ya existe.
+
+   Transporte y Comedor: SEPARADOS en dos routers propios,
+   transporte.routes.ts y comedor.routes.ts, cada uno con su ABM plano
+   (GET/POST/PATCH/DELETE), calcados de niveles.routes.ts o
+   cursos.routes.ts (la variante MÁS simple, sin sub-recurso). No
+   comparten router entre sí ni con deportes porque son entidades sin
+   relación entre ellas — meterlas en un único router "servicios"
+   genérico sería agrupar por conveniencia, no por dominio, y rompería
+   el patrón de "un router por entidad/familia de entidades relacionadas"
+   que el resto del backend sigue (niveles, cursos, materias son
+   routers distintos aunque estén relacionados entre sí por FK).
+
+d) Patrones de diseño: por qué NO corresponde aplicar ninguno acá.
+
+   Este módulo es un ABM simple — alta, baja, modificación y listado de
+   catálogos, con como mucho una tabla de asignación intermedia (igual
+   que Niveles/Cursos/Materias). No hay creación polimórfica de objetos
+   según un tipo que varíe en tiempo de ejecución (no correspondería
+   Factory Method), no hay que unificar una interfaz compleja de varios
+   subsistemas detrás de una fachada simple (no correspondería Facade:
+   cada router expone directamente sus propias operaciones CRUD, sin
+   nada que orquestar), y no hay un algoritmo que varíe su
+   comportamiento según una condición de negocio intercambiable en
+   tiempo de ejecución (no correspondería Strategy).
+
+   Esos tres patrones están reservados, según el propio criterio de
+   diseño del Plan de Trabajo, para otros módulos bien distintos:
+     - Factory Method  -> Notificaciones (RF-34): creación de distintos
+       tipos de Notificacion (por inasistencia, por aprobación de
+       cuenta, etc.) a partir de una fábrica común.
+     - Facade           -> Panel Padre/Tutor (RF-23/24): unificar detrás
+       de una interfaz simple el acceso a datos que hoy viven repartidos
+       en varios subsistemas (materias+profesor, deportes, transporte,
+       comedor, inscripción a cursado).
+     - Strategy          -> Motor de Reportes (RF-25 a RF-33): cada
+       reporte (por alumno, por docente, por curso, por deporte, etc.)
+       es una estrategia de generación de listado intercambiable sobre
+       un mismo motor.
+
+   Ninguno de los tres aplica a Deportes/Transporte/Comedor. Forzar un
+   patrón acá sería sobreingeniería: se implementa como ABM directo,
+   exactamente igual que Niveles/Cursos/Materias, sin envoltorios
+   adicionales.
+
+--------------------------------------------------------------------------------
+5. PLAN DE TRABAJO POR FASES
+--------------------------------------------------------------------------------
+
+FASE 1 — Modelo de datos (backend/prisma/schema.prisma)
+  [ ] 1.1 Agregar modelo `Deporte` (id, nombre único).
+  [ ] 1.2 Agregar modelo `GrupoDeporte` (deporteId, nivelId, horario,
+      docenteId; @@unique([deporteId, nivelId, horario]); índices en
+      nivelId y docenteId).
+  [ ] 1.3 Agregar relación inversa en `User` (materiasDictadas ya existe
+      para MateriaCurso vía "DocenteMateriaCurso"; agregar análoga
+      "gruposDeporteDictados" o similar vía "DocenteGrupoDeporte") y en
+      `NivelEducativo` (grupos de deporte por nivel), siguiendo el mismo
+      estilo que Curso <-> MateriaCurso.
+  [ ] 1.4 Agregar modelo `RecorridoTransporte` (id, nombre único,
+      horario).
+  [ ] 1.5 Agregar modelo `TurnoComedor` (id, nombre único, horario).
+  [ ] 1.6 Generar y aplicar la migración (mismo mecanismo ya usado:
+      `prisma migrate dev` si el entorno lo permite de forma
+      interactiva, o `prisma migrate diff` + `prisma migrate deploy`
+      como se hizo en el Módulo Alumnos si no).
+  [ ] 1.7 Seed opcional: agregar algunos Deportes/GrupoDeporte/
+      Recorridos/Turnos de ejemplo a backend/prisma/seed.ts para poder
+      probar el ABM con datos reales (mismo criterio que se usó para
+      niveles/cursos/materias).
+
+FASE 2 — Backend: endpoints
+  [ ] 2.1 backend/src/routes/deportes.routes.ts (nuevo):
+      - GET  /api/deportes            (requireAuth)
+      - POST/PATCH/DELETE /api/deportes  (ADMIN; DELETE con 409 si el
+        deporte tiene grupos)
+      - GET  /api/deportes/grupos     (requireAuth; filtros opcionales
+        deporteId/nivelId/docenteId por query, con z.coerce.number())
+      - POST /api/deportes/grupos     (ADMIN; valida que deporte/nivel
+        existan y que el docente sea role=DOCENTE; 409 si ya existe esa
+        combinación deporte+nivel+horario)
+      - DELETE /api/deportes/grupos/:id (ADMIN)
+  [ ] 2.2 backend/src/routes/transporte.routes.ts (nuevo): ABM plano de
+      RecorridoTransporte, calcado de niveles.routes.ts.
+  [ ] 2.3 backend/src/routes/comedor.routes.ts (nuevo): ABM plano de
+      TurnoComedor, calcado de niveles.routes.ts.
+  [ ] 2.4 Montar los tres routers nuevos en backend/src/routes/index.ts
+      (`/deportes`, `/transporte`, `/comedor`), junto a niveles/cursos/
+      materias.
+  [ ] 2.5 Validación con Zod en cada router (nombre, horario acotados en
+      longitud; ids con z.coerce.number().int().positive()). No se
+      necesita tocar backend/src/utils/validators.ts (ver decisión 4.a).
+  [ ] 2.6 Verificación: `tsc --noEmit` sin errores; probar cada endpoint
+      con curl/Postman (alta, edición, conflicto de nombre duplicado,
+      conflicto de combinación duplicada en grupos, borrado bloqueado
+      por dependencias, borrado exitoso).
+
+FASE 3 — Frontend: servicios y pantallas
+  [ ] 3.1 Nuevos servicios en client/src/services/api/: deportesService.js
+      (list/create/update/remove + listGrupos/createGrupo/removeGrupo),
+      transporteService.js, comedorService.js — mismo esqueleto que
+      materiasService.js/cursosService.js/nivelesService.js.
+  [ ] 3.2 Nueva página client/src/pages/admin/ServiciosPage.jsx (o el
+      nombre que se defina) con pestañas al estilo AcademicoPage.jsx:
+      Deportes / Grupos de deporte / Transporte / Comedor. Reusar
+      <DataTable/> y el mismo esqueleto de sección (cargar/crear/editar/
+      borrar con toasts).
+  [ ] 3.3 Ruta nueva en el router de la app (confirmar archivo exacto —
+      probablemente client/src/app/AppRoutes.jsx) para la página nueva
+      bajo /admin/*.
+  [ ] 3.4 Ítem de menú nuevo en client/src/pages/admin/AdminShell.jsx
+      (array `menu`), con ícono acorde (ej. fa-futbol o similar).
+  [ ] 3.5 Verificación: `vite build` sin errores; probar en navegador el
+      ABM completo de las cuatro entidades como ADMIN (alta, edición,
+      borrado con y sin dependencias, mensajes de error del servidor
+      visibles correctamente — reusar el fix de `res.message` ya
+      aplicado en el Módulo Alumnos, no volver a introducir el bug de
+      leer `res.mensaje`).
+
+FASE 4 — Fuera de alcance de esta tarea (para más adelante, no hacer acá)
+  - RF-18 a RF-24: reglas de negocio de inscripción de alumnos a
+    deportes/transporte/comedor (máx. 2 deportes, solapamiento horario,
+    duplicados, "1 de 4 recorridos").
+  - RF-30 a RF-33: reportes que consumen este catálogo.
+  - Relación de estos catálogos con User/alumno (tabla de inscripción,
+    todavía no existe y no se crea en esta tarea).
+
+--------------------------------------------------------------------------------
+6. CHECKLIST PUNTUAL DE ESTA TAREA
+--------------------------------------------------------------------------------
+
+MODELO DE DATOS
+  [ ] Entidad Deporte
+  [ ] Entidad GrupoDeporte (deporte + nivel + horario + profesor, RF-14)
+  [ ] Entidad RecorridoTransporte
+  [ ] Entidad TurnoComedor
+  [ ] Migración generada y aplicada
+  [ ] Seed de ejemplo (opcional pero recomendado para poder probar)
+
+BACKEND
+  [ ] deportes.routes.ts — ABM Deporte + sub-recurso /grupos
+  [ ] transporte.routes.ts — ABM RecorridoTransporte
+  [ ] comedor.routes.ts — ABM TurnoComedor
+  [ ] Los tres montados en routes/index.ts
+  [ ] Validación Zod + HttpError en los tres, mismo estilo que
+      niveles/cursos/materias
+  [ ] Permisos: lectura para cualquier logueado, escritura solo ADMIN
+      (RNF-44, ya cubierto por requireAuth/requireRole existentes — no
+      hace falta tocar el middleware)
+
+FRONTEND
+  [ ] deportesService.js / transporteService.js / comedorService.js
+  [ ] Página de administración con las cuatro secciones (Deportes /
+      Grupos de deporte / Transporte / Comedor)
+  [ ] Ruta nueva registrada en el router de la app
+  [ ] Ítem de menú nuevo en AdminShell.jsx
+  [ ] Probado en navegador (alta/edición/baja de las cuatro entidades,
+      incluidos los casos de conflicto/borrado bloqueado)
+
+NO TOCAR EN ESTA TAREA
+  [ ] Niveles / Cursos / Materias (ya resueltos)
+  [ ] Permisos, solicitudes de inscripción pública, control de acceso
+      por rol (RF-16/17/RNF-44, ya resueltos)
+  [ ] Reglas de negocio de inscripción de alumnos a deportes/transporte/
+      comedor (RF-18 a RF-24, módulo aparte)
+
+--------------------------------------------------------------------------------
+7. RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+
+Empezar por: backend/prisma/schema.prisma — agregar Deporte, GrupoDeporte
+(deporte + nivel + horario + profesor, replicando el estilo de
+MateriaCurso pero con nivel en vez de curso y horario como parte de la
+clave única), RecorridoTransporte y TurnoComedor, y correr la migración.
+Recién después los endpoints (deportes.routes.ts con sub-recurso /grupos,
+más transporte.routes.ts y comedor.routes.ts separados) y por último la
+pantalla de administración (una página nueva con cuatro pestañas, calcada
+de AcademicoPage.jsx). Es un ABM simple de punta a punta — no corresponde
+Factory Method, Facade ni Strategy acá; esos patrones están reservados
+para Notificaciones, el panel Padre/Tutor y el Motor de Reportes
+respectivamente. La inscripción real de alumnos a estos servicios
+(RF-18 a RF-24) y los reportes que los consumen (RF-30 a RF-33) quedan
+fuera de esta tarea, para el módulo siguiente.
+
+================================================================================
+Fin del documento.
+================================================================================
