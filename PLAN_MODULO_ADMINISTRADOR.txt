@@ -171,18 +171,29 @@ a) Modelo de datos — Deporte y GrupoDeporte.
    que no lo necesita porque el horario de una materia depende del
    curso, no se administra acá):
 
-     model GrupoDeporte {
-       id        Int            @id @default(autoincrement())
-       deporteId Int
-       deporte   Deporte        @relation(fields: [deporteId], references: [id], onDelete: Cascade)
-       nivelId   Int
-       nivel     NivelEducativo @relation(fields: [nivelId], references: [id], onDelete: Restrict)
-       horario   String         // texto libre acotado, ej. "Lunes y Miércoles 14:00–15:30"
-       docenteId Int
-       docente   User           @relation("DocenteGrupoDeporte", fields: [docenteId], references: [id], onDelete: Restrict)
-       createdAt DateTime       @default(now())
+     enum DiaSemana {
+       LUNES
+       MARTES
+       MIERCOLES
+       JUEVES
+       VIERNES
+       SABADO
+     }
 
-       @@unique([deporteId, nivelId, horario])
+     model GrupoDeporte {
+       id          Int            @id @default(autoincrement())
+       deporteId   Int
+       deporte     Deporte        @relation(fields: [deporteId], references: [id], onDelete: Restrict)
+       nivelId     Int
+       nivel       NivelEducativo @relation(fields: [nivelId], references: [id], onDelete: Restrict)
+       diaSemana   DiaSemana
+       horaInicio  DateTime       @db.Time
+       horaFin     DateTime       @db.Time
+       docenteId   Int
+       docente     User           @relation("DocenteGrupoDeporte", fields: [docenteId], references: [id], onDelete: Restrict)
+       createdAt   DateTime       @default(now())
+
+       @@unique([deporteId, nivelId, diaSemana, horaInicio, horaFin])
        @@index([nivelId])
        @@index([docenteId])
      }
@@ -195,31 +206,79 @@ a) Modelo de datos — Deporte y GrupoDeporte.
    RF-31/RF-32 ("por deporte y por nivel", "por deporte, nivel, horario
    y profesor"), nunca "por curso".
 
-   Por qué @@unique([deporteId, nivelId, horario]) y no incluye
-   docenteId (a diferencia de MateriaCurso, que sí incluye docenteId en
-   su unique): en MateriaCurso puede haber MÁS DE UN docente dando la
-   misma materia en el mismo curso en teoría (aunque en la práctica no
-   pasa) porque el unique real de negocio ahí es materia+curso+docente.
-   Acá, en cambio, RF-14 dice "único profesor responsable" por actividad
-   — un mismo deporte+nivel+horario no debería tener dos profesores
-   distintos a cargo simultáneamente, así que el unique se define sobre
-   deporte+nivel+horario (sin docente), y el POST simplemente falla con
-   409 si ya existe esa combinación, sin importar qué docente se mande.
-   Si más adelante se necesitara permitir el mismo deporte+nivel en dos
-   horarios distintos con el mismo o distinto profesor, ya está cubierto
-   (el horario forma parte de la clave).
+   Por qué `horario` NO puede ser String libre: es parte de la clave
+   única del grupo, y con texto libre se pueden crear duplicados
+   "distintos" ante la base pero iguales en la práctica (ej. "Lunes
+   14:00-15:30" vs "lunes 14:00 a 15:30" vs "Lunes  14:00-15:30" con
+   doble espacio) — el @@unique de Postgres compara bytes, no
+   normaliza. Más grave: RF-21 (fuera de alcance de este documento pero
+   ya previsto en el diseño) exige detectar solapamiento horario entre
+   los deportes de un mismo alumno, algo que es inviable de calcular
+   comparando strings arbitrarios de forma confiable — hace falta poder
+   comparar rangos de tiempo reales. Por eso el horario se modela como
+   tres campos estructurados:
+     - `diaSemana DiaSemana` (enum: LUNES..SABADO) en vez de texto,
+       para que "lunes" y "Lunes" no puedan coexistir como valores
+       distintos.
+     - `horaInicio DateTime @db.Time` y `horaFin DateTime @db.Time`
+       (tipo TIME de Postgres, sin fecha), para poder comparar y
+       ordenar horas con operadores nativos (`horaInicio < horaFin`,
+       solapamiento de rangos) en vez de parsear strings en cada
+       consulta.
+   La validación de que horaInicio < horaFin se hace en el router
+   (Zod .refine), igual que cualquier otra regla de consistencia entre
+   campos que ya usa el resto del backend.
+
+   Por qué @@unique([deporteId, nivelId, diaSemana, horaInicio,
+   horaFin]) y no incluye docenteId (a diferencia de MateriaCurso, que
+   sí incluye docenteId en su unique): en MateriaCurso puede haber MÁS
+   DE UN docente dando la misma materia en el mismo curso en teoría
+   (aunque en la práctica no pasa) porque el unique real de negocio ahí
+   es materia+curso+docente. Acá, en cambio, RF-14 dice "único profesor
+   responsable" por actividad — un mismo deporte+nivel+día+horario no
+   debería tener dos profesores distintos a cargo simultáneamente, así
+   que el unique se define sobre deporte+nivel+día+horaInicio+horaFin
+   (sin docente), y el POST simplemente falla con 409 si ya existe esa
+   combinación, sin importar qué docente se mande. Si más adelante se
+   necesitara permitir el mismo deporte+nivel en otro día/horario con
+   el mismo o distinto profesor, ya está cubierto (el horario forma
+   parte de la clave).
 
    docenteId valida contra User con role=DOCENTE, igual que
    materiaId/cursoId/docenteId en asignacionSchema de materias.routes.ts.
 
-   Validación de horario: no existe hoy ningún validador de horario en
-   el repo (ni en validators.ts ni como campo de otro modelo). Se
-   resuelve como z.string().trim().min(3).max(80) directamente en el
-   router nuevo — no amerita agregarlo a validators.ts todavía porque no
-   se reutiliza en ningún otro lado (RecorridoTransporte y TurnoComedor,
-   si llevan horario, lo definen igual, pero son schemas independientes;
-   no hay lógica de parseo/validación de formato horario real, es texto
-   libre como el "curso" original en RF-4.1 antes de tener FK).
+   Por qué Deporte -> GrupoDeporte usa onDelete: Restrict (y no
+   Cascade): mismo patrón ya establecido en NivelEducativo -> Curso
+   (schema.prisma:53, confirmado leyendo el schema actual), que usa
+   Restrict en la base MÁS un chequeo explícito de 409 a nivel de API
+   antes de borrar (niveles.routes.ts: cuenta cursos asociados y
+   responde HttpError.conflict si hay alguno, en vez de dejar que el
+   borrado en cascada se lleve puesto todo silenciosamente). Un
+   Deporte con grupos activos no se puede borrar "de arriba" sin que
+   el ADMIN se entere de que existen grupos dependientes — igual
+   razón por la que ya está así en Nivel/Curso: el borrado en cascada
+   de la base es una herramienta peligrosa para una acción de ABM
+   disparada por un click en la UI, así que se prefiere que la base
+   RECHACE el delete (Restrict) y que sea el router el que decide
+   cuándo devolver un 409 legible en vez de un error crudo de FK
+   constraint. El DELETE /api/deportes/:id (Fase 2) replica
+   exactamente el mismo chequeo: cuenta grupos del deporte antes de
+   borrar, 409 si hay alguno.
+
+   ¿RecorridoTransporte y TurnoComedor necesitan el mismo tratamiento
+   estructurado? NO, y queda explícito por qué: ninguno de los dos
+   forma parte de una clave compuesta que dependa del horario (cada uno
+   tiene @unique solo en `nombre`, ver 4.b), y el TP no define ninguna
+   regla de negocio de solapamiento horario sobre transporte o comedor
+   — RF-18 a RF-24 (las únicas reglas de "no se puede combinar X con
+   Y") hablan de máximo 2 deportes y solapamiento ENTRE deportes, y de
+   "1 de 4 recorridos" de transporte (una regla de cardinalidad, no de
+   horario), pero nunca de comparar horarios de transporte/comedor
+   entre sí o contra otra cosa. Por eso en esos dos el campo `horario`
+   sigue siendo texto libre: es información descriptiva para mostrarle
+   al usuario ("Salida 07:00 / Regreso 17:30"), no un dato sobre el que
+   el sistema tenga que razonar o comparar. Estructurarlo igual que
+   GrupoDeporte sería sobreingeniería sin ningún RF que lo pida.
 
 b) Modelo de datos — RecorridoTransporte y TurnoComedor.
 
@@ -318,10 +377,16 @@ d) Patrones de diseño: por qué NO corresponde aplicar ninguno acá.
 --------------------------------------------------------------------------------
 
 FASE 1 — Modelo de datos (backend/prisma/schema.prisma)
-  [ ] 1.1 Agregar modelo `Deporte` (id, nombre único).
-  [ ] 1.2 Agregar modelo `GrupoDeporte` (deporteId, nivelId, horario,
-      docenteId; @@unique([deporteId, nivelId, horario]); índices en
-      nivelId y docenteId).
+  [ ] 1.1 Agregar modelo `Deporte` (id, nombre único), con
+      onDelete: Restrict en la FK que apunta a GrupoDeporte (igual que
+      NivelEducativo -> Curso).
+  [ ] 1.2 Agregar enum `DiaSemana` (LUNES..SABADO) y modelo
+      `GrupoDeporte` (deporteId con onDelete: Restrict, nivelId,
+      diaSemana, horaInicio/horaFin como DateTime @db.Time, docenteId;
+      @@unique([deporteId, nivelId, diaSemana, horaInicio, horaFin]);
+      índices en nivelId y docenteId). Horario estructurado y NO texto
+      libre — ver decisión 4.a (es parte de la clave única y RF-21
+      necesita comparar rangos horarios reales, no strings).
   [ ] 1.3 Agregar relación inversa en `User` (materiasDictadas ya existe
       para MateriaCurso vía "DocenteMateriaCurso"; agregar análoga
       "gruposDeporteDictados" o similar vía "DocenteGrupoDeporte") y en
@@ -347,8 +412,9 @@ FASE 2 — Backend: endpoints
       - GET  /api/deportes/grupos     (requireAuth; filtros opcionales
         deporteId/nivelId/docenteId por query, con z.coerce.number())
       - POST /api/deportes/grupos     (ADMIN; valida que deporte/nivel
-        existan y que el docente sea role=DOCENTE; 409 si ya existe esa
-        combinación deporte+nivel+horario)
+        existan, que horaInicio < horaFin y que el docente sea
+        role=DOCENTE; 409 si ya existe esa combinación
+        deporte+nivel+diaSemana+horaInicio+horaFin)
       - DELETE /api/deportes/grupos/:id (ADMIN)
   [ ] 2.2 backend/src/routes/transporte.routes.ts (nuevo): ABM plano de
       RecorridoTransporte, calcado de niveles.routes.ts.
@@ -357,9 +423,14 @@ FASE 2 — Backend: endpoints
   [ ] 2.4 Montar los tres routers nuevos en backend/src/routes/index.ts
       (`/deportes`, `/transporte`, `/comedor`), junto a niveles/cursos/
       materias.
-  [ ] 2.5 Validación con Zod en cada router (nombre, horario acotados en
-      longitud; ids con z.coerce.number().int().positive()). No se
-      necesita tocar backend/src/utils/validators.ts (ver decisión 4.a).
+  [ ] 2.5 Validación con Zod en cada router: nombre acotado en longitud
+      en todos; en GrupoDeporte, diaSemana como z.nativeEnum(DiaSemana)
+      y horaInicio/horaFin validados como hora (HH:mm) con
+      .refine(horaInicio < horaFin); en RecorridoTransporte/TurnoComedor
+      el campo horario sigue siendo z.string().trim().min(3).max(80)
+      (texto libre, ver decisión 4.b); ids con
+      z.coerce.number().int().positive(). No se necesita tocar
+      backend/src/utils/validators.ts (ver decisión 4.a).
   [ ] 2.6 Verificación: `tsc --noEmit` sin errores; probar cada endpoint
       con curl/Postman (alta, edición, conflicto de nombre duplicado,
       conflicto de combinación duplicada en grupos, borrado bloqueado
@@ -400,8 +471,9 @@ FASE 4 — Fuera de alcance de esta tarea (para más adelante, no hacer acá)
 --------------------------------------------------------------------------------
 
 MODELO DE DATOS
-  [ ] Entidad Deporte
-  [ ] Entidad GrupoDeporte (deporte + nivel + horario + profesor, RF-14)
+  [ ] Entidad Deporte (onDelete: Restrict hacia GrupoDeporte)
+  [ ] Enum DiaSemana + Entidad GrupoDeporte (deporte + nivel + día +
+      horaInicio + horaFin estructurados + profesor, RF-14)
   [ ] Entidad RecorridoTransporte
   [ ] Entidad TurnoComedor
   [ ] Migración generada y aplicada
@@ -438,10 +510,16 @@ NO TOCAR EN ESTA TAREA
 7. RESUMEN EJECUTIVO
 --------------------------------------------------------------------------------
 
-Empezar por: backend/prisma/schema.prisma — agregar Deporte, GrupoDeporte
-(deporte + nivel + horario + profesor, replicando el estilo de
-MateriaCurso pero con nivel en vez de curso y horario como parte de la
-clave única), RecorridoTransporte y TurnoComedor, y correr la migración.
+Empezar por: backend/prisma/schema.prisma — agregar Deporte (con
+onDelete: Restrict hacia GrupoDeporte, mismo patrón que NivelEducativo
+-> Curso), el enum DiaSemana y GrupoDeporte (deporte + nivel + día +
+horaInicio/horaFin estructurados como DateTime @db.Time + profesor,
+replicando el estilo de MateriaCurso pero con nivel en vez de curso y
+el horario estructurado — no texto libre — como parte de la clave
+única, porque RF-21 exige detectar solapamiento horario real más
+adelante), RecorridoTransporte y TurnoComedor (estos dos SÍ con
+horario como texto libre, porque no hay ninguna regla de negocio de
+solapamiento sobre ellos), y correr la migración.
 Recién después los endpoints (deportes.routes.ts con sub-recurso /grupos,
 más transporte.routes.ts y comedor.routes.ts separados) y por último la
 pantalla de administración (una página nueva con cuatro pestañas, calcada
