@@ -2,6 +2,7 @@ import {
   PrismaClient,
   Role,
   AttendanceStatus,
+  DiaSemana,
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -53,6 +54,43 @@ const SEED_USERS: UserSeed[] = [
   { usuario: 'rperez',     email: 'r.perez@et.edu.ar',     dni: '30000002', nombre: 'Roberto Pérez',      role: Role.PADRE, curso: null },
   { usuario: 'mgomezp',    email: 'm.gomez.padre@et.edu.ar', dni: '30000003', nombre: 'Mariana Gómez',    role: Role.PADRE, curso: null },
 ];
+
+// ---- Deportes, grupos de deporte, transporte y comedor ----
+const DEPORTES = ['Fútbol', 'Vóley', 'Básquet'] as const;
+
+type GrupoDeporteSeed = {
+  deporte: (typeof DEPORTES)[number];
+  nivel: (typeof NIVELES)[number];
+  diaSemana: DiaSemana;
+  horaInicio: string; // "HH:mm"
+  horaFin: string; // "HH:mm"
+  docente: string; // usuario del docente responsable
+};
+
+const GRUPOS_DEPORTE: GrupoDeporteSeed[] = [
+  { deporte: 'Fútbol', nivel: 'Primaria', diaSemana: DiaSemana.LUNES, horaInicio: '14:00', horaFin: '15:30', docente: 'amartinez' },
+  { deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30', docente: 'amartinez' },
+  { deporte: 'Vóley', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
+  { deporte: 'Básquet', nivel: 'Primaria', diaSemana: DiaSemana.VIERNES, horaInicio: '13:30', horaFin: '14:30', docente: 'jgarcia' },
+];
+
+const RECORRIDOS_TRANSPORTE = [
+  { nombre: 'Recorrido Norte', horario: 'Salida 07:00 / Regreso 17:30' },
+  { nombre: 'Recorrido Sur', horario: 'Salida 07:10 / Regreso 17:40' },
+  { nombre: 'Recorrido Este', horario: 'Salida 07:20 / Regreso 17:50' },
+  { nombre: 'Recorrido Oeste', horario: 'Salida 07:30 / Regreso 18:00' },
+];
+
+const TURNOS_COMEDOR = [
+  { nombre: 'Primer turno', horario: '12:00 a 13:00' },
+  { nombre: 'Segundo turno', horario: '13:00 a 14:00' },
+  { nombre: 'Turno extendido', horario: '14:00 a 15:00' },
+];
+
+// GrupoDeporte.horaInicio/horaFin son @db.Time: Postgres solo persiste la
+// hora, pero Prisma exige un Date completo de entrada, por eso se fija una
+// fecha arbitraria (epoch) igual para todos los registros.
+const horaTime = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 
 const LINKS = [
   { padre: 'pbarrabino', hijos: ['fbarrabino'] },
@@ -219,6 +257,44 @@ async function main() {
     }
   }
 
+  const deporteIdByNombre = new Map<string, number>();
+  for (const nombre of DEPORTES) {
+    const deporte = await prisma.deporte.upsert({
+      where: { nombre },
+      update: {},
+      create: { nombre },
+    });
+    deporteIdByNombre.set(nombre, deporte.id);
+  }
+
+  for (const g of GRUPOS_DEPORTE) {
+    const deporteId = deporteIdByNombre.get(g.deporte)!;
+    const nivelId = nivelIdByNombre.get(g.nivel)!;
+    const horaInicio = horaTime(g.horaInicio);
+    const horaFin = horaTime(g.horaFin);
+    await prisma.grupoDeporte.upsert({
+      where: {
+        deporteId_nivelId_diaSemana_horaInicio_horaFin: {
+          deporteId,
+          nivelId,
+          diaSemana: g.diaSemana,
+          horaInicio,
+          horaFin,
+        },
+      },
+      update: {},
+      create: { deporteId, nivelId, diaSemana: g.diaSemana, horaInicio, horaFin, docenteId: uid(g.docente) },
+    });
+  }
+
+  for (const r of RECORRIDOS_TRANSPORTE) {
+    await prisma.recorridoTransporte.upsert({ where: { nombre: r.nombre }, update: {}, create: r });
+  }
+
+  for (const t of TURNOS_COMEDOR) {
+    await prisma.turnoComedor.upsert({ where: { nombre: t.nombre }, update: {}, create: t });
+  }
+
   const today = new Date();
   const dayIso = (offset: number) => {
     const d = new Date(today);
@@ -302,7 +378,9 @@ async function main() {
   console.log(
     `   ${SEED_USERS.length} usuarios · ${nivelIdByNombre.size} niveles · ${cursoIdByLabel.size} cursos · ` +
     `${materiaIdByNombre.size} materias · ${seenAsignaciones.size} asignaciones materia-curso-docente · ` +
-    `${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio`,
+    `${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio · ` +
+    `${deporteIdByNombre.size} deportes · ${GRUPOS_DEPORTE.length} grupos de deporte · ` +
+    `${RECORRIDOS_TRANSPORTE.length} recorridos de transporte · ${TURNOS_COMEDOR.length} turnos de comedor`,
   );
 }
 
