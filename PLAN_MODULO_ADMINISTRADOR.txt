@@ -437,21 +437,21 @@ FASE 2 — Backend: endpoints
       por dependencias, borrado exitoso).
 
 FASE 3 — Frontend: servicios y pantallas
-  [ ] 3.1 Nuevos servicios en client/src/services/api/: deportesService.js
+  [x] 3.1 Nuevos servicios en client/src/services/api/: deportesService.js
       (list/create/update/remove + listGrupos/createGrupo/removeGrupo),
       transporteService.js, comedorService.js — mismo esqueleto que
       materiasService.js/cursosService.js/nivelesService.js.
-  [ ] 3.2 Nueva página client/src/pages/admin/ServiciosPage.jsx (o el
+  [x] 3.2 Nueva página client/src/pages/admin/ServiciosPage.jsx (o el
       nombre que se defina) con pestañas al estilo AcademicoPage.jsx:
       Deportes / Grupos de deporte / Transporte / Comedor. Reusar
       <DataTable/> y el mismo esqueleto de sección (cargar/crear/editar/
       borrar con toasts).
-  [ ] 3.3 Ruta nueva en el router de la app (confirmar archivo exacto —
+  [x] 3.3 Ruta nueva en el router de la app (confirmar archivo exacto —
       probablemente client/src/app/AppRoutes.jsx) para la página nueva
       bajo /admin/*.
-  [ ] 3.4 Ítem de menú nuevo en client/src/pages/admin/AdminShell.jsx
+  [x] 3.4 Ítem de menú nuevo en client/src/pages/admin/AdminShell.jsx
       (array `menu`), con ícono acorde (ej. fa-futbol o similar).
-  [ ] 3.5 Verificación: `vite build` sin errores; probar en navegador el
+  [x] 3.5 Verificación: `vite build` sin errores; probar en navegador el
       ABM completo de las cuatro entidades como ADMIN (alta, edición,
       borrado con y sin dependencias, mensajes de error del servidor
       visibles correctamente — reusar el fix de `res.message` ya
@@ -491,12 +491,12 @@ BACKEND
       hace falta tocar el middleware)
 
 FRONTEND
-  [ ] deportesService.js / transporteService.js / comedorService.js
-  [ ] Página de administración con las cuatro secciones (Deportes /
+  [x] deportesService.js / transporteService.js / comedorService.js
+  [x] Página de administración con las cuatro secciones (Deportes /
       Grupos de deporte / Transporte / Comedor)
-  [ ] Ruta nueva registrada en el router de la app
-  [ ] Ítem de menú nuevo en AdminShell.jsx
-  [ ] Probado en navegador (alta/edición/baja de las cuatro entidades,
+  [x] Ruta nueva registrada en el router de la app
+  [x] Ítem de menú nuevo en AdminShell.jsx
+  [x] Probado en navegador (alta/edición/baja de las cuatro entidades,
       incluidos los casos de conflicto/borrado bloqueado)
 
 NO TOCAR EN ESTA TAREA
