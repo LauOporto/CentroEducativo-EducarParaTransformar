@@ -377,29 +377,29 @@ d) Patrones de diseño: por qué NO corresponde aplicar ninguno acá.
 --------------------------------------------------------------------------------
 
 FASE 1 — Modelo de datos (backend/prisma/schema.prisma)
-  [ ] 1.1 Agregar modelo `Deporte` (id, nombre único), con
+  [x] 1.1 Agregar modelo `Deporte` (id, nombre único), con
       onDelete: Restrict en la FK que apunta a GrupoDeporte (igual que
       NivelEducativo -> Curso).
-  [ ] 1.2 Agregar enum `DiaSemana` (LUNES..SABADO) y modelo
+  [x] 1.2 Agregar enum `DiaSemana` (LUNES..SABADO) y modelo
       `GrupoDeporte` (deporteId con onDelete: Restrict, nivelId,
       diaSemana, horaInicio/horaFin como DateTime @db.Time, docenteId;
       @@unique([deporteId, nivelId, diaSemana, horaInicio, horaFin]);
       índices en nivelId y docenteId). Horario estructurado y NO texto
       libre — ver decisión 4.a (es parte de la clave única y RF-21
       necesita comparar rangos horarios reales, no strings).
-  [ ] 1.3 Agregar relación inversa en `User` (materiasDictadas ya existe
+  [x] 1.3 Agregar relación inversa en `User` (materiasDictadas ya existe
       para MateriaCurso vía "DocenteMateriaCurso"; agregar análoga
       "gruposDeporteDictados" o similar vía "DocenteGrupoDeporte") y en
       `NivelEducativo` (grupos de deporte por nivel), siguiendo el mismo
       estilo que Curso <-> MateriaCurso.
-  [ ] 1.4 Agregar modelo `RecorridoTransporte` (id, nombre único,
+  [x] 1.4 Agregar modelo `RecorridoTransporte` (id, nombre único,
       horario).
-  [ ] 1.5 Agregar modelo `TurnoComedor` (id, nombre único, horario).
-  [ ] 1.6 Generar y aplicar la migración (mismo mecanismo ya usado:
+  [x] 1.5 Agregar modelo `TurnoComedor` (id, nombre único, horario).
+  [x] 1.6 Generar y aplicar la migración (mismo mecanismo ya usado:
       `prisma migrate dev` si el entorno lo permite de forma
       interactiva, o `prisma migrate diff` + `prisma migrate deploy`
       como se hizo en el Módulo Alumnos si no).
-  [ ] 1.7 Seed opcional: agregar algunos Deportes/GrupoDeporte/
+  [x] 1.7 Seed opcional: agregar algunos Deportes/GrupoDeporte/
       Recorridos/Turnos de ejemplo a backend/prisma/seed.ts para poder
       probar el ABM con datos reales (mismo criterio que se usó para
       niveles/cursos/materias).
@@ -471,13 +471,13 @@ FASE 4 — Fuera de alcance de esta tarea (para más adelante, no hacer acá)
 --------------------------------------------------------------------------------
 
 MODELO DE DATOS
-  [ ] Entidad Deporte (onDelete: Restrict hacia GrupoDeporte)
-  [ ] Enum DiaSemana + Entidad GrupoDeporte (deporte + nivel + día +
+  [x] Entidad Deporte (onDelete: Restrict hacia GrupoDeporte)
+  [x] Enum DiaSemana + Entidad GrupoDeporte (deporte + nivel + día +
       horaInicio + horaFin estructurados + profesor, RF-14)
-  [ ] Entidad RecorridoTransporte
-  [ ] Entidad TurnoComedor
-  [ ] Migración generada y aplicada
-  [ ] Seed de ejemplo (opcional pero recomendado para poder probar)
+  [x] Entidad RecorridoTransporte
+  [x] Entidad TurnoComedor
+  [x] Migración generada y aplicada
+  [x] Seed de ejemplo (opcional pero recomendado para poder probar)
 
 BACKEND
   [ ] deportes.routes.ts — ABM Deporte + sub-recurso /grupos
