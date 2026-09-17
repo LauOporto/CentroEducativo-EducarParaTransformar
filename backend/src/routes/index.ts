@@ -14,6 +14,7 @@ import { nivelesRouter } from './niveles.routes';
 import { cursosRouter } from './cursos.routes';
 import { materiasRouter } from './materias.routes';
 import { deportesRouter } from './deportes.routes';
+import { transporteRouter } from './transporte.routes';
 
 const router = Router();
 
@@ -39,5 +40,6 @@ router.use('/niveles', nivelesRouter);
 router.use('/cursos', cursosRouter);
 router.use('/materias', materiasRouter);
 router.use('/deportes', deportesRouter);
+router.use('/transporte', transporteRouter);
 
 export { router as apiRouter };
