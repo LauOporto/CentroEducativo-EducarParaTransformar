@@ -307,3 +307,21 @@ model GrupoDeporte {
   @@index([nivelId])
   @@index([docenteId])
 }
+
+// Catálogo plano: sin relación a nivel/curso/profesor (el TP no la pide) y
+// sin ninguna regla de negocio de solapamiento horario sobre este modelo,
+// por eso `horario` es texto libre descriptivo.
+model RecorridoTransporte {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  horario   String
+  createdAt DateTime @default(now())
+}
+
+// Catálogo plano, mismo criterio que RecorridoTransporte.
+model TurnoComedor {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  horario   String
+  createdAt DateTime @default(now())
+}
