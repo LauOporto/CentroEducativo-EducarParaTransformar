@@ -18,10 +18,15 @@ router.get('/', requireAuth, async (_req, res, next) => {
 router.use(requireAuth, requireRole(Role.ADMIN));
 
 // `horario` es texto libre descriptivo (ver decisión 4.b del plan): no hay
-// ninguna regla de negocio de solapamiento horario sobre este catálogo.
+// ninguna regla de negocio de solapamiento horario sobre este catálogo, por
+// eso no se estructura como en GrupoDeporte. Igual debe contener al menos
+// un patrón de hora (HH:mm) en algún punto del texto para evitar valores
+// sin ningún sentido (ej. "adasd").
+const horaEnTexto = /\d{1,2}:\d{2}/;
 const recorridoSchema = z.object({
   nombre: z.string().trim().min(2).max(60),
-  horario: z.string().trim().min(3).max(80),
+  horario: z.string().trim().min(3).max(80)
+    .regex(horaEnTexto, 'El horario debe incluir al menos un horario en formato HH:mm.'),
 });
 
 router.post('/', async (req, res, next) => {
