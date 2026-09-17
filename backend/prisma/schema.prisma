@@ -37,17 +37,27 @@ enum EstadoAlumno {
   EGRESADO
 }
 
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+}
+
 // ---- Estructura académica (Módulo Alumnos / Profesores / Administración) ----
 
 model NivelEducativo {
   id     Int    @id @default(autoincrement())
   nombre String @unique // Inicial | Primario | Secundario
 
-  cursos Curso[]
+  cursos        Curso[]
+  gruposDeporte GrupoDeporte[]
 }
 
 model Curso {
-  id      Int  @id @default(autoincrement())
+  id      Int            @id @default(autoincrement())
   nombre  String
   nivelId Int
   nivel   NivelEducativo @relation(fields: [nivelId], references: [id], onDelete: Restrict)
@@ -115,7 +125,8 @@ model User {
   planesDeEstudio       StudyPlan[]
   forumPosts            ForumPost[]
   forumReplies          ForumReply[]
-  materiasDictadas      MateriaCurso[]      @relation("DocenteMateriaCurso")
+  materiasDictadas      MateriaCurso[] @relation("DocenteMateriaCurso")
+  gruposDeporteDictados GrupoDeporte[] @relation("DocenteGrupoDeporte")
 
   @@index([role])
   @@index([cursoId])
@@ -177,16 +188,16 @@ model Notification {
 }
 
 model ForumPost {
-  id        Int          @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   authorId  Int
-  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   materia   String
   titulo    String
   contenido String
-  isPinned  Boolean      @default(false)
-  createdAt DateTime     @default(now())
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-  replies   ForumReply[]
+  replies ForumReply[]
 
   @@index([materia])
   @@index([createdAt])
@@ -205,31 +216,31 @@ model ForumReply {
 }
 
 model Inscription {
-  id              Int              @id @default(autoincrement())
-  nombreTutor     String
-  emailTutor      String
-  telefonoTutor   String
+  id               Int              @id @default(autoincrement())
+  nombreTutor      String
+  emailTutor       String
+  telefonoTutor    String
   nombreEstudiante String
-  nivel           String
-  curso           String
-  mensaje         String?
-  status          ModerationStatus @default(PENDIENTE)
-  notaAdmin       String?
-  createdAt       DateTime         @default(now())
-  resolvedAt      DateTime?
+  nivel            String
+  curso            String
+  mensaje          String?
+  status           ModerationStatus @default(PENDIENTE)
+  notaAdmin        String?
+  createdAt        DateTime         @default(now())
+  resolvedAt       DateTime?
 
   @@index([status])
   @@index([createdAt])
 }
 
 model Opinion {
-  id        Int              @id @default(autoincrement())
-  nombre    String?
-  rol       String
-  texto     String
-  rating    Int
-  status    ModerationStatus @default(PENDIENTE)
-  createdAt DateTime         @default(now())
+  id         Int              @id @default(autoincrement())
+  nombre     String?
+  rol        String
+  texto      String
+  rating     Int
+  status     ModerationStatus @default(PENDIENTE)
+  createdAt  DateTime         @default(now())
   resolvedAt DateTime?
 
   @@index([status])
@@ -237,14 +248,14 @@ model Opinion {
 }
 
 model EmploymentApplication {
-  id        Int              @id @default(autoincrement())
-  nombre    String
-  email     String
-  puesto    String
-  cvUrl     String?
-  status    ModerationStatus @default(PENDIENTE)
-  notaAdmin String?
-  createdAt DateTime         @default(now())
+  id         Int              @id @default(autoincrement())
+  nombre     String
+  email      String
+  puesto     String
+  cvUrl      String?
+  status     ModerationStatus @default(PENDIENTE)
+  notaAdmin  String?
+  createdAt  DateTime         @default(now())
   resolvedAt DateTime?
 
   @@index([status])
@@ -263,4 +274,36 @@ model StudyPlan {
   createdAt  DateTime @default(now())
 
   @@index([materia])
+}
+
+// ---- Deportes / Transporte / Comedor (RF-14, RF-15) ----
+
+model Deporte {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique
+
+  grupos GrupoDeporte[]
+}
+
+// Grupo de deporte: deporte + nivel + día + horario + profesor responsable
+// (RF-14). El horario se modela con campos estructurados (no texto libre)
+// porque es parte de la clave única y RF-21 exige más adelante detectar
+// solapamiento horario entre los deportes de un mismo alumno, algo
+// inviable de calcular comparando strings arbitrarios.
+model GrupoDeporte {
+  id         Int            @id @default(autoincrement())
+  deporteId  Int
+  deporte    Deporte        @relation(fields: [deporteId], references: [id], onDelete: Restrict)
+  nivelId    Int
+  nivel      NivelEducativo @relation(fields: [nivelId], references: [id], onDelete: Restrict)
+  diaSemana  DiaSemana
+  horaInicio DateTime       @db.Time
+  horaFin    DateTime       @db.Time
+  docenteId  Int
+  docente    User           @relation("DocenteGrupoDeporte", fields: [docenteId], references: [id], onDelete: Restrict)
+  createdAt  DateTime       @default(now())
+
+  @@unique([deporteId, nivelId, diaSemana, horaInicio, horaFin])
+  @@index([nivelId])
+  @@index([docenteId])
 }
