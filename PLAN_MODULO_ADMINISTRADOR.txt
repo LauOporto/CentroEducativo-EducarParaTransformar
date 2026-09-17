@@ -405,7 +405,7 @@ FASE 1 — Modelo de datos (backend/prisma/schema.prisma)
       niveles/cursos/materias).
 
 FASE 2 — Backend: endpoints
-  [ ] 2.1 backend/src/routes/deportes.routes.ts (nuevo):
+  [x] 2.1 backend/src/routes/deportes.routes.ts (nuevo):
       - GET  /api/deportes            (requireAuth)
       - POST/PATCH/DELETE /api/deportes  (ADMIN; DELETE con 409 si el
         deporte tiene grupos)
@@ -416,14 +416,14 @@ FASE 2 — Backend: endpoints
         role=DOCENTE; 409 si ya existe esa combinación
         deporte+nivel+diaSemana+horaInicio+horaFin)
       - DELETE /api/deportes/grupos/:id (ADMIN)
-  [ ] 2.2 backend/src/routes/transporte.routes.ts (nuevo): ABM plano de
+  [x] 2.2 backend/src/routes/transporte.routes.ts (nuevo): ABM plano de
       RecorridoTransporte, calcado de niveles.routes.ts.
-  [ ] 2.3 backend/src/routes/comedor.routes.ts (nuevo): ABM plano de
+  [x] 2.3 backend/src/routes/comedor.routes.ts (nuevo): ABM plano de
       TurnoComedor, calcado de niveles.routes.ts.
-  [ ] 2.4 Montar los tres routers nuevos en backend/src/routes/index.ts
+  [x] 2.4 Montar los tres routers nuevos en backend/src/routes/index.ts
       (`/deportes`, `/transporte`, `/comedor`), junto a niveles/cursos/
       materias.
-  [ ] 2.5 Validación con Zod en cada router: nombre acotado en longitud
+  [x] 2.5 Validación con Zod en cada router: nombre acotado en longitud
       en todos; en GrupoDeporte, diaSemana como z.nativeEnum(DiaSemana)
       y horaInicio/horaFin validados como hora (HH:mm) con
       .refine(horaInicio < horaFin); en RecorridoTransporte/TurnoComedor
@@ -431,7 +431,7 @@ FASE 2 — Backend: endpoints
       (texto libre, ver decisión 4.b); ids con
       z.coerce.number().int().positive(). No se necesita tocar
       backend/src/utils/validators.ts (ver decisión 4.a).
-  [ ] 2.6 Verificación: `tsc --noEmit` sin errores; probar cada endpoint
+  [x] 2.6 Verificación: `tsc --noEmit` sin errores; probar cada endpoint
       con curl/Postman (alta, edición, conflicto de nombre duplicado,
       conflicto de combinación duplicada en grupos, borrado bloqueado
       por dependencias, borrado exitoso).
@@ -480,13 +480,13 @@ MODELO DE DATOS
   [x] Seed de ejemplo (opcional pero recomendado para poder probar)
 
 BACKEND
-  [ ] deportes.routes.ts — ABM Deporte + sub-recurso /grupos
-  [ ] transporte.routes.ts — ABM RecorridoTransporte
-  [ ] comedor.routes.ts — ABM TurnoComedor
-  [ ] Los tres montados en routes/index.ts
-  [ ] Validación Zod + HttpError en los tres, mismo estilo que
+  [x] deportes.routes.ts — ABM Deporte + sub-recurso /grupos
+  [x] transporte.routes.ts — ABM RecorridoTransporte
+  [x] comedor.routes.ts — ABM TurnoComedor
+  [x] Los tres montados en routes/index.ts
+  [x] Validación Zod + HttpError en los tres, mismo estilo que
       niveles/cursos/materias
-  [ ] Permisos: lectura para cualquier logueado, escritura solo ADMIN
+  [x] Permisos: lectura para cualquier logueado, escritura solo ADMIN
       (RNF-44, ya cubierto por requireAuth/requireRole existentes — no
       hace falta tocar el middleware)
 
