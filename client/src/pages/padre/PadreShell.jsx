@@ -8,6 +8,7 @@ const MENU = [
   { to: '/padre', label: 'Boletín e Historial', icon: 'fa-file-invoice', end: true },
   { to: '/padre/materias', label: 'Materias del Hijo', icon: 'fa-book-open' },
   { to: '/padre/asistencias', label: 'Asistencias', icon: 'fa-clipboard-user' },
+  { to: '/padre/servicios', label: 'Deportes y Servicios', icon: 'fa-futbol' },
 ];
 
 export default function PadreShell() {

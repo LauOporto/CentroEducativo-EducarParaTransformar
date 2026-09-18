@@ -170,7 +170,12 @@ router.post('/grupos', async (req, res, next) => {
 
 router.delete('/grupos/:id', async (req, res, next) => {
   try {
-    await prisma.grupoDeporte.delete({ where: { id: Number(req.params.id) } });
+    const id = Number(req.params.id);
+    const inscripcionesAsociadas = await prisma.inscripcionDeporte.count({ where: { grupoDeporteId: id } });
+    if (inscripcionesAsociadas > 0) {
+      throw HttpError.conflict('No se puede eliminar: el grupo tiene alumnos inscriptos. Desinscribilos primero.');
+    }
+    await prisma.grupoDeporte.delete({ where: { id } });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });

@@ -1,0 +1,643 @@
+================================================================================
+PLAN DE TRABAJO — MÓDULO INSCRIPCIONES (Deportes / Transporte / Comedor)
+Proyecto: Centro Educativo "Educar para Transformar" (Equipo FLCODE)
+Base: TP-Metodologia-2 (TUP 2026) + Plan de Trabajo (PlanTrabajoProyecto-Met2-2026)
+      + estado real del código (backend/ + client/) en franco-rama == main (d8f061b)
+Fecha: 18/09/2026
+================================================================================
+
+--------------------------------------------------------------------------------
+1. QUÉ PIDE EL TP SOBRE ESTO (resumen normativo)
+--------------------------------------------------------------------------------
+
+Requerimientos funcionales exactos (Plan de Trabajo, sección de requerimientos):
+
+  RF-18: El sistema debe permitir inscribir a cada alumno hasta un máximo de
+         2 (dos) deportes de forma simultánea, rechazando la inscripción a
+         un tercer deporte mientras las dos anteriores permanezcan activas.
+  RF-19: El sistema debe permitir inscribir a cada alumno a 1 (uno) de los
+         4 (cuatro) recorridos disponibles del servicio de transporte.
+  RF-20: El sistema debe permitir inscribir a cada alumno al servicio de
+         comedor.
+  RF-21: El sistema debe validar, al momento de inscribir a un alumno en una
+         actividad deportiva, que no exista superposición de horario con
+         otra actividad deportiva en la que el alumno ya esté inscripto,
+         rechazando la inscripción en caso de conflicto.
+  RF-22: El sistema debe impedir el registro de inscripciones duplicadas de
+         un mismo alumno para la misma actividad deportiva, recorrido de
+         transporte o turno de comedor.
+  RF-23: El sistema debe permitir a un usuario con rol Padre/Tutor
+         consultar, únicamente para los hijos que tenga asociados, los
+         profesores por materia y los deportes en los que participa cada
+         hijo.
+  RF-24: El sistema debe permitir a un Padre/Tutor con uno o varios hijos
+         asociados inscribir a su(s) hijo(s) al cursado, accediendo
+         exclusivamente a la información de estos.
+
+Reglas de negocio del TP original (documento fuente, PARTE-2) que aplican
+directamente a este bloque:
+  - Cada alumno puede inscribirse a dos deportes simultáneamente.
+  - Cada alumno puede inscribirse al servicio de transporte por recorrido.
+  - Cada alumno puede inscribirse al servicio de comedor.
+  - El servicio de transporte tiene cuatro recorridos.
+  - El sistema deberá controlar que no existan conflictos de horarios entre
+    las actividades deportivas seleccionadas por los estudiantes.
+  - Un padre puede tener asociados uno o varios hijos.
+  - Un padre solamente puede consultar y gestionar información de sus hijos.
+  - El sistema debe evitar registros duplicados de inscripciones.
+
+Restricciones de negocio reafirmadas en el propio Plan de Trabajo:
+  - "Un alumno no puede estar inscripto en más de dos deportes simultáneos"
+    (RF-18).
+  - "No se admite superposición horaria entre deportes de un mismo alumno"
+    (RF-21).
+  - "No se admiten inscripciones duplicadas en deporte, transporte o
+    comedor" (RF-22).
+  - "Un alumno puede inscribirse a un solo recorrido de transporte" (RF-19).
+
+Nota de alcance importante (confirmada leyendo el propio Plan de Trabajo,
+no solo el enunciado del TP): RF-23 y RF-24 son DOS cosas distintas.
+  - RF-24 es "inscribir al cursado" (asignar un Curso a un alumno sin
+    curso) — pertenece conceptualmente al Módulo Alumnos y, de hecho, YA
+    ESTÁ IMPLEMENTADO (ver sección 2). No es parte del trabajo pendiente
+    de este módulo, más allá de que su patrón de acceso padre-hijo se
+    reutiliza acá.
+  - RF-23 combina DOS fuentes de datos para el panel Padre: "profesores por
+    materia" (ya resuelto, Módulo Alumnos) y "deportes en que participa"
+    (no existe todavía — depende de que exista la inscripción a deportes
+    de este módulo). Solo la segunda mitad de RF-23 es trabajo nuevo acá.
+
+Patrones de diseño: el Plan de Trabajo (línea "2. Facade — Panel del
+Padre/Tutor") define explícitamente que el patrón Facade se reserva para
+RF-23/RF-24, para "unificar detrás de una fachada simple el acceso a datos
+que hoy viven repartidos en varios subsistemas (materias+profesor,
+deportes, transporte, comedor, inscripción a cursado)". El propio
+PLAN_MODULO_ADMINISTRADOR.txt (sección 4d) ya había diferido este patrón
+hasta este módulo. Se evalúa en la sección 4c si corresponde tal cual está
+descripto o con ajustes de alcance.
+
+--------------------------------------------------------------------------------
+2. QUÉ HAY HOY EN EL CÓDIGO (diagnóstico)
+--------------------------------------------------------------------------------
+
+Backend — modelo de datos (backend/prisma/schema.prisma, leído completo):
+
+  - `Deporte` (id, nombre único) -> `GrupoDeporte[]`.
+  - `GrupoDeporte` (deporteId, nivelId, diaSemana enum, horaInicio/horaFin
+    @db.Time, docenteId), @@unique([deporteId, nivelId, diaSemana,
+    horaInicio, horaFin]). horaInicio/horaFin se persisten con fecha fija
+    1970-01-01 (ver deportes.routes.ts:121 `toTime()`), es decir que dos
+    registros cualesquiera son directamente comparables como si fueran
+    solo "hora del día" — CONFIRMADO: no hace falta ningún cálculo
+    especial de fechas para detectar solapamiento, es una comparación de
+    rangos [horaInicio, horaFin) estándar sobre objetos Date ya
+    normalizados al mismo día.
+  - `RecorridoTransporte` (nombre único, horaSalida/horaRegreso @db.Time) y
+    `TurnoComedor` (nombre único, horaInicio/horaFin @db.Time): catálogos
+    planos, sin ninguna relación a alumno todavía.
+  - `Inscription` (línea 218): esto NO es lo que necesitamos. Es la
+    solicitud de inscripción del formulario público (RF-17): campos
+    nombreTutor/emailTutor/nombreEstudiante como STRINGS LIBRES (ni
+    siquiera son FK a `User`), con status PENDIENTE/APROBADO/RECHAZADO
+    resuelto por Admin vía moderation.routes.ts. Pertenece al proceso de
+    ADMISIÓN de un estudiante nuevo al colegio, un dominio totalmente
+    distinto de "un alumno YA MATRICULADO se inscribe a un servicio
+    extracurricular". Reusar esta tabla sería incorrecto: no tiene FK a
+    `User`/`GrupoDeporte`, su enum de estado (moderación) no representa
+    "activo/dado de baja", y mezclaría dos procesos de negocio no
+    relacionados solo porque comparten la palabra "inscripción". DECISIÓN:
+    entidades nuevas (desarrollado en sección 4a).
+  - No existe ninguna entidad que vincule `User` (rol ESTUDIANTE) con
+    Deporte/GrupoDeporte/RecorridoTransporte/TurnoComedor. Confirmado con
+    búsqueda exhaustiva: cero apariciones de "Inscripcion" + "Deporte" o
+    similar en el schema.
+
+Backend — rutas relevantes (leídas completas):
+
+  - `backend/src/routes/parent.routes.ts`: patrón "padre gestiona hijos"
+    consolidado en `assertHijoVinculado(padreId, estudianteId)` (busca
+    `ParentStudentLink` único). Expone GET /hijos, POST /vincular y
+    POST /hijos/:id/inscribir-cursado. ESTE ÚLTIMO YA IMPLEMENTA RF-24
+    completo (backend y frontend, ver abajo) — con una regla de negocio
+    propia no pedida por el TP pero razonable: solo funciona si el hijo
+    todavía no tiene curso asignado (evita que el padre reasigne curso a
+    mitad de año sin pasar por Dirección).
+  - `backend/src/routes/students.routes.ts`: tiene su PROPIA función de
+    control de acceso, `assertCanAccessStudent(req, studentId)`, más
+    permisiva que la del padre: ADMIN/DOCENTE sin restricción, ESTUDIANTE
+    solo su propia ficha, PADRE solo si hay `ParentStudentLink`. Expone
+    GET /:id/materias (materias + profesor a cargo, RF-11) — esto ya
+    resuelve la mitad de RF-23 ("profesores por materia"), consumido hoy
+    por MateriasPage.jsx del panel Padre. NOTA: hay DOS funciones de
+    verificación de vínculo padre-hijo casi idénticas y no compartidas
+    (`assertHijoVinculado` en parent.routes.ts, `assertCanAccessStudent`
+    en students.routes.ts, esta última no exportada). Ver decisión en 4e.
+  - `deportes.routes.ts` / `transporte.routes.ts` / `comedor.routes.ts`:
+    ABM de catálogo (Admin) + GET de lectura para cualquier logueado. Sin
+    ninguna referencia a inscripción de alumnos. El DELETE de
+    `/deportes/grupos/:id` y de recorridos/turnos NO verifica si hay
+    dependientes antes de borrar (a diferencia de `DELETE /deportes/:id`,
+    que sí cuenta grupos asociados) — hoy no importa porque nada depende
+    de un grupo/recorrido/turno todavía, pero pasa a importar en cuanto
+    exista la inscripción (ver sección 4e "relación inversa mínima").
+  - `moderation.routes.ts`: resuelve RF-17 (aprobar/rechazar solicitudes
+    de `Inscription`). Confirma que ese modelo es del proceso de admisión,
+    no de servicios extracurriculares.
+  - `backend/src/utils/validators.ts`: solo tiene `dniSchema`,
+    `telefonoSchema`, `fechaNacimientoSchema`, `legajoSchema`,
+    `estadoAlumnoSchema`. Nada relacionado con horarios o inscripciones —
+    la validación de formato HH:mm ya vive inline en deportes/transporte/
+    comedor.routes.ts (regex `horaRegex` duplicado 3 veces, uno por
+    archivo). No hace falta tocar validators.ts para este módulo salvo que
+    se decida centralizar ese regex (no es parte del alcance de RF-18-24,
+    se anota como mejora posible, no se hace acá).
+
+Frontend — panel Padre (client/src/pages/padre/, leído completo):
+
+  - `PadreShell.jsx`: define el menú (Boletín, Materias del Hijo,
+    Asistencias) y pasa `{ hijoId, hijos, refrescarHijos }` por contexto
+    a las páginas hijas vía `<Outlet>`. Usa `HijoSelector` para elegir
+    cuál hijo se está viendo. NO hay ningún ítem de menú de "Deportes" ni
+    "Servicios" todavía.
+  - `MateriasPage.jsx`: llama a `studentsService.getMaterias(hijoId)` y
+    `gradesService.listByStudent(hijoId)` POR SEPARADO desde el frontend
+    (dos llamadas independientes, sin fachada), y muestra el formulario
+    `InscribirCursado` inline cuando `hijo.curso` es null — ESTO ES RF-24
+    y ya funciona end-to-end (confirmado también en el `[x]` de
+    PLAN_MODULO_ALUMNOS.txt, Fase 2.5/3.5).
+  - `parentService.js`: `listHijos`, `vincularHijo`, `inscribirCursado`.
+    No hay ningún servicio de deportes/transporte/comedor para el padre.
+  - No existe ninguna página de "Mis Servicios" / "Deportes" en el panel
+    Padre. La parte de RF-23 sobre "deportes en que participa" no tiene
+    ni backend ni frontend.
+
+Discrepancia detectada con CHECKLIST_REQUERIMIENTOS.txt (para corregir,
+no se toca en este plan salvo que el usuario lo pida): el checklist actual
+(commit 0756c23) marca RF-24 como `[FALTA]` con evidencia "solo existe
+vinculación por DNI", lo cual es INCORRECTO — el commit f7822cb (previo a
+la última actualización del checklist) ya agregó
+`POST /api/parent/hijos/:id/inscribir-cursado` + el formulario
+`InscribirCursado` en el frontend. El checklist quedó desactualizado en
+ese punto puntual. RF-23 sí está bien reflejado como `[PARCIAL]`.
+
+Conclusión del diagnóstico: el catálogo (Deporte, GrupoDeporte,
+RecorridoTransporte, TurnoComedor) está completo y ya modela el horario de
+forma estructurada pensando explícitamente en este momento (el propio
+comentario en schema.prisma:288-292 dice que el horario se estructuró
+"porque RF-21 exige más adelante detectar solapamiento horario"). Lo que
+falta es exactamente el bloque transaccional: las tres entidades de
+inscripción, sus reglas de negocio (máximo 2, solapamiento, no duplicados),
+los endpoints, y las pantallas de padre para gestionarlas. RF-24 y la mitad
+de RF-23 ya están resueltos y no requieren trabajo nuevo.
+
+--------------------------------------------------------------------------------
+3. POR DÓNDE ARRANCAR (recomendación)
+--------------------------------------------------------------------------------
+
+ARRANCAR POR EL MODELO DE DATOS, igual criterio que en los dos módulos
+anteriores: las reglas de negocio (máximo 2 deportes, solapamiento
+horario, no duplicados) solo se pueden reforzar de verdad si el modelo las
+sostiene desde el schema (restricciones UNIQUE, tal como indica el propio
+Plan de Trabajo: "se resuelven en la capa de servicios y se refuerzan con
+restricciones UNIQUE en la base de datos"). Si se empieza por las
+pantallas, se termina validando reglas de negocio solo en el frontend, lo
+cual no cumple RNF-44/RNF-47 ni el criterio de "única fuente de verdad" ya
+declarado en la arquitectura.
+
+Orden recomendado:
+  1º Modelo de datos: 3 entidades nuevas de inscripción + relación inversa
+     mínima en Deporte/GrupoDeporte/RecorridoTransporte/TurnoComedor/User.
+  2º Capa de servicio con las reglas de negocio (máximo 2, solapamiento,
+     acceso) + el Facade que combina catálogo + inscripciones para el
+     panel Padre.
+  3º Router de inscripciones (endpoints).
+  4º Frontend: servicio API + página "Mis Servicios" en el panel Padre +
+     ítem de menú.
+  5º Guardas de borrado en deportes/transporte/comedor.routes.ts (evitar
+     que Admin borre un grupo/recorrido/turno con inscripciones activas).
+
+--------------------------------------------------------------------------------
+4. DECISIONES DE DISEÑO A TOMAR ANTES DE CODEAR
+--------------------------------------------------------------------------------
+
+a) Modelo de datos: ¿reusar `Inscription` o crear entidades nuevas?
+
+   DECISIÓN: entidades nuevas. `Inscription` (RF-17) es del proceso de
+   admisión de un estudiante NUEVO (antes de tener cuenta, con datos de
+   tutor en texto libre, resuelto por moderación Admin). Lo que necesita
+   RF-18-22 es todo lo opuesto: un alumno YA matriculado (fila real en
+   `User` con role=ESTUDIANTE) que se engancha a un catálogo YA existente
+   (GrupoDeporte/RecorridoTransporte/TurnoComedor) mediante FKs reales, sin
+   ningún flujo de aprobación/rechazo. Forzar el reuso de `Inscription`
+   requeriría añadirle `estudianteId`, `grupoDeporteId`, etc. opcionales
+   sobre una tabla pensada para otra cosa, degradando su único propósito
+   actual y complicando las queries de moderation.routes.ts sin necesidad.
+
+   Se proponen 3 modelos nuevos:
+
+     // Denormaliza deporteId (además de grupoDeporteId) a propósito: el
+     // TP dice "2 deportes" (no "2 grupos"), así que el tope de 2 y el
+     // rechazo de duplicados deben calcularse por Deporte, no por Grupo.
+     // Con @@unique([estudianteId, deporteId]) la base garantiza sola,
+     // sin lógica adicional, que un alumno no pueda tener dos grupos
+     // activos del MISMO deporte (RF-22) y que contar sus filas alcance
+     // para el tope de 2 (RF-18) sin tener que hacer join ni distinct.
+     model InscripcionDeporte {
+       id             Int          @id @default(autoincrement())
+       estudianteId   Int
+       estudiante     User         @relation("InscripcionesDeporte", fields: [estudianteId], references: [id], onDelete: Cascade)
+       deporteId      Int
+       deporte        Deporte      @relation(fields: [deporteId], references: [id], onDelete: Restrict)
+       grupoDeporteId Int
+       grupoDeporte   GrupoDeporte @relation(fields: [grupoDeporteId], references: [id], onDelete: Restrict)
+       createdAt      DateTime     @default(now())
+
+       @@unique([estudianteId, deporteId])
+       @@index([grupoDeporteId])
+     }
+
+     // @unique(estudianteId): "1 de los 4 recorridos" (RF-19) se modela
+     // como estado ACTUAL (a lo sumo una fila por alumno), no como
+     // historial mensual — el TP no pide reportar variaciones mes a mes,
+     // solo permitir que el alumno CAMBIE de recorrido ("puede variar mes
+     // a mes" = se puede reemplazar, no que haya que guardar cada mes).
+     // Cambiar de recorrido es un upsert, nunca puede haber una fila
+     // duplicada (RF-22 queda resuelto por el propio @unique).
+     model InscripcionTransporte {
+       id           Int                 @id @default(autoincrement())
+       estudianteId Int                 @unique
+       estudiante   User                @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+       recorridoId  Int
+       recorrido    RecorridoTransporte @relation(fields: [recorridoId], references: [id], onDelete: Restrict)
+       createdAt    DateTime            @default(now())
+       updatedAt    DateTime            @updatedAt
+     }
+
+     // Mismo criterio que InscripcionTransporte.
+     model InscripcionComedor {
+       id           Int          @id @default(autoincrement())
+       estudianteId Int          @unique
+       estudiante   User         @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+       turnoId      Int
+       turno        TurnoComedor @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+       createdAt    DateTime     @default(now())
+       updatedAt    DateTime     @updatedAt
+     }
+
+   Relación inversa mínima a agregar (aditiva, no rompe nada existente) en
+   los modelos ya mergeados a main:
+     - `User`: + `inscripcionesDeporte InscripcionDeporte[] @relation("InscripcionesDeporte")`,
+       + `inscripcionTransporte InscripcionTransporte?`,
+       + `inscripcionComedor InscripcionComedor?`.
+     - `Deporte`: + `inscripciones InscripcionDeporte[]`.
+     - `GrupoDeporte`: + `inscripciones InscripcionDeporte[]`.
+     - `RecorridoTransporte`: + `inscripciones InscripcionTransporte[]`.
+     - `TurnoComedor`: + `inscripciones InscripcionComedor[]`.
+   Esto es exactamente lo que el pedido inicial permitía tocar del módulo
+   ya resuelto: son campos nuevos que Prisma exige por ser relaciones
+   explícitas, no se modifica ningún campo ni comportamiento existente.
+
+   Punto a confirmar con el usuario: modelar transporte/comedor como
+   "estado actual" (1 fila, upsert) en vez de historial con vigencia
+   (desde/hasta por mes). Recomiendo estado actual por simplicidad y
+   porque ningún RF/reporte pide historial mensual — si más adelante un
+   reporte lo pidiera, se agrega `vigenteDesde`/`vigenteHasta` sin romper
+   lo demás.
+
+b) Detección de solapamiento horario entre deportes — CONFIRMADO cómo se
+   implementa.
+
+   Con horaInicio/horaFin ya persistidos como @db.Time sobre una fecha fija
+   (1970-01-01, ver deportes.routes.ts `toTime()`), dos GrupoDeporte son
+   directamente comparables con operadores `<`/`>` de JS/Prisma sin ningún
+   parseo adicional. El algoritmo, ejecutado en la capa de servicio antes
+   de crear una `InscripcionDeporte`:
+
+     1. Traer los grupos de las inscripciones activas del alumno (máximo
+        2, o 1 si se está evaluando la segunda) vía
+        `InscripcionDeporte.findMany({ where: { estudianteId }, include: { grupoDeporte: true } })`.
+     2. Para el grupo candidato G y cada grupo existente E:
+          si G.diaSemana === E.diaSemana
+             && G.horaInicio < E.horaFin
+             && E.horaInicio < G.horaFin
+          -> hay solapamiento (fórmula estándar de intersección de
+             intervalos semiabiertos), rechazar con 409.
+     3. Si no hay solapamiento con ninguno de los existentes, y el conteo
+        de inscripciones del alumno es < 2, y no existe ya una fila con
+        ese mismo `deporteId` (cubierto por el `@@unique` de 4a, pero se
+        valida antes también para devolver un mensaje 409 legible en vez
+        de dejar que explote la constraint), se crea la inscripción.
+
+   No hace falta SQL crudo ni una librería de rangos de fecha: es una
+   comparación de 2 a 4 registros como máximo por alumno, la complejidad
+   es trivial y no hay ningún riesgo de rendimiento (RNF-45 aplica a
+   reportes de hasta 500 filas, no a esto).
+
+c) ¿Corresponde el patrón Facade acá? Evaluación seria, no descartada por
+   default.
+
+   El Plan de Trabajo asigna explícitamente Facade a "Panel del
+   Padre/Tutor" (RF-23/RF-24), para "unificar detrás de una fachada simple
+   el acceso a datos que hoy viven repartidos en varios subsistemas
+   (materias+profesor, deportes, transporte, comedor, inscripción a
+   cursado)", y aclara que "la misma fachada se reutiliza sin cambios para
+   el panel del Alumno, que consulta la misma información sobre sí mismo".
+
+   PERO hay un dato real del código que hay que confrontar con eso: RF-24
+   (inscribir cursado) y la mitad "materias+profesor" de RF-23 YA ESTÁN
+   IMPLEMENTADOS, y NO usan ninguna fachada — `MateriasPage.jsx` llama
+   `studentsService.getMaterias(hijoId)` y `gradesService.listByStudent(hijoId)`
+   como dos peticiones independientes, coordinadas en el propio
+   frontend, y funciona bien, está probado y ya en main. Retrofitear eso
+   a una fachada ahora sería puro riesgo de regresión sobre código que
+   funciona, sin ningún RF pendiente que lo pida — iría en contra de "no
+   refactorices más allá de lo que la tarea requiere".
+
+   CONCLUSIÓN: sí corresponde Facade, pero con alcance ajustado a lo que
+   es REALMENTE nuevo, no a retrofitear lo ya resuelto:
+
+     - Lo nuevo que hay que construir para completar RF-23 y para dar
+       soporte a RF-18-22 desde el panel Padre es, en los hechos, UNA
+       sola pantalla ("Mis Servicios" / "Deportes y Transporte y
+       Comedor") que necesita combinar, por cada hijo: (1) catálogo de
+       Deporte/GrupoDeporte disponibles + los grupos en los que el hijo
+       ya está inscripto, (2) catálogo de RecorridoTransporte + el
+       recorrido actual del hijo (si tiene), (3) catálogo de TurnoComedor
+       + el turno actual del hijo (si tiene). Esto es EXACTAMENTE la
+       forma del problema que Facade resuelve: combinar varias fuentes
+       (3 catálogos + 3 estados transaccionales) detrás de una sola
+       llamada, para que el frontend no tenga que orquestar 6 pedidos.
+     - Se define `backend/src/services/panelFamilia.facade.ts` con:
+         `obtenerResumenServicios(estudianteId)` -> { deportes: {
+         inscriptos, disponibles }, transporte: { actual, disponibles },
+         comedor: { actual, disponibles } }.
+       Esta única función es la fachada: el router de inscripciones y el
+       de parent/students la llaman sin conocer que por debajo combina 6
+       tablas de 2 dominios distintos (catálogo administrable +
+       transaccional de inscripción).
+     - Las mutaciones (inscribir/desinscribir deporte, cambiar transporte,
+       cambiar comedor) SE INCLUYEN también en el mismo archivo como
+       operaciones del "caso de uso del panel" (el propio Plan de Trabajo
+       dice "expone una única operación por caso de uso del panel", no
+       limita el patrón a lecturas): `inscribirDeporte`,
+       `desinscribirDeporte`, `inscribirTransporte`, `desinscribirTransporte`,
+       `inscribirComedor`, `desinscribirComedor`. Cada una aplica las
+       reglas de negocio de 4b antes de tocar la base.
+     - Reutilización confirmada tal como la describe el Plan de Trabajo:
+       la misma fachada sirve para el panel Padre (`GET
+       /inscripciones/estudiantes/:id/resumen` con chequeo de vínculo) y,
+       sin cambios, para una futura vista del propio Alumno o para Admin
+       (mismo `estudianteId`, distinto chequeo de acceso en el router).
+     - Se descarta explícitamente ponerle Facade a RF-24 (inscribir
+       cursado) y a la mitad "materias+profesor" de RF-23: son
+       operaciones de una sola fuente de datos cada una, ya resueltas de
+       forma simple y correcta, sin nada que orquestar. Aplicarles Facade
+       ahí sería sobreingeniería sobre código que no lo necesita.
+
+   No corresponden Factory Method ni Strategy en este módulo: no hay
+   construcción polimórfica de objetos según un tipo variable (las 3
+   inscripciones son entidades distintas y conocidas de antemano, no una
+   familia abierta), y no hay un algoritmo intercambiable en tiempo de
+   ejecución (las reglas de negocio de deportes/transporte/comedor son
+   fijas, no una estrategia seleccionable). Coincide con lo ya
+   documentado en PLAN_MODULO_ADMINISTRADOR.txt: esos dos patrones quedan
+   reservados para Notificaciones (RF-34) y Motor de Reportes
+   (RF-25 a RF-33) respectivamente.
+
+d) Endpoints necesarios y dónde viven.
+
+   DECISIÓN: router nuevo `backend/src/routes/inscripciones.routes.ts`,
+   montado en `/api/inscripciones`, en vez de agregar todo esto dentro de
+   `parent.routes.ts`. Motivo: el acceso no es exclusivo del padre —
+   ADMIN necesita poder ver/gestionar inscripciones de cualquier alumno
+   (regla general "el administrador puede gestionar toda la información
+   del sistema"), y eventualmente el propio Alumno podría consultar las
+   suyas. Esto es el mismo criterio que ya usa `students.routes.ts`
+   (rutas parametrizadas por `:id` con un chequeo de acceso multi-rol),
+   no el de `parent.routes.ts` (rutas implícitas sobre "mis hijos" sin
+   `:id` de padre). `parent.routes.ts` queda intacto: sigue siendo
+   responsable solo de lo que es inherentemente del padre (vincular,
+   listar hijos, inscribir a cursado).
+
+     GET    /api/inscripciones/estudiantes/:id/resumen
+            Acceso: ADMIN/DOCENTE sin restricción, ESTUDIANTE propio,
+            PADRE si vinculado (reusa el chequeo de lectura, ver 4e).
+            -> Facade.obtenerResumenServicios(id). Resuelve RF-23
+            (mitad "deportes") combinado con lo que ya expone
+            /students/:id/materias para la otra mitad.
+
+     POST   /api/inscripciones/estudiantes/:id/deportes   { grupoDeporteId }
+     DELETE /api/inscripciones/estudiantes/:id/deportes/:grupoDeporteId
+     PUT    /api/inscripciones/estudiantes/:id/transporte  { recorridoId }
+     DELETE /api/inscripciones/estudiantes/:id/transporte
+     PUT    /api/inscripciones/estudiantes/:id/comedor     { turnoId }
+     DELETE /api/inscripciones/estudiantes/:id/comedor
+            Acceso (mutaciones): ADMIN sin restricción, PADRE solo si
+            vinculado — a diferencia de la lectura, el propio ESTUDIANTE
+            NO puede autoinscribirse (el TP solo le da esa potestad al
+            padre/tutor y, por generalización del resto del sistema, al
+            Admin; no hay RF que habilite autogestión del alumno acá).
+            PUT en transporte/comedor hace upsert (crear si no existe,
+            reemplazar si ya tenía otro recorrido/turno) — así RF-19
+            ("puede variar mes a mes") queda cubierto con una sola
+            llamada idempotente en vez de forzar al frontend a hacer
+            DELETE+POST.
+
+   Todas las rutas devuelven los mismos códigos ya estandarizados en el
+   resto del backend (400 validación, 403 acceso, 404 no existe, 409
+   conflicto de regla de negocio), vía `HttpError`, igual que el resto
+   del proyecto.
+
+e) Consolidar el control de acceso padre-hijo (hallazgo del diagnóstico,
+   no pedido explícitamente pero necesario para no triplicar lógica).
+
+   Hoy existen DOS verificaciones de "¿este padre puede ver/gestionar a
+   este alumno?" casi idénticas y no compartidas: `assertHijoVinculado`
+   (parent.routes.ts, solo valida el vínculo, para PADRE) y
+   `assertCanAccessStudent` (students.routes.ts, no exportada, cubre
+   también ADMIN/DOCENTE/ESTUDIANTE-propio). El nuevo router de
+   inscripciones necesita la MISMA lógica que `assertCanAccessStudent`
+   para las lecturas, más una variante más estricta para las escrituras
+   (solo ADMIN o PADRE-vinculado, sin ESTUDIANTE ni DOCENTE). Escribir
+   una tercera copia sería duplicar una regla de seguridad (RNF-44/
+   RNF-47) en 3 lugares — riesgo real de que una la actualicen y las
+   otras dos queden desincronizadas.
+
+   DECISIÓN: extraer a `backend/src/utils/studentAccess.ts` dos
+   funciones: `assertCanViewStudent(req, studentId)` (idéntica a la
+   actual `assertCanAccessStudent`) y `assertCanManageStudentServices(req, studentId)`
+   (ADMIN sin restricción, PADRE solo si vinculado, cualquier otro rol
+   403). `students.routes.ts` pasa a importar `assertCanViewStudent` en
+   vez de tener su copia local; `inscripciones.routes.ts` usa ambas
+   según el método HTTP. `parent.routes.ts` puede seguir con
+   `assertHijoVinculado` tal cual (es un caso particular ya usado en 2
+   endpoints existentes y funcionando) o migrar también — se recomienda
+   migrarlo por consistencia, pero no es bloqueante si se prefiere no
+   tocar ese archivo: queda como decisión menor a confirmar al empezar
+   la Fase 2.
+
+--------------------------------------------------------------------------------
+5. PLAN DE TRABAJO POR FASES
+--------------------------------------------------------------------------------
+
+FASE 1 — Modelo de datos (backend/prisma/schema.prisma)
+  [ ] 1.1 Crear `InscripcionDeporte`, `InscripcionTransporte`,
+      `InscripcionComedor` según 4a.
+  [ ] 1.2 Agregar relaciones inversas mínimas en `User`, `Deporte`,
+      `GrupoDeporte`, `RecorridoTransporte`, `TurnoComedor`.
+  [ ] 1.3 Generar y aplicar la migración (mismo mecanismo no interactivo
+      ya usado en este entorno: `prisma migrate diff` + `prisma migrate
+      deploy`, ver nota en PLAN_MODULO_ALUMNOS.txt Fase 1.7).
+  [ ] 1.4 (Opcional) Ampliar `backend/prisma/seed.ts` con 2-3
+      inscripciones de ejemplo por alumno de prueba, útiles para probar
+      manualmente el tope de 2 deportes y el solapamiento sin tener que
+      cargarlas a mano.
+
+FASE 2 — Backend: servicio de negocio + Facade + router
+  [ ] 2.1 Extraer `assertCanViewStudent`/`assertCanManageStudentServices`
+      a `backend/src/utils/studentAccess.ts` (ver 4e); actualizar el
+      import en `students.routes.ts`.
+  [ ] 2.2 `backend/src/services/panelFamilia.facade.ts`:
+        - `obtenerResumenServicios(estudianteId)`.
+        - `inscribirDeporte(estudianteId, grupoDeporteId)` — valida tope
+          de 2 (4a), solapamiento (4b), duplicado por deporte (unique).
+        - `desinscribirDeporte(estudianteId, grupoDeporteId)`.
+        - `inscribirTransporte(estudianteId, recorridoId)` (upsert).
+        - `desinscribirTransporte(estudianteId)`.
+        - `inscribirComedor(estudianteId, turnoId)` (upsert).
+        - `desinscribirComedor(estudianteId)`.
+  [ ] 2.3 `backend/src/routes/inscripciones.routes.ts` con los 7
+      endpoints de 4d, montado en `backend/src/routes/index.ts` como
+      `/inscripciones`.
+  [ ] 2.4 Guardas de borrado (relación inversa mínima en la práctica):
+        - `DELETE /deportes/grupos/:id`: 409 si tiene
+          `InscripcionDeporte` asociadas (mismo patrón que
+          `DELETE /deportes/:id` ya usa para grupos).
+        - `DELETE /transporte/:id` y `DELETE /comedor/:id`: mismo chequeo
+          contra `InscripcionTransporte`/`InscripcionComedor`.
+  [ ] 2.5 Validación Zod de los bodies (`grupoDeporteId`, `recorridoId`,
+      `turnoId` como enteros positivos) inline en el router, mismo
+      estilo que el resto de los routers del proyecto.
+
+FASE 3 — Frontend: servicio API + pantalla del panel Padre
+  [ ] 3.1 `client/src/services/api/inscripcionesService.js`:
+      `getResumen(estudianteId)`, `inscribirDeporte`,
+      `desinscribirDeporte`, `setTransporte`, `quitarTransporte`,
+      `setComedor`, `quitarComedor`.
+  [ ] 3.2 Nueva página `client/src/pages/padre/ServiciosPage.jsx`
+      (ruta `/padre/servicios`, ítem de menú "Deportes y Servicios" en
+      `PadreShell.jsx`), con 3 secciones (Deportes, Transporte, Comedor)
+      reusando los servicios de catálogo ya existentes
+      (`deportesService`, `transporteService`, `comedorService`) para
+      poblar las opciones disponibles, combinadas con
+      `inscripcionesService.getResumen(hijoId)` para el estado actual.
+      Cada sección permite inscribir/desinscribir con confirmación y
+      muestra el mensaje de error del backend tal cual (409 de tope,
+      solapamiento o duplicado) — mismo patrón de `toast.error(res.message)`
+      ya usado en `MateriasPage.jsx` (ojo con el bug ya corregido ahí de
+      leer `res.mensaje` en vez de `res.message`, no reintroducirlo acá).
+  [ ] 3.3 RF-23 completo: decidir si "deportes en que participa" se
+      muestra dentro de la nueva `ServiciosPage.jsx` (recomendado, ya que
+      ahí vive el resumen) o se agrega también una sección de solo
+      lectura en `MateriasPage.jsx` para que ambas mitades de RF-23 estén
+      visibles en una sola pantalla. Recomendación: dejarlo en
+      `ServiciosPage.jsx` únicamente y agregar el ítem de menú con
+      nombre claro; no duplicar la información en dos pantallas.
+
+FASE 4 — Reportes que dependen de este modelo (fuera de alcance directo,
+para nota)
+  4.1 RF-25 (reporte por alumno, incluye deportes/transporte/comedor),
+      RF-30/31/32 (listados por deporte) y RF-33 (por recorrido de
+      transporte) quedan desbloqueados recién cuando exista este modelo
+      — son candidatos naturales para las primeras estrategias del Motor
+      de Reportes (Strategy, RF-25 a RF-33) una vez que ese módulo
+      arranque.
+
+FASE 5 — Pruebas
+  [ ] 5.1 Backend: casos de negocio críticos — 3er deporte rechazado con
+      2 activos, solapamiento horario rechazado (mismo día, rangos que
+      se cruzan), mismo deporte dos veces rechazado, cambio de recorrido
+      de transporte (upsert, no crea fila duplicada), padre no vinculado
+      recibe 403, admin sin restricción.
+  [ ] 5.2 Frontend: probar manualmente desde el panel Padre con un hijo
+      de prueba: inscribir 2 deportes sin solapamiento (ok), intentar un
+      3ro (rechazado con mensaje claro), intentar uno que solapa
+      (rechazado), asignar y luego cambiar de recorrido de transporte,
+      asignar y quitar turno de comedor.
+
+--------------------------------------------------------------------------------
+6. CHECKLIST PUNTUAL DE ESTA TAREA
+--------------------------------------------------------------------------------
+
+MODELO DE DATOS
+  [ ] Entidad InscripcionDeporte (denormaliza deporteId, @@unique
+      [estudianteId, deporteId])
+  [ ] Entidad InscripcionTransporte (@unique estudianteId)
+  [ ] Entidad InscripcionComedor (@unique estudianteId)
+  [ ] Relaciones inversas en User/Deporte/GrupoDeporte/
+      RecorridoTransporte/TurnoComedor
+  [ ] Migración generada y aplicada
+
+BACKEND
+  [ ] Refactor mínimo: assertCanViewStudent/assertCanManageStudentServices
+      en backend/src/utils/studentAccess.ts (dedup con students.routes.ts)
+  [ ] Facade backend/src/services/panelFamilia.facade.ts (resumen +
+      6 operaciones de inscripción/desinscripción)
+  [ ] Regla RF-18: máximo 2 deportes activos por alumno
+  [ ] Regla RF-21: solapamiento horario entre deportes del mismo alumno
+  [ ] Regla RF-22: sin duplicados en deporte (unique compuesto),
+      transporte y comedor (unique simple + upsert)
+  [ ] Regla RF-19: 1 de 4 recorridos, reemplazable (upsert)
+  [ ] Regla RF-20: inscripción a comedor, reemplazable (upsert)
+  [ ] Router backend/src/routes/inscripciones.routes.ts (7 endpoints) +
+      montado en index.ts
+  [ ] Guardas de borrado en deportes/transporte/comedor.routes.ts contra
+      inscripciones activas
+
+FRONTEND
+  [ ] client/src/services/api/inscripcionesService.js
+  [ ] client/src/pages/padre/ServiciosPage.jsx (RF-18/19/20 desde el
+      panel Padre + mitad "deportes" de RF-23)
+  [ ] Ítem de menú "Deportes y Servicios" en PadreShell.jsx + ruta en
+      AppRoutes.jsx
+
+YA RESUELTO — NO REQUIERE TRABAJO EN ESTE MÓDULO
+  [x] RF-24 (inscribir hijo al cursado) — parent.routes.ts +
+      MateriasPage.jsx, confirmado funcionando
+  [x] RF-23 mitad "profesores por materia" — GET /students/:id/materias
+      + MateriasPage.jsx
+
+PENDIENTE FUERA DE ESTE PLAN (a marcar aparte)
+  [ ] Corregir CHECKLIST_REQUERIMIENTOS.txt: RF-24 real es [OK], no
+      [FALTA] (discrepancia detectada en sección 2)
+
+--------------------------------------------------------------------------------
+7. RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+
+RF-24 y la mitad "materias+profesor" de RF-23 ya están resueltos en main;
+lo que falta de RF-18 a RF-24 es un único bloque nuevo: la inscripción
+transaccional de un alumno a Deportes, Transporte y Comedor, con sus reglas
+de negocio (máximo 2 deportes, sin solapamiento horario, sin duplicados) y
+la pantalla del panel Padre para gestionarla.
+
+Empezar por el modelo de datos: 3 entidades nuevas
+(InscripcionDeporte/Transporte/Comedor) que se apoyan en el catálogo ya
+resuelto (Deporte/GrupoDeporte/RecorridoTransporte/TurnoComedor), sin tocar
+ninguno de sus campos existentes — solo se agregan las relaciones inversas
+que Prisma exige. El solapamiento horario es una comparación de rangos
+directa gracias a que GrupoDeporte ya guarda horaInicio/horaFin
+estructurados. Se aplica el patrón Facade tal como lo define el propio
+Plan de Trabajo para RF-23/24, pero con alcance ajustado a lo que es
+realmente nuevo (el panel de servicios combinando 3 catálogos + 3 estados
+de inscripción), sin retrofitear el código de RF-24 y la otra mitad de
+RF-23 que ya funciona sin fachada. Los endpoints viven en un router nuevo,
+`inscripciones.routes.ts`, separado de `parent.routes.ts`, porque el
+acceso no es exclusivo del padre (Admin también gestiona todo el sistema).
+De paso, se consolida en un único helper compartido la lógica de "¿este
+padre puede ver/gestionar a este alumno?", hoy duplicada entre
+parent.routes.ts y students.routes.ts.
+
+================================================================================
+Fin del documento.
+================================================================================

@@ -128,6 +128,10 @@ model User {
   materiasDictadas      MateriaCurso[] @relation("DocenteMateriaCurso")
   gruposDeporteDictados GrupoDeporte[] @relation("DocenteGrupoDeporte")
 
+  inscripcionesDeporte   InscripcionDeporte[]   @relation("InscripcionesDeporte")
+  inscripcionTransporte  InscripcionTransporte?
+  inscripcionComedor     InscripcionComedor?
+
   @@index([role])
   @@index([cursoId])
 }
@@ -282,7 +286,8 @@ model Deporte {
   id     Int    @id @default(autoincrement())
   nombre String @unique
 
-  grupos GrupoDeporte[]
+  grupos        GrupoDeporte[]
+  inscripciones InscripcionDeporte[]
 }
 
 // Grupo de deporte: deporte + nivel + día + horario + profesor responsable
@@ -303,6 +308,8 @@ model GrupoDeporte {
   docente    User           @relation("DocenteGrupoDeporte", fields: [docenteId], references: [id], onDelete: Restrict)
   createdAt  DateTime       @default(now())
 
+  inscripciones InscripcionDeporte[]
+
   @@unique([deporteId, nivelId, diaSemana, horaInicio, horaFin])
   @@index([nivelId])
   @@index([docenteId])
@@ -319,6 +326,8 @@ model RecorridoTransporte {
   horaSalida  DateTime @db.Time
   horaRegreso DateTime @db.Time
   createdAt   DateTime @default(now())
+
+  inscripciones InscripcionTransporte[]
 }
 
 // Catálogo plano, mismo criterio que RecorridoTransporte. Acá sí es un
@@ -329,4 +338,57 @@ model TurnoComedor {
   horaInicio DateTime @db.Time
   horaFin    DateTime @db.Time
   createdAt  DateTime @default(now())
+
+  inscripciones InscripcionComedor[]
+}
+
+// ---- Inscripciones a Deportes / Transporte / Comedor (RF-18 a RF-22) ----
+
+// Denormaliza deporteId (además de grupoDeporteId) a propósito: el TP dice
+// "2 deportes" (no "2 grupos"), así que el tope de 2 y el rechazo de
+// duplicados deben calcularse por Deporte, no por Grupo. Con
+// @@unique([estudianteId, deporteId]) la base garantiza sola, sin lógica
+// adicional, que un alumno no pueda tener dos grupos activos del MISMO
+// deporte (RF-22) y que contar sus filas alcance para el tope de 2 (RF-18)
+// sin tener que hacer join ni distinct.
+model InscripcionDeporte {
+  id             Int          @id @default(autoincrement())
+  estudianteId   Int
+  estudiante     User         @relation("InscripcionesDeporte", fields: [estudianteId], references: [id], onDelete: Cascade)
+  deporteId      Int
+  deporte        Deporte      @relation(fields: [deporteId], references: [id], onDelete: Restrict)
+  grupoDeporteId Int
+  grupoDeporte   GrupoDeporte @relation(fields: [grupoDeporteId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+
+  @@unique([estudianteId, deporteId])
+  @@index([grupoDeporteId])
+}
+
+// @unique(estudianteId): "1 de los 4 recorridos" (RF-19) se modela como
+// estado ACTUAL (a lo sumo una fila por alumno), no como historial
+// mensual — el TP no pide reportar variaciones mes a mes, solo permitir
+// que el alumno CAMBIE de recorrido ("puede variar mes a mes" = se puede
+// reemplazar, no que haya que guardar cada mes). Cambiar de recorrido es
+// un upsert, nunca puede haber una fila duplicada (RF-22 queda resuelto
+// por el propio @unique).
+model InscripcionTransporte {
+  id           Int                 @id @default(autoincrement())
+  estudianteId Int                 @unique
+  estudiante   User                @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  recorridoId  Int
+  recorrido    RecorridoTransporte @relation(fields: [recorridoId], references: [id], onDelete: Restrict)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+// Mismo criterio que InscripcionTransporte.
+model InscripcionComedor {
+  id           Int          @id @default(autoincrement())
+  estudianteId Int          @unique
+  estudiante   User         @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  turnoId      Int
+  turno        TurnoComedor @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }

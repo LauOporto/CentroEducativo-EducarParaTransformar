@@ -141,26 +141,43 @@ REQUERIMIENTOS FUNCIONALES (RF-1 a RF-34)
 
 --- Inscripciones y reglas de negocio (deportes / transporte / comedor) ---
 
-[FALTA]   RF-18 Máximo 2 deportes simultáneos por alumno.
-[FALTA]   RF-19 Inscripción a 1 de 4 recorridos de transporte.
-[FALTA]   RF-20 Inscripción al servicio de comedor.
-[FALTA]   RF-21 Validación de solapamiento horario entre deportes.
-[FALTA]   RF-22 Rechazo de inscripciones duplicadas (deporte/transporte/comedor).
-          Evidencia (para los 5 anteriores): búsqueda exhaustiva en todo
-          el repo — no existe modelo, ruta ni componente relacionado con
-          deportes, transporte o comedor. Es el bloque de funcionalidad
-          más grande pendiente del proyecto.
+[OK]      RF-18 Máximo 2 deportes simultáneos por alumno.
+          Evidencia: modelo InscripcionDeporte (@@unique[estudianteId,
+          deporteId]) + panelFamilia.facade.ts (inscribirDeporte, chequeo
+          de conteo < 2) + POST /api/inscripciones/estudiantes/:id/deportes.
 
-[PARCIAL] RF-23 Padre/Tutor consulta, solo de sus hijos, los profesores
+[OK]      RF-19 Inscripción a 1 de 4 recorridos de transporte.
+          Evidencia: modelo InscripcionTransporte (@unique estudianteId,
+          upsert) + PUT /api/inscripciones/estudiantes/:id/transporte.
+
+[OK]      RF-20 Inscripción al servicio de comedor.
+          Evidencia: modelo InscripcionComedor (@unique estudianteId,
+          upsert) + PUT /api/inscripciones/estudiantes/:id/comedor.
+
+[OK]      RF-21 Validación de solapamiento horario entre deportes.
+          Evidencia: panelFamilia.facade.ts (inscribirDeporte), compara
+          diaSemana + rangos horaInicio/horaFin de los grupos activos del
+          alumno contra el grupo candidato antes de inscribir.
+
+[OK]      RF-22 Rechazo de inscripciones duplicadas (deporte/transporte/comedor).
+          Evidencia: @@unique([estudianteId, deporteId]) en InscripcionDeporte
+          y @unique(estudianteId) en InscripcionTransporte/InscripcionComedor,
+          reforzado con chequeo previo en el Facade para devolver 409 legible.
+
+[OK]      RF-23 Padre/Tutor consulta, solo de sus hijos, los profesores
           por materia y los deportes en que participan.
-          Evidencia: MateriasPage.jsx (panel Padre) cubre la parte de
-          materias/profesores; la parte de deportes no existe (ver RF-14/18).
+          Evidencia: GET /api/students/:id/materias (profesores por
+          materia, ya en main) + GET /api/inscripciones/estudiantes/:id/resumen
+          (deportes en que participa) — ambos con el mismo control de
+          acceso padre-hijo, mostrados en ServiciosPage.jsx (panel Padre).
 
-[FALTA]   RF-24 Padre/Tutor con uno o varios hijos inscribe a su(s) hijo(s)
+[OK]      RF-24 Padre/Tutor con uno o varios hijos inscribe a su(s) hijo(s)
           al cursado.
-          Evidencia: solo existe vinculación padre-hijo por DNI
-          (POST /api/parent/vincular), no una funcionalidad de
-          "inscripción al cursado" en sí.
+          Evidencia: POST /api/parent/hijos/:id/inscribir-cursado +
+          formulario InscribirCursado en MateriasPage.jsx (panel Padre).
+          Ya estaba resuelto en main antes del módulo de inscripciones;
+          el checklist anterior lo marcaba [FALTA] por error (discrepancia
+          detectada al diagnosticar PLAN_MODULO_INSCRIPCIONES.txt).
 
 --- Módulo de Reportes ---
 
@@ -287,10 +304,10 @@ RESUMEN NUMÉRICO
 ================================================================================
 
 Requerimientos Funcionales (34 totales, contando RF-4.1/RF-4.2 como RF-4):
-  OK      : 7   (RF-1, RF-3, RF-4, RF-5, RF-8, RF-16, RF-17)
-  PARCIAL : 5   (RF-2, RF-7, RF-11, RF-23, RF-34)
-  FALTA   : 22  (RF-6, RF-9, RF-10, RF-12 a RF-15, RF-18 a RF-22, RF-24
-                a RF-33)
+  OK      : 14  (RF-1, RF-3, RF-4, RF-5, RF-8, RF-16, RF-17, RF-18, RF-19,
+                RF-20, RF-21, RF-22, RF-23, RF-24)
+  PARCIAL : 4   (RF-2, RF-7, RF-11, RF-34)
+  FALTA   : 16  (RF-6, RF-9, RF-10, RF-12 a RF-15, RF-25 a RF-33)
 
 Requerimientos No Funcionales (13 totales):
   OK      : 4   (RNF-35, RNF-38, RNF-41, RNF-44)
@@ -301,29 +318,25 @@ Requerimientos No Funcionales (13 totales):
 BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
 ================================================================================
 
-1. Módulo de Deportes / Transporte / Comedor completo (RF-14, RF-18 a
-   RF-22, RF-23 parcial, parte de RF-25/30-33). No existe absolutamente
-   nada de esto todavía: ni modelos, ni rutas, ni pantallas.
-
-2. Entidades académicas estructurales: Curso, Nivel Educativo y Materia
+1. Entidades académicas estructurales: Curso, Nivel Educativo y Materia
    como tablas relacionales propias (hoy son texto libre). De esto
    dependen RF-9, RF-10, RF-11, RF-12, RF-13 y buena parte de los
    reportes.
 
-3. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
+2. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
    contadores en un dashboard; faltan los 9 reportes filtrables
    exigidos, y por lo tanto tampoco se puede verificar RNF-45.
 
-4. Fichas completas de Alumno y Profesor (RF-9, RF-12): faltan varios
+3. Fichas completas de Alumno y Profesor (RF-9, RF-12): faltan varios
    campos obligatorios (Legajo, Apellido, Fecha de nacimiento,
    Domicilio, Teléfono, Especialidad, Nivel educativo).
 
-5. Notificación automática por 3 inasistencias consecutivas (parte de
+4. Notificación automática por 3 inasistencias consecutivas (parte de
    RF-34) — el patrón Factory Method previsto en el diseño (Notificacion
    / NotificacionFactory) tampoco está implementado en el código, aunque
    sí hay un sistema de notificaciones genérico reutilizable como base.
 
-6. Auditoría (RNF-46) y ajustes de seguridad de sesión (RNF-39): falta
+5. Auditoría (RNF-46) y ajustes de seguridad de sesión (RNF-39): falta
    una tabla/registro de auditoría y limitar la sesión por inactividad
    (hoy se renueva indefinidamente vía refresh token).
 

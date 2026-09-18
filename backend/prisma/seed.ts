@@ -87,6 +87,39 @@ const TURNOS_COMEDOR = [
   { nombre: 'Turno extendido', horaInicio: '14:00', horaFin: '15:00' },
 ];
 
+// ---- Inscripciones de ejemplo a Deportes / Transporte / Comedor ----
+// fbarrabino queda con 2 deportes sin solapamiento (útil para probar a
+// mano el tope de RF-18 y el rechazo por solapamiento de RF-21: cualquier
+// 3er grupo de Secundaria que se intente agregar, o un grupo que caiga el
+// mismo día, debe rechazarse), más transporte y comedor. jperez y mgomez
+// quedan con un solo deporte cada uno, para probar el caso de "todavía
+// tiene lugar para un 2do deporte".
+type InscripcionDeporteSeed = {
+  estudiante: string;
+  deporte: (typeof DEPORTES)[number];
+  nivel: (typeof NIVELES)[number];
+  diaSemana: DiaSemana;
+  horaInicio: string;
+  horaFin: string;
+};
+
+const INSCRIPCIONES_DEPORTE: InscripcionDeporteSeed[] = [
+  { estudiante: 'fbarrabino', deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30' },
+  { estudiante: 'fbarrabino', deporte: 'Vóley', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'jperez', deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30' },
+  { estudiante: 'mgomez', deporte: 'Básquet', nivel: 'Primaria', diaSemana: DiaSemana.VIERNES, horaInicio: '13:30', horaFin: '14:30' },
+];
+
+const INSCRIPCIONES_TRANSPORTE: { estudiante: string; recorrido: string }[] = [
+  { estudiante: 'fbarrabino', recorrido: 'Recorrido Norte' },
+  { estudiante: 'jperez', recorrido: 'Recorrido Sur' },
+];
+
+const INSCRIPCIONES_COMEDOR: { estudiante: string; turno: string }[] = [
+  { estudiante: 'fbarrabino', turno: 'Primer turno' },
+  { estudiante: 'mgomez', turno: 'Segundo turno' },
+];
+
 // Los campos de hora de GrupoDeporte, RecorridoTransporte y TurnoComedor son
 // @db.Time: Postgres solo persiste la hora, pero Prisma exige un Date
 // completo de entrada, por eso se fija una fecha arbitraria (epoch) igual
@@ -268,12 +301,13 @@ async function main() {
     deporteIdByNombre.set(nombre, deporte.id);
   }
 
+  const grupoIdByKey = new Map<string, number>();
   for (const g of GRUPOS_DEPORTE) {
     const deporteId = deporteIdByNombre.get(g.deporte)!;
     const nivelId = nivelIdByNombre.get(g.nivel)!;
     const horaInicio = horaTime(g.horaInicio);
     const horaFin = horaTime(g.horaFin);
-    await prisma.grupoDeporte.upsert({
+    const grupo = await prisma.grupoDeporte.upsert({
       where: {
         deporteId_nivelId_diaSemana_horaInicio_horaFin: {
           deporteId,
@@ -286,16 +320,50 @@ async function main() {
       update: {},
       create: { deporteId, nivelId, diaSemana: g.diaSemana, horaInicio, horaFin, docenteId: uid(g.docente) },
     });
+    grupoIdByKey.set(`${g.deporte}|${g.nivel}|${g.diaSemana}|${g.horaInicio}|${g.horaFin}`, grupo.id);
   }
 
+  const recorridoIdByNombre = new Map<string, number>();
   for (const r of RECORRIDOS_TRANSPORTE) {
     const data = { nombre: r.nombre, horaSalida: horaTime(r.horaSalida), horaRegreso: horaTime(r.horaRegreso) };
-    await prisma.recorridoTransporte.upsert({ where: { nombre: r.nombre }, update: {}, create: data });
+    const recorrido = await prisma.recorridoTransporte.upsert({ where: { nombre: r.nombre }, update: {}, create: data });
+    recorridoIdByNombre.set(r.nombre, recorrido.id);
   }
 
+  const turnoIdByNombre = new Map<string, number>();
   for (const t of TURNOS_COMEDOR) {
     const data = { nombre: t.nombre, horaInicio: horaTime(t.horaInicio), horaFin: horaTime(t.horaFin) };
-    await prisma.turnoComedor.upsert({ where: { nombre: t.nombre }, update: {}, create: data });
+    const turno = await prisma.turnoComedor.upsert({ where: { nombre: t.nombre }, update: {}, create: data });
+    turnoIdByNombre.set(t.nombre, turno.id);
+  }
+
+  for (const i of INSCRIPCIONES_DEPORTE) {
+    const grupoId = grupoIdByKey.get(`${i.deporte}|${i.nivel}|${i.diaSemana}|${i.horaInicio}|${i.horaFin}`);
+    if (!grupoId) throw new Error(`Grupo de deporte no encontrado para la inscripción de ${i.estudiante} (${i.deporte}/${i.nivel}).`);
+    const deporteId = deporteIdByNombre.get(i.deporte)!;
+    await prisma.inscripcionDeporte.upsert({
+      where: { estudianteId_deporteId: { estudianteId: uid(i.estudiante), deporteId } },
+      update: { grupoDeporteId: grupoId },
+      create: { estudianteId: uid(i.estudiante), deporteId, grupoDeporteId: grupoId },
+    });
+  }
+
+  for (const i of INSCRIPCIONES_TRANSPORTE) {
+    const recorridoId = recorridoIdByNombre.get(i.recorrido)!;
+    await prisma.inscripcionTransporte.upsert({
+      where: { estudianteId: uid(i.estudiante) },
+      update: { recorridoId },
+      create: { estudianteId: uid(i.estudiante), recorridoId },
+    });
+  }
+
+  for (const i of INSCRIPCIONES_COMEDOR) {
+    const turnoId = turnoIdByNombre.get(i.turno)!;
+    await prisma.inscripcionComedor.upsert({
+      where: { estudianteId: uid(i.estudiante) },
+      update: { turnoId },
+      create: { estudianteId: uid(i.estudiante), turnoId },
+    });
   }
 
   const today = new Date();
@@ -383,7 +451,9 @@ async function main() {
     `${materiaIdByNombre.size} materias · ${seenAsignaciones.size} asignaciones materia-curso-docente · ` +
     `${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio · ` +
     `${deporteIdByNombre.size} deportes · ${GRUPOS_DEPORTE.length} grupos de deporte · ` +
-    `${RECORRIDOS_TRANSPORTE.length} recorridos de transporte · ${TURNOS_COMEDOR.length} turnos de comedor`,
+    `${RECORRIDOS_TRANSPORTE.length} recorridos de transporte · ${TURNOS_COMEDOR.length} turnos de comedor · ` +
+    `${INSCRIPCIONES_DEPORTE.length} inscripciones a deporte · ${INSCRIPCIONES_TRANSPORTE.length} a transporte · ` +
+    `${INSCRIPCIONES_COMEDOR.length} a comedor`,
   );
 }
 

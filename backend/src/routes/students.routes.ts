@@ -1,4 +1,4 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 
@@ -7,6 +7,7 @@ import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
 import { telefonoSchema } from '../utils/validators';
+import { assertCanViewStudent } from '../utils/studentAccess';
 
 const router = Router();
 
@@ -30,25 +31,6 @@ function serializeFicha<T extends { curso: Parameters<typeof formatCursoLabel>[0
   return { ...u, curso: formatCursoLabel(u.curso) };
 }
 
-// Un alumno puede ver su propia ficha; un padre solo la de sus hijos
-// vinculados; docente/admin sin restricción (RNF-44/RNF-47).
-async function assertCanAccessStudent(req: Request, studentId: number) {
-  const { role, id } = req.authUser!;
-  if (role === Role.ADMIN || role === Role.DOCENTE) return;
-  if (role === Role.ESTUDIANTE) {
-    if (id !== studentId) throw HttpError.forbidden('Solo podés consultar tu propia ficha.');
-    return;
-  }
-  if (role === Role.PADRE) {
-    const link = await prisma.parentStudentLink.findUnique({
-      where: { padreId_estudianteId: { padreId: id, estudianteId: studentId } },
-    });
-    if (!link) throw HttpError.forbidden('Ese alumno no está vinculado a tu cuenta.');
-    return;
-  }
-  throw HttpError.forbidden();
-}
-
 router.get('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (_req, res, next) => {
   try {
     const students = await prisma.user.findMany({
@@ -66,7 +48,7 @@ router.get('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (_req,
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    await assertCanAccessStudent(req, id);
+    await assertCanViewStudent(req, id);
 
     const student = await prisma.user.findUnique({ where: { id }, select: FICHA_SELECT });
     if (!student) throw HttpError.notFound('Alumno no encontrado.');
@@ -78,7 +60,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 router.get('/:id/materias', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    await assertCanAccessStudent(req, id);
+    await assertCanViewStudent(req, id);
 
     const student = await prisma.user.findUnique({ where: { id }, select: { role: true, cursoId: true } });
     if (!student || student.role !== Role.ESTUDIANTE) throw HttpError.notFound('Alumno no encontrado.');

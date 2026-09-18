@@ -64,6 +64,10 @@ router.patch('/:id', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const inscripcionesAsociadas = await prisma.inscripcionComedor.count({ where: { turnoId: id } });
+    if (inscripcionesAsociadas > 0) {
+      throw HttpError.conflict('No se puede eliminar: el turno tiene alumnos inscriptos. Desinscribilos primero.');
+    }
     await prisma.turnoComedor.delete({ where: { id } });
     res.json({ exito: true });
   } catch (err) { next(err); }
