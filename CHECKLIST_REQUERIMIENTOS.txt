@@ -304,10 +304,10 @@ RESUMEN NUMÉRICO
 ================================================================================
 
 Requerimientos Funcionales (34 totales, contando RF-4.1/RF-4.2 como RF-4):
-  OK      : 7   (RF-1, RF-3, RF-4, RF-5, RF-8, RF-16, RF-17)
-  PARCIAL : 5   (RF-2, RF-7, RF-11, RF-23, RF-34)
-  FALTA   : 22  (RF-6, RF-9, RF-10, RF-12 a RF-15, RF-18 a RF-22, RF-24
-                a RF-33)
+  OK      : 14  (RF-1, RF-3, RF-4, RF-5, RF-8, RF-16, RF-17, RF-18, RF-19,
+                RF-20, RF-21, RF-22, RF-23, RF-24)
+  PARCIAL : 4   (RF-2, RF-7, RF-11, RF-34)
+  FALTA   : 16  (RF-6, RF-9, RF-10, RF-12 a RF-15, RF-25 a RF-33)
 
 Requerimientos No Funcionales (13 totales):
   OK      : 4   (RNF-35, RNF-38, RNF-41, RNF-44)
@@ -318,29 +318,25 @@ Requerimientos No Funcionales (13 totales):
 BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
 ================================================================================
 
-1. Módulo de Deportes / Transporte / Comedor completo (RF-14, RF-18 a
-   RF-22, RF-23 parcial, parte de RF-25/30-33). No existe absolutamente
-   nada de esto todavía: ni modelos, ni rutas, ni pantallas.
-
-2. Entidades académicas estructurales: Curso, Nivel Educativo y Materia
+1. Entidades académicas estructurales: Curso, Nivel Educativo y Materia
    como tablas relacionales propias (hoy son texto libre). De esto
    dependen RF-9, RF-10, RF-11, RF-12, RF-13 y buena parte de los
    reportes.
 
-3. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
+2. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
    contadores en un dashboard; faltan los 9 reportes filtrables
    exigidos, y por lo tanto tampoco se puede verificar RNF-45.
 
-4. Fichas completas de Alumno y Profesor (RF-9, RF-12): faltan varios
+3. Fichas completas de Alumno y Profesor (RF-9, RF-12): faltan varios
    campos obligatorios (Legajo, Apellido, Fecha de nacimiento,
    Domicilio, Teléfono, Especialidad, Nivel educativo).
 
-5. Notificación automática por 3 inasistencias consecutivas (parte de
+4. Notificación automática por 3 inasistencias consecutivas (parte de
    RF-34) — el patrón Factory Method previsto en el diseño (Notificacion
    / NotificacionFactory) tampoco está implementado en el código, aunque
    sí hay un sistema de notificaciones genérico reutilizable como base.
 
-6. Auditoría (RNF-46) y ajustes de seguridad de sesión (RNF-39): falta
+5. Auditoría (RNF-46) y ajustes de seguridad de sesión (RNF-39): falta
    una tabla/registro de auditoría y limitar la sesión por inactividad
    (hoy se renueva indefinidamente vía refresh token).
 
