@@ -22,6 +22,11 @@ const DIAS = [
 ];
 const diaLabel = (value) => DIAS.find((d) => d.value === value)?.label ?? value;
 
+// Los campos de hora llegan del backend como ISO completo (@db.Time via
+// Prisma), acá solo se necesita la parte HH:mm para mostrar y para
+// precargar los <input type="time">.
+const horaLabel = (iso) => iso.slice(11, 16);
+
 function confirmarBorrado(mensaje) {
   return window.confirm(mensaje);
 }
@@ -152,10 +157,6 @@ function GruposDeporteSection() {
 
   return (
     <div>
-      <p className="mb-3 text-sm text-slate-500">
-        Cada grupo combina deporte + nivel + día + horario + profesor responsable (RF-14). No puede haber dos grupos
-        con exactamente esa misma combinación.
-      </p>
       <form onSubmit={crear} className="mb-4 flex flex-wrap gap-2">
         <select required value={form.deporteId} onChange={(e) => setForm({ ...form, deporteId: e.target.value })} className={inputCls}>
           <option value="">Deporte…</option>
@@ -182,12 +183,14 @@ function GruposDeporteSection() {
   );
 }
 
+const TRANSPORTE_FORM_INICIAL = { nombre: '', horaSalida: '', horaRegreso: '' };
+
 function TransporteSection() {
   const toast = useToast();
   const [recorridos, setRecorridos] = useState(null);
-  const [form, setForm] = useState({ nombre: '', horario: '' });
+  const [form, setForm] = useState(TRANSPORTE_FORM_INICIAL);
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ nombre: '', horario: '' });
+  const [editForm, setEditForm] = useState(TRANSPORTE_FORM_INICIAL);
 
   const cargar = async () => {
     const data = await transporteService.list();
@@ -198,7 +201,7 @@ function TransporteSection() {
   const crear = async (e) => {
     e.preventDefault();
     const res = await transporteService.create(form);
-    if (res.exito) { toast.success('Recorrido creado.'); setForm({ nombre: '', horario: '' }); cargar(); }
+    if (res.exito) { toast.success('Recorrido creado.'); setForm(TRANSPORTE_FORM_INICIAL); cargar(); }
     else toast.error(res.message || res.mensaje || 'No se pudo crear.');
   };
 
@@ -224,9 +227,12 @@ function TransporteSection() {
     },
     {
       key: 'horario', label: 'Horario',
-      render: (r) => editId === r.id
-        ? <input value={editForm.horario} onChange={(e) => setEditForm({ ...editForm, horario: e.target.value })} className={inputCls} />
-        : r.horario,
+      render: (r) => editId === r.id ? (
+        <div className="flex gap-1">
+          <input title="Hora de salida" type="time" value={editForm.horaSalida} onChange={(e) => setEditForm({ ...editForm, horaSalida: e.target.value })} className={inputCls} />
+          <input title="Hora de regreso" type="time" value={editForm.horaRegreso} onChange={(e) => setEditForm({ ...editForm, horaRegreso: e.target.value })} className={inputCls} />
+        </div>
+      ) : `${horaLabel(r.horaSalida)} - ${horaLabel(r.horaRegreso)}`,
     },
     {
       key: 'acciones', label: 'Acciones',
@@ -237,7 +243,7 @@ function TransporteSection() {
         </div>
       ) : (
         <div className="flex gap-1.5">
-          <button onClick={() => { setEditId(r.id); setEditForm({ nombre: r.nombre, horario: r.horario }); }} className={btnMuted}>Editar</button>
+          <button onClick={() => { setEditId(r.id); setEditForm({ nombre: r.nombre, horaSalida: horaLabel(r.horaSalida), horaRegreso: horaLabel(r.horaRegreso) }); }} className={btnMuted}>Editar</button>
           <button onClick={() => borrar(r)} className={btnDanger}>Eliminar</button>
         </div>
       ),
@@ -247,8 +253,9 @@ function TransporteSection() {
   return (
     <div>
       <form onSubmit={crear} className="mb-4 flex flex-wrap gap-2">
-        <input required placeholder="Nombre (ej: Recorrido Norte)" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={inputCls} />
-        <input required placeholder="Horario (ej: Salida 07:00 / Regreso 17:30)" value={form.horario} onChange={(e) => setForm({ ...form, horario: e.target.value })} className={`flex-1 ${inputCls}`} />
+        <input required placeholder="Nombre (ej: Recorrido Norte)" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={`flex-1 ${inputCls}`} />
+        <input required title="Hora de salida" type="time" value={form.horaSalida} onChange={(e) => setForm({ ...form, horaSalida: e.target.value })} className={inputCls} />
+        <input required title="Hora de regreso" type="time" value={form.horaRegreso} onChange={(e) => setForm({ ...form, horaRegreso: e.target.value })} className={inputCls} />
         <button type="submit" className={btnPrimary}><i className="fas fa-plus" /> Agregar</button>
       </form>
       <DataTable columns={columns} rows={recorridos ?? []} loading={recorridos === null} emptyMessage="Sin recorridos cargados." />
@@ -256,12 +263,14 @@ function TransporteSection() {
   );
 }
 
+const COMEDOR_FORM_INICIAL = { nombre: '', horaInicio: '', horaFin: '' };
+
 function ComedorSection() {
   const toast = useToast();
   const [turnos, setTurnos] = useState(null);
-  const [form, setForm] = useState({ nombre: '', horario: '' });
+  const [form, setForm] = useState(COMEDOR_FORM_INICIAL);
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ nombre: '', horario: '' });
+  const [editForm, setEditForm] = useState(COMEDOR_FORM_INICIAL);
 
   const cargar = async () => {
     const data = await comedorService.list();
@@ -272,7 +281,7 @@ function ComedorSection() {
   const crear = async (e) => {
     e.preventDefault();
     const res = await comedorService.create(form);
-    if (res.exito) { toast.success('Turno creado.'); setForm({ nombre: '', horario: '' }); cargar(); }
+    if (res.exito) { toast.success('Turno creado.'); setForm(COMEDOR_FORM_INICIAL); cargar(); }
     else toast.error(res.message || res.mensaje || 'No se pudo crear.');
   };
 
@@ -298,9 +307,12 @@ function ComedorSection() {
     },
     {
       key: 'horario', label: 'Horario',
-      render: (t) => editId === t.id
-        ? <input value={editForm.horario} onChange={(e) => setEditForm({ ...editForm, horario: e.target.value })} className={inputCls} />
-        : t.horario,
+      render: (t) => editId === t.id ? (
+        <div className="flex gap-1">
+          <input title="Hora de inicio" type="time" value={editForm.horaInicio} onChange={(e) => setEditForm({ ...editForm, horaInicio: e.target.value })} className={inputCls} />
+          <input title="Hora de fin" type="time" value={editForm.horaFin} onChange={(e) => setEditForm({ ...editForm, horaFin: e.target.value })} className={inputCls} />
+        </div>
+      ) : `${horaLabel(t.horaInicio)} - ${horaLabel(t.horaFin)}`,
     },
     {
       key: 'acciones', label: 'Acciones',
@@ -311,7 +323,7 @@ function ComedorSection() {
         </div>
       ) : (
         <div className="flex gap-1.5">
-          <button onClick={() => { setEditId(t.id); setEditForm({ nombre: t.nombre, horario: t.horario }); }} className={btnMuted}>Editar</button>
+          <button onClick={() => { setEditId(t.id); setEditForm({ nombre: t.nombre, horaInicio: horaLabel(t.horaInicio), horaFin: horaLabel(t.horaFin) }); }} className={btnMuted}>Editar</button>
           <button onClick={() => borrar(t)} className={btnDanger}>Eliminar</button>
         </div>
       ),
@@ -321,8 +333,9 @@ function ComedorSection() {
   return (
     <div>
       <form onSubmit={crear} className="mb-4 flex flex-wrap gap-2">
-        <input required placeholder="Nombre (ej: Primer turno)" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={inputCls} />
-        <input required placeholder="Horario (ej: 12:00 a 13:00)" value={form.horario} onChange={(e) => setForm({ ...form, horario: e.target.value })} className={`flex-1 ${inputCls}`} />
+        <input required placeholder="Nombre (ej: Primer turno)" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={`flex-1 ${inputCls}`} />
+        <input required title="Hora de inicio" type="time" value={form.horaInicio} onChange={(e) => setForm({ ...form, horaInicio: e.target.value })} className={inputCls} />
+        <input required title="Hora de fin" type="time" value={form.horaFin} onChange={(e) => setForm({ ...form, horaFin: e.target.value })} className={inputCls} />
         <button type="submit" className={btnPrimary}><i className="fas fa-plus" /> Agregar</button>
       </form>
       <DataTable columns={columns} rows={turnos ?? []} loading={turnos === null} emptyMessage="Sin turnos cargados." />
