@@ -61,6 +61,7 @@ async function request(path, { method = 'GET', body, isFormData = false, skipAut
 export const httpClient = {
   get: (path) => request(path),
   post: (path, body) => request(path, { method: 'POST', body: body ?? {} }),
+  put: (path, body) => request(path, { method: 'PUT', body: body ?? {} }),
   patch: (path, body) => request(path, { method: 'PATCH', body: body ?? {} }),
   delete: (path) => request(path, { method: 'DELETE' }),
   upload: (path, formData) => request(path, { method: 'POST', body: formData, isFormData: true }),
