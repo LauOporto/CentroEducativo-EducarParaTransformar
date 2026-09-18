@@ -17,24 +17,32 @@ router.get('/', requireAuth, async (_req, res, next) => {
 
 router.use(requireAuth, requireRole(Role.ADMIN));
 
-// `horario` es texto libre descriptivo (ver decisión 4.b del plan): no hay
-// ninguna regla de negocio de solapamiento horario sobre este catálogo, por
-// eso no se estructura como en GrupoDeporte. Igual debe contener al menos
-// un patrón de hora (HH:mm) en algún punto del texto para evitar valores
-// sin ningún sentido (ej. "adasd").
-const horaEnTexto = /\d{1,2}:\d{2}/;
-const turnoSchema = z.object({
-  nombre: z.string().trim().min(2).max(60),
-  horario: z.string().trim().min(3).max(80)
-    .regex(horaEnTexto, 'El horario debe incluir al menos un horario en formato HH:mm.'),
-});
+// Un único bloque de tiempo, igual criterio que GrupoDeporte.
+const horaRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+const turnoSchema = z
+  .object({
+    nombre: z.string().trim().min(2).max(60),
+    horaInicio: z.string().trim().regex(horaRegex, 'Formato de hora inválido (HH:mm).'),
+    horaFin: z.string().trim().regex(horaRegex, 'Formato de hora inválido (HH:mm).'),
+  })
+  .refine((data) => data.horaInicio < data.horaFin, {
+    message: 'horaInicio debe ser anterior a horaFin.',
+    path: ['horaFin'],
+  });
+
+// @db.Time: Postgres solo persiste la hora, pero Prisma exige un Date
+// completo de entrada, por eso se fija una fecha arbitraria (epoch).
+const toTime = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 
 router.post('/', async (req, res, next) => {
   try {
     const data = turnoSchema.parse(req.body);
     const existe = await prisma.turnoComedor.findUnique({ where: { nombre: data.nombre } });
     if (existe) throw HttpError.conflict('Ya existe un turno con ese nombre.');
-    const turno = await prisma.turnoComedor.create({ data });
+    const turno = await prisma.turnoComedor.create({
+      data: { nombre: data.nombre, horaInicio: toTime(data.horaInicio), horaFin: toTime(data.horaFin) },
+    });
     res.json({ exito: true, turno });
   } catch (err) { next(err); }
 });
@@ -42,12 +50,13 @@ router.post('/', async (req, res, next) => {
 router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const data = turnoSchema.partial().parse(req.body);
-    if (data.nombre !== undefined) {
-      const conflicto = await prisma.turnoComedor.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
-      if (conflicto) throw HttpError.conflict('Ya existe un turno con ese nombre.');
-    }
-    const turno = await prisma.turnoComedor.update({ where: { id }, data });
+    const data = turnoSchema.parse(req.body);
+    const conflicto = await prisma.turnoComedor.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
+    if (conflicto) throw HttpError.conflict('Ya existe un turno con ese nombre.');
+    const turno = await prisma.turnoComedor.update({
+      where: { id },
+      data: { nombre: data.nombre, horaInicio: toTime(data.horaInicio), horaFin: toTime(data.horaFin) },
+    });
     res.json({ exito: true, turno });
   } catch (err) { next(err); }
 });
