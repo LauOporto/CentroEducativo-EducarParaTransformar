@@ -29,6 +29,7 @@ import OpinionesPage from '../pages/admin/OpinionesPage';
 import EmpleoPage from '../pages/admin/EmpleoPage';
 import VinculosPage from '../pages/admin/VinculosPage';
 import AcademicoPage from '../pages/admin/AcademicoPage';
+import ServiciosPage from '../pages/admin/ServiciosPage';
 
 export default function AppRoutes() {
   return (
@@ -91,6 +92,7 @@ export default function AppRoutes() {
         <Route path="empleo" element={<EmpleoPage />} />
         <Route path="vinculos" element={<VinculosPage />} />
         <Route path="academico" element={<AcademicoPage />} />
+        <Route path="servicios" element={<ServiciosPage />} />
       </Route>
     </Routes>
   );

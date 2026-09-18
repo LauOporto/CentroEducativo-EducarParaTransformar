@@ -13,6 +13,9 @@ import { moderationPublicRouter, moderationAdminRouter, requireAdmin } from './m
 import { nivelesRouter } from './niveles.routes';
 import { cursosRouter } from './cursos.routes';
 import { materiasRouter } from './materias.routes';
+import { deportesRouter } from './deportes.routes';
+import { transporteRouter } from './transporte.routes';
+import { comedorRouter } from './comedor.routes';
 
 const router = Router();
 
@@ -37,5 +40,8 @@ router.use('/admin', ...requireAdmin(), moderationAdminRouter);
 router.use('/niveles', nivelesRouter);
 router.use('/cursos', cursosRouter);
 router.use('/materias', materiasRouter);
+router.use('/deportes', deportesRouter);
+router.use('/transporte', transporteRouter);
+router.use('/comedor', comedorRouter);
 
 export { router as apiRouter };

@@ -9,6 +9,7 @@ export default function AdminShell() {
     { to: '/admin', label: 'Dashboard', icon: 'fa-tachometer-alt', end: true },
     { to: '/admin/usuarios', label: 'Usuarios', icon: 'fa-users' },
     { to: '/admin/academico', label: 'Académico', icon: 'fa-graduation-cap' },
+    { to: '/admin/servicios', label: 'Deportes, Transporte y Comedor', icon: 'fa-futbol' },
     { to: '/admin/docentes', label: 'Docentes pendientes', icon: 'fa-user-clock', badge: counts?.docentes },
     { to: '/admin/inscripciones', label: 'Inscripciones', icon: 'fa-file-signature', badge: counts?.inscripciones },
     { to: '/admin/opiniones', label: 'Opiniones', icon: 'fa-comment-dots', badge: counts?.opiniones },

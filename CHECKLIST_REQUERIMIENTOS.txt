@@ -115,17 +115,19 @@ REQUERIMIENTOS FUNCIONALES (RF-1 a RF-34)
           solo se infiere informalmente por los registros que un docente
           cargó (Grade, StudyPlan, ForumPost).
 
-[FALTA]   RF-14 Asignar a cada actividad deportiva un único profesor
+[OK]      RF-14 Asignar a cada actividad deportiva un único profesor
           responsable.
-          Evidencia: no existe módulo de deportes en ninguna parte del
-          código.
+          Evidencia: modelo GrupoDeporte (backend/prisma/schema.prisma)
+          con docenteId obligatorio por grupo deporte+nivel+día+horario.
 
 --- Módulo Administración ---
 
-[FALTA]   RF-15 ABM de niveles educativos, cursos, materias, deportes,
+[OK]      RF-15 ABM de niveles educativos, cursos, materias, deportes,
           horarios, recorridos de transporte y turnos de comedor.
-          Evidencia: el panel Admin solo tiene ABM de Usuarios y de
-          vínculos padre-hijo; no existen las entidades mencionadas.
+          Evidencia: backend/src/routes/deportes.routes.ts,
+          transporte.routes.ts, comedor.routes.ts (niveles/cursos/
+          materias ya cubiertos aparte) +
+          client/src/pages/admin/ServiciosPage.jsx.
 
 [OK]      RF-16 Admin gestiona usuarios y permisos según 4 roles
           (Alumno, Padre/Tutor, Profesor, Administrador).
