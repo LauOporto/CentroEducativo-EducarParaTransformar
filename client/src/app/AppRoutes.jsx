@@ -19,6 +19,7 @@ import PadreShell from '../pages/padre/PadreShell';
 import BoletinPadrePage from '../pages/padre/BoletinPage';
 import MateriasPadrePage from '../pages/padre/MateriasPage';
 import AsistenciasPadrePage from '../pages/padre/AsistenciasPage';
+import ServiciosPadrePage from '../pages/padre/ServiciosPage';
 
 import AdminShell from '../pages/admin/AdminShell';
 import DashboardPage from '../pages/admin/DashboardPage';
@@ -75,6 +76,7 @@ export default function AppRoutes() {
         <Route index element={<BoletinPadrePage />} />
         <Route path="materias" element={<MateriasPadrePage />} />
         <Route path="asistencias" element={<AsistenciasPadrePage />} />
+        <Route path="servicios" element={<ServiciosPadrePage />} />
       </Route>
       <Route
         path="/admin"
