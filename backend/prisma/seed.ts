@@ -75,21 +75,22 @@ const GRUPOS_DEPORTE: GrupoDeporteSeed[] = [
 ];
 
 const RECORRIDOS_TRANSPORTE = [
-  { nombre: 'Recorrido Norte', horario: 'Salida 07:00 / Regreso 17:30' },
-  { nombre: 'Recorrido Sur', horario: 'Salida 07:10 / Regreso 17:40' },
-  { nombre: 'Recorrido Este', horario: 'Salida 07:20 / Regreso 17:50' },
-  { nombre: 'Recorrido Oeste', horario: 'Salida 07:30 / Regreso 18:00' },
+  { nombre: 'Recorrido Norte', horaSalida: '07:00', horaRegreso: '17:30' },
+  { nombre: 'Recorrido Sur', horaSalida: '07:10', horaRegreso: '17:40' },
+  { nombre: 'Recorrido Este', horaSalida: '07:20', horaRegreso: '17:50' },
+  { nombre: 'Recorrido Oeste', horaSalida: '07:30', horaRegreso: '18:00' },
 ];
 
 const TURNOS_COMEDOR = [
-  { nombre: 'Primer turno', horario: '12:00 a 13:00' },
-  { nombre: 'Segundo turno', horario: '13:00 a 14:00' },
-  { nombre: 'Turno extendido', horario: '14:00 a 15:00' },
+  { nombre: 'Primer turno', horaInicio: '12:00', horaFin: '13:00' },
+  { nombre: 'Segundo turno', horaInicio: '13:00', horaFin: '14:00' },
+  { nombre: 'Turno extendido', horaInicio: '14:00', horaFin: '15:00' },
 ];
 
-// GrupoDeporte.horaInicio/horaFin son @db.Time: Postgres solo persiste la
-// hora, pero Prisma exige un Date completo de entrada, por eso se fija una
-// fecha arbitraria (epoch) igual para todos los registros.
+// Los campos de hora de GrupoDeporte, RecorridoTransporte y TurnoComedor son
+// @db.Time: Postgres solo persiste la hora, pero Prisma exige un Date
+// completo de entrada, por eso se fija una fecha arbitraria (epoch) igual
+// para todos los registros.
 const horaTime = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 
 const LINKS = [
@@ -288,11 +289,13 @@ async function main() {
   }
 
   for (const r of RECORRIDOS_TRANSPORTE) {
-    await prisma.recorridoTransporte.upsert({ where: { nombre: r.nombre }, update: {}, create: r });
+    const data = { nombre: r.nombre, horaSalida: horaTime(r.horaSalida), horaRegreso: horaTime(r.horaRegreso) };
+    await prisma.recorridoTransporte.upsert({ where: { nombre: r.nombre }, update: {}, create: data });
   }
 
   for (const t of TURNOS_COMEDOR) {
-    await prisma.turnoComedor.upsert({ where: { nombre: t.nombre }, update: {}, create: t });
+    const data = { nombre: t.nombre, horaInicio: horaTime(t.horaInicio), horaFin: horaTime(t.horaFin) };
+    await prisma.turnoComedor.upsert({ where: { nombre: t.nombre }, update: {}, create: data });
   }
 
   const today = new Date();

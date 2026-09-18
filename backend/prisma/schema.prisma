@@ -309,19 +309,24 @@ model GrupoDeporte {
 }
 
 // Catálogo plano: sin relación a nivel/curso/profesor (el TP no la pide) y
-// sin ninguna regla de negocio de solapamiento horario sobre este modelo,
-// por eso `horario` es texto libre descriptivo.
+// sin ninguna regla de negocio de solapamiento horario sobre este modelo.
+// Salida y regreso son dos eventos distintos del día (no un rango continuo
+// como GrupoDeporte), por eso los campos se llaman horaSalida/horaRegreso
+// y no horaInicio/horaFin.
 model RecorridoTransporte {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique
-  horario   String
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  horaSalida  DateTime @db.Time
+  horaRegreso DateTime @db.Time
+  createdAt   DateTime @default(now())
 }
 
-// Catálogo plano, mismo criterio que RecorridoTransporte.
+// Catálogo plano, mismo criterio que RecorridoTransporte. Acá sí es un
+// único bloque de tiempo (como GrupoDeporte), de ahí horaInicio/horaFin.
 model TurnoComedor {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique
-  horario   String
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  nombre     String   @unique
+  horaInicio DateTime @db.Time
+  horaFin    DateTime @db.Time
+  createdAt  DateTime @default(now())
 }
