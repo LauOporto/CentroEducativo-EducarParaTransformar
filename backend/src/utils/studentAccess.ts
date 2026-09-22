@@ -23,13 +23,20 @@ export async function assertCanViewStudent(req: Request, studentId: number) {
   throw HttpError.forbidden();
 }
 
-// Gestionar (inscribir/desinscribir) servicios de un alumno es más
-// restrictivo que solo verlos: el propio alumno y el docente no pueden
-// autogestionarse ni gestionar a otros, solo Admin o el padre/tutor
-// vinculado (RF-18 a RF-22, gestionadas "por el padre" según el TP).
+// Gestionar (inscribir/desinscribir) servicios de un alumno: el propio
+// alumno puede autogestionarse (el TP lo dice explícitamente en
+// Reglas de Negocio: "Cada alumno puede: inscribirse a dos deportes...
+// / al servicio de transporte... / al servicio de comedor" — la
+// potestad del padre, en cambio, es otra regla distinta y separada,
+// "inscribir a su hijo al CURSADO", que no cubre estos tres servicios).
+// Docente queda afuera porque el TP no le da ningún rol en esto.
 export async function assertCanManageStudentServices(req: Request, studentId: number) {
   const { role, id } = req.authUser!;
   if (role === Role.ADMIN) return;
+  if (role === Role.ESTUDIANTE) {
+    if (id !== studentId) throw HttpError.forbidden('Solo podés gestionar tus propios servicios.');
+    return;
+  }
   if (role === Role.PADRE) {
     const link = await prisma.parentStudentLink.findUnique({
       where: { padreId_estudianteId: { padreId: id, estudianteId: studentId } },

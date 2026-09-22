@@ -17,6 +17,7 @@ import { deportesRouter } from './deportes.routes';
 import { transporteRouter } from './transporte.routes';
 import { comedorRouter } from './comedor.routes';
 import { inscripcionesRouter } from './inscripciones.routes';
+import { reportesRouter } from './reportes.routes';
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use('/deportes', deportesRouter);
 router.use('/transporte', transporteRouter);
 router.use('/comedor', comedorRouter);
 router.use('/inscripciones', inscripcionesRouter);
+router.use('/reportes', reportesRouter);
 
 export { router as apiRouter };

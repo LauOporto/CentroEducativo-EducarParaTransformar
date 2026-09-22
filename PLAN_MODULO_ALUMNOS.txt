@@ -467,6 +467,46 @@ el Módulo Profesores como varios reportes (RF-27, RF-28, y en el futuro
 RF-25/26/29) van a apoyarse en las mismas tablas de Nivel/Curso/Materia
 que se creen acá.
 
+--------------------------------------------------------------------------------
+8. VERIFICACIÓN POST-MERGE (22/09/2026) — MÓDULO CERRADO
+--------------------------------------------------------------------------------
+
+Contexto: entre el cierre de la Fase 3 (14/09) y esta revisión se
+mergearon a la rama dos módulos más, construidos por Franco en paralelo:
+Administrador (Deportes/Transporte/Comedor, RF-14/RF-15) e Inscripciones
+(RF-18 a RF-24) — ver PLAN_MODULO_ADMINISTRADOR.txt y
+PLAN_MODULO_INSCRIPCIONES.txt. Antes de dar por cerrado el Módulo
+Alumnos se volvió a contrastar contra el TP-Metodologia-2 y se verificó
+que nada de esos merges lo haya afectado:
+
+  [x] El TP define el Módulo Alumnos solo por la ficha de 11 campos +
+      "consultar y administrar" — no pide nada más allá de lo ya hecho
+      en las Fases 1 a 3. No quedó ningún requerimiento pendiente.
+  [x] backend/prisma/schema.prisma: NivelEducativo, Curso, Materia,
+      MateriaCurso y los campos de ficha en User siguen intactos; los
+      modelos nuevos de Franco (Deporte, GrupoDeporte,
+      RecorridoTransporte, TurnoComedor, Inscripcion*) se relacionan
+      con User sin tocar ni duplicar nada del módulo de Alumnos.
+  [x] Las migraciones encadenan en orden sin conflicto:
+      20260914141459_modulo_alumnos_academico (este módulo) ->
+      20260916202943_modulo_administrador_deportes_transporte_comedor ->
+      20260917205840_transporte_comedor_horas_estructuradas ->
+      20260918140017_modulo_inscripciones_deportes_transporte_comedor.
+  [x] Rutas backend (students/niveles/cursos/materias/admin/parent) y
+      pantallas frontend (PerfilPage, AcademicoPage, MateriasPage con
+      inscribir-cursado) siguen presentes y montadas.
+  [x] Se corrigió CHECKLIST_REQUERIMIENTOS.txt, que había quedado
+      desactualizado marcando RF-9/RF-10 como [FALTA] y RF-11 como
+      [PARCIAL] desde antes de la Fase 1 — ahora refleja [OK] en los
+      tres, con la evidencia correspondiente.
+
+No se encontró ningún requerimiento del Módulo Alumnos pendiente. El
+próximo módulo con trabajo real pendiente es Profesores (RF-12: ficha
+de profesor con legajo/apellido/especialidad/teléfono — el modelo User
+todavía no tiene esos campos para role=DOCENTE; RF-13, la asignación
+Materia-Curso-Profesor, ya está resuelta de hecho porque se construyó
+como parte de este módulo — falta solo la ficha).
+
 ================================================================================
 Fin del documento.
 ================================================================================

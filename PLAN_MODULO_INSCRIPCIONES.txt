@@ -432,11 +432,17 @@ d) Endpoints necesarios y dónde viven.
      DELETE /api/inscripciones/estudiantes/:id/transporte
      PUT    /api/inscripciones/estudiantes/:id/comedor     { turnoId }
      DELETE /api/inscripciones/estudiantes/:id/comedor
-            Acceso (mutaciones): ADMIN sin restricción, PADRE solo si
-            vinculado — a diferencia de la lectura, el propio ESTUDIANTE
-            NO puede autoinscribirse (el TP solo le da esa potestad al
-            padre/tutor y, por generalización del resto del sistema, al
-            Admin; no hay RF que habilite autogestión del alumno acá).
+            [CORREGIDO 22/09] Acceso (mutaciones): ADMIN sin restricción,
+            ESTUDIANTE solo sobre sí mismo, PADRE solo si vinculado. La
+            versión original de este documento excluía a ESTUDIANTE
+            citando "el TP solo le da esa potestad al padre/tutor" — eso
+            era una lectura incorrecta del documento fuente: el propio TP
+            (Reglas de Negocio, 1er punto) dice "Cada alumno puede:
+            inscribirse a dos deportes... / al servicio de transporte...
+            / al servicio de comedor", con el ALUMNO como sujeto. La
+            potestad del padre que sí está en el TP es otra, distinta:
+            "inscribir a su hijo al CURSADO" (RF-24), no esto. Ver
+            backend/src/utils/studentAccess.ts, assertCanManageStudentServices.
             PUT en transporte/comedor hace upsert (crear si no existe,
             reemplazar si ya tenía otro recorrido/turno) — así RF-19
             ("puede variar mes a mes") queda cubierto con una sola

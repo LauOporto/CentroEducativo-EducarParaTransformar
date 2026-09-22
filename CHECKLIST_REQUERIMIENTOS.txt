@@ -2,7 +2,8 @@
 CHECKLIST DE REQUERIMIENTOS — PROYECTO "TRANSFORMAR PARA EDUCAR"
 Equipo FLCODE (Barrabino / Oporto)
 Contraste entre el Plan de Trabajo (documento) y el estado real del código
-Fecha de análisis: 14/09/2026
+Fecha de análisis original: 14/09/2026
+Última revisión parcial (Módulo Alumnos): 22/09/2026 — ver NOTA abajo.
 ================================================================================
 
 NOTA IMPORTANTE SOBRE EL REPOSITORIO
@@ -13,10 +14,18 @@ El repo contiene DOS implementaciones:
   - frontend/            -> Sitio estático anterior, EN DESUSO según el propio
     README del proyecto (HTML/CSS/JS plano, reemplazado por client/).
 
-El sistema actualmente construido es un "campus virtual académico" (notas,
-asistencia, foros, planes de estudio, sitio institucional) pero NO incluye
-ningún módulo de deportes, transporte ni comedor, que el Plan de Trabajo
-considera un pilar central del proyecto (RF-14, RF-18 a RF-22, RF-30 a RF-33).
+Este documento se armó originalmente el 14/09 y describía un estado del
+código anterior al Módulo Alumnos, al Módulo Administrador (deportes/
+transporte/comedor) y al Módulo de Inscripciones, todos ya mergeados a
+esta rama. La sección "Módulo Alumnos" (RF-8 a RF-11) y las referencias
+cruzadas a RF-9 se actualizaron el 22/09 para reflejar el estado real.
+Las secciones de RF-12 en adelante (Profesores, Administración, deportes/
+transporte/comedor, inscripciones, reportes) NO se re-auditaron en esta
+pasada — para esas, además de los planes específicos
+(PLAN_MODULO_ADMINISTRADOR.txt, PLAN_MODULO_INSCRIPCIONES.txt), varios
+requerimientos individuales ya fueron marcados [OK] en commits `docs:`
+posteriores al 14/09, aunque el resumen numérico al final de este
+archivo todavía no está recalculado para reflejarlo por completo.
 
 Leyenda de estado:
   [OK]     Implementado y cumple lo pedido
@@ -80,26 +89,27 @@ REQUERIMIENTOS FUNCIONALES (RF-1 a RF-34)
           backend/src/routes/grades.routes.ts; CalificacionesPage.jsx
           (docente) y BoletinPage.jsx (alumno/padre).
 
-[FALTA]   RF-9  Ficha de alumno con 11 campos obligatorios (Legajo, DNI,
+[OK]      RF-9  Ficha de alumno con 11 campos obligatorios (Legajo, DNI,
           Nombre, Apellido, Fecha de nacimiento, Domicilio, Teléfono,
           Correo, Nivel educativo, Curso, Estado).
-          Evidencia: el modelo User solo tiene id, usuario, email, dni,
-          password, role, nombre, curso (string libre), isActive.
-          Faltan: Legajo, Apellido separado, Fecha de nacimiento,
-          Domicilio, Teléfono, Nivel educativo como entidad propia.
+          Evidencia: backend/prisma/schema.prisma (User: legajo @unique,
+          apellido, fechaNacimiento, domicilio, telefono, estado
+          EstadoAlumno, cursoId -> Curso); alta/edición completa en
+          admin.routes.ts (POST/PATCH /api/admin/users, obligatorios
+          para role=ESTUDIANTE); UserForm.jsx / EditUserModal.jsx.
 
-[FALTA]   RF-10 Un alumno pertenece a un único curso, y un curso a un
+[OK]      RF-10 Un alumno pertenece a un único curso, y un curso a un
           único nivel educativo.
-          Evidencia: no existen entidades "Curso" ni "Nivel educativo"
-          relacionales; "curso" es un campo de texto libre en User, sin
-          validación estructural de niveles.
+          Evidencia: Curso.nivelId -> NivelEducativo (FK), User.cursoId
+          -> Curso (FK única por fila). Migración
+          20260914141459_modulo_alumnos_academico.
 
-[PARCIAL] RF-11 Consultar, por alumno, el listado de materias cursadas con
+[OK]      RF-11 Consultar, por alumno, el listado de materias cursadas con
           su profesor a cargo.
-          Evidencia: existe de forma indirecta vía Grade/ForumPost
-          (materia como texto libre asociada a un docenteId), y
-          MateriasPage.jsx (panel Padre). No hay una entidad formal de
-          "asignación materia-curso-profesor" que sustente el listado.
+          Evidencia: modelo MateriaCurso (materia+curso+docente) +
+          GET /api/students/:id/materias (students.routes.ts) +
+          MateriasCursoList.jsx, usado en PerfilPage.jsx (alumno) y
+          MateriasPage.jsx (padre).
 
 --- Módulo Profesores ---
 
@@ -269,10 +279,10 @@ REQUERIMIENTOS NO FUNCIONALES (RNF-35 a RNF-47)
 [PARCIAL] RNF-43 Modificaciones de datos de alumno/profesor se reflejan
           de inmediato en todos los módulos, sin duplicados.
           Evidencia: al ser una única base relacional (fuente única de
-          verdad) el diseño lo favorece, pero como los datos de la
-          ficha del alumno/profesor están incompletos (ver RF-9/RF-12),
-          esto no puede verificarse plenamente sobre los campos que
-          exige el enunciado.
+          verdad) el diseño lo favorece; la ficha de alumno ya está
+          completa (RF-9), pero la ficha de profesor todavía no (ver
+          RF-12), así que no puede verificarse plenamente sobre TODOS
+          los campos que exige el enunciado.
 
 [OK]      RNF-44 Restricción de acceso por rol autenticado.
           Evidencia: requireAuth + requireRole(...) en
@@ -295,19 +305,25 @@ REQUERIMIENTOS NO FUNCIONALES (RNF-35 a RNF-47)
           Evidencia: existe restricción de acceso por rol (RNF-44) y
           las rutas de grades/attendance ya filtran por vínculo
           padre-hijo, pero no hay una política explícita ni revisión
-          documentada de cumplimiento legal sobre datos sensibles, y
-          varios de esos campos (domicilio, teléfono) ni siquiera
-          existen todavía en el modelo de datos (ver RF-9/RF-12).
+          documentada de cumplimiento legal sobre datos sensibles; los
+          campos sensibles del alumno ya existen (domicilio, teléfono —
+          RF-9), pero los del profesor todavía no (ver RF-12).
 
 ================================================================================
 RESUMEN NUMÉRICO
 ================================================================================
 
 Requerimientos Funcionales (34 totales, contando RF-4.1/RF-4.2 como RF-4):
-  OK      : 14  (RF-1, RF-3, RF-4, RF-5, RF-8, RF-16, RF-17, RF-18, RF-19,
-                RF-20, RF-21, RF-22, RF-23, RF-24)
-  PARCIAL : 4   (RF-2, RF-7, RF-11, RF-34)
-  FALTA   : 16  (RF-6, RF-9, RF-10, RF-12 a RF-15, RF-25 a RF-33)
+  OK      : 17  (RF-1, RF-3, RF-4, RF-5, RF-8, RF-9, RF-10, RF-11, RF-16,
+                RF-17, RF-18, RF-19, RF-20, RF-21, RF-22, RF-23, RF-24)
+  PARCIAL : 3   (RF-2, RF-7, RF-34)
+  FALTA   : 14  (RF-6, RF-12 a RF-15, RF-25 a RF-33)
+
+  NOTA: RF-14 y RF-15 (deportes/horarios/transporte/comedor) están
+  marcados [OK] más arriba con evidencia (Franco, sesión 22/09), pero
+  este conteo no llegó a actualizarse para incluirlos — no se corrigió
+  en esta pasada porque esta revisión se centró en el Módulo Alumnos
+  (RF-8 a RF-11); falta una pasada de conteo sobre RF-12 a RF-24.
 
 Requerimientos No Funcionales (13 totales):
   OK      : 4   (RNF-35, RNF-38, RNF-41, RNF-44)
@@ -318,18 +334,21 @@ Requerimientos No Funcionales (13 totales):
 BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
 ================================================================================
 
-1. Entidades académicas estructurales: Curso, Nivel Educativo y Materia
-   como tablas relacionales propias (hoy son texto libre). De esto
-   dependen RF-9, RF-10, RF-11, RF-12, RF-13 y buena parte de los
-   reportes.
+1. [RESUELTO] Entidades académicas estructurales: Curso, Nivel Educativo
+   y Materia ya son tablas relacionales propias (Módulo Alumnos, sesión
+   14/09). RF-9, RF-10 y RF-11 quedaron cerrados. Esto además ya deja
+   armada la base de la que dependían RF-12/RF-13 (Módulo Profesores) y
+   buena parte de los reportes por curso/materia.
 
 2. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
    contadores en un dashboard; faltan los 9 reportes filtrables
    exigidos, y por lo tanto tampoco se puede verificar RNF-45.
 
-3. Fichas completas de Alumno y Profesor (RF-9, RF-12): faltan varios
-   campos obligatorios (Legajo, Apellido, Fecha de nacimiento,
-   Domicilio, Teléfono, Especialidad, Nivel educativo).
+3. [RESUELTO para Alumno] Ficha completa de Alumno (RF-9): ya tiene
+   Legajo, Apellido, Fecha de nacimiento, Domicilio, Teléfono y Nivel
+   educativo (vía Curso). Sigue pendiente la Ficha de Profesor (RF-12):
+   Legajo, Apellido, Especialidad, Teléfono — el modelo User no tiene
+   esos campos para role=DOCENTE todavía.
 
 4. Notificación automática por 3 inasistencias consecutivas (parte de
    RF-34) — el patrón Factory Method previsto en el diseño (Notificacion
