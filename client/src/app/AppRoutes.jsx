@@ -11,6 +11,8 @@ import ForosPage from '../pages/estudiante/ForosPage';
 
 import DocenteShell from '../pages/docente/DocenteShell';
 import CalificacionesPage from '../pages/docente/CalificacionesPage';
+import PerfilDocentePage from '../pages/docente/PerfilPage';
+import MisCursosPage from '../pages/docente/MisCursosPage';
 import AsistenciaDocentePage from '../pages/docente/AsistenciaPage';
 import PlanesDocentePage from '../pages/docente/PlanesPage';
 import ForosDocentePage from '../pages/docente/ForosPage';
@@ -24,6 +26,7 @@ import ServiciosPadrePage from '../pages/padre/ServiciosPage';
 import AdminShell from '../pages/admin/AdminShell';
 import DashboardPage from '../pages/admin/DashboardPage';
 import UsuariosPage from '../pages/admin/UsuariosPage';
+import ProfesoresPage from '../pages/admin/ProfesoresPage';
 import DocentesPendientesPage from '../pages/admin/DocentesPendientesPage';
 import InscripcionesPage from '../pages/admin/InscripcionesPage';
 import OpinionesPage from '../pages/admin/OpinionesPage';
@@ -61,6 +64,8 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<CalificacionesPage />} />
+        <Route path="perfil" element={<PerfilDocentePage />} />
+        <Route path="cursos" element={<MisCursosPage />} />
         <Route path="asistencia" element={<AsistenciaDocentePage />} />
         <Route path="planes" element={<PlanesDocentePage />} />
         <Route path="foros" element={<ForosDocentePage />} />
@@ -88,6 +93,7 @@ export default function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="usuarios" element={<UsuariosPage />} />
+        <Route path="profesores" element={<ProfesoresPage />} />
         <Route path="docentes" element={<DocentesPendientesPage />} />
         <Route path="inscripciones" element={<InscripcionesPage />} />
         <Route path="opiniones" element={<OpinionesPage />} />

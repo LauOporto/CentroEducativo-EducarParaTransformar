@@ -19,6 +19,6 @@ export const adminService = {
   deleteLink: (id) => httpClient.delete(`/api/admin/links/${id}`),
 
   pendingTeachers: () => httpClient.get('/api/admin/teachers/pending'),
-  approveTeacher: (id) => httpClient.post(`/api/admin/teachers/${id}/approve`),
+  approveTeacher: (id, ficha = {}) => httpClient.post(`/api/admin/teachers/${id}/approve`, ficha),
   rejectTeacher: (id) => httpClient.delete(`/api/admin/teachers/${id}/reject`),
 };

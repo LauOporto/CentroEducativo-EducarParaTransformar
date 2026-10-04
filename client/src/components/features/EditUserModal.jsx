@@ -11,6 +11,12 @@ const ESTADOS_ALUMNO = [
   { value: 'EGRESADO', label: 'Egresado' },
 ];
 
+const ESTADOS_PROFESOR = [
+  { value: 'ACTIVO', label: 'Activo' },
+  { value: 'LICENCIA', label: 'Licencia' },
+  { value: 'INACTIVO', label: 'Inactivo' },
+];
+
 function toDateInput(value) {
   if (!value) return '';
   return String(value).slice(0, 10);
@@ -29,18 +35,27 @@ export default function EditUserModal({ user, onClose, onSaved }) {
       legajo: user.legajo || '', apellido: user.apellido || '', domicilio: user.domicilio || '',
       telefono: user.telefono || '', fechaNacimiento: toDateInput(user.fechaNacimiento),
       estado: user.estado || 'ACTIVO',
+      especialidad: user.especialidad || '', estadoProfesor: user.estadoProfesor || 'ACTIVO',
     });
   }, [user]);
 
   if (!user || !form) return null;
 
   const esAlumno = form.role === 'ESTUDIANTE';
+  const esDocente = form.role === 'DOCENTE';
 
   const submit = async (e) => {
     e.preventDefault();
     const payload = esAlumno
-      ? form
-      : { ...form, curso: null, legajo: null, apellido: null, fechaNacimiento: null, domicilio: null, telefono: null, estado: null };
+      ? { ...form, especialidad: null, estadoProfesor: null }
+      : esDocente
+        ? {
+            ...form,
+            curso: null, fechaNacimiento: null, domicilio: null, estado: null,
+            legajo: form.legajo || null, apellido: form.apellido || null,
+            telefono: form.telefono || null, especialidad: form.especialidad || null,
+          }
+        : { ...form, curso: null, legajo: null, apellido: null, fechaNacimiento: null, domicilio: null, telefono: null, estado: null, especialidad: null, estadoProfesor: null };
     const res = await adminService.updateUser(user.id, payload);
     if (res.exito) {
       toast.success('Usuario actualizado.');
@@ -83,6 +98,21 @@ export default function EditUserModal({ user, onClose, onSaved }) {
             <input placeholder="Domicilio" value={form.domicilio} onChange={(e) => setForm({ ...form, domicilio: e.target.value })} className={campo()} />
             <select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })} className={campo()}>
               {ESTADOS_ALUMNO.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
+            </select>
+          </>
+        )}
+
+        {esDocente && (
+          <>
+            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Ficha de profesor
+            </div>
+            <input placeholder="Legajo" value={form.legajo} onChange={(e) => setForm({ ...form, legajo: e.target.value })} className={campo()} />
+            <input placeholder="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} className={campo()} />
+            <input placeholder="Especialidad" value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={campo()} />
+            <input placeholder="Teléfono (solo dígitos)" pattern="[0-9]{6,20}" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={campo()} />
+            <select value={form.estadoProfesor} onChange={(e) => setForm({ ...form, estadoProfesor: e.target.value })} className={campo('col-span-2')}>
+              {ESTADOS_PROFESOR.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
             </select>
           </>
         )}

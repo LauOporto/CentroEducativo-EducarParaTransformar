@@ -8,6 +8,7 @@ export default function AdminShell() {
   const menu = [
     { to: '/admin', label: 'Dashboard', icon: 'fa-tachometer-alt', end: true },
     { to: '/admin/usuarios', label: 'Usuarios', icon: 'fa-users' },
+    { to: '/admin/profesores', label: 'Profesores', icon: 'fa-chalkboard-teacher' },
     { to: '/admin/academico', label: 'Académico', icon: 'fa-graduation-cap' },
     { to: '/admin/servicios', label: 'Deportes, Transporte y Comedor', icon: 'fa-futbol' },
     { to: '/admin/docentes', label: 'Docentes pendientes', icon: 'fa-user-clock', badge: counts?.docentes },

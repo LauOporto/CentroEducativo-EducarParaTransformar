@@ -37,6 +37,12 @@ enum EstadoAlumno {
   EGRESADO
 }
 
+enum EstadoProfesor {
+  ACTIVO
+  LICENCIA
+  INACTIVO
+}
+
 enum DiaSemana {
   LUNES
   MARTES
@@ -114,6 +120,11 @@ model User {
   estado          EstadoAlumno?
   cursoId         Int?
   curso           Curso?        @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+
+  // Ficha de profesor (RF-12) — solo se completan para role = DOCENTE.
+  // Reusa legajo / apellido / telefono de arriba.
+  especialidad    String?
+  estadoProfesor  EstadoProfesor?
 
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")

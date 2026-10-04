@@ -36,7 +36,7 @@ router.get('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (_req,
     const students = await prisma.user.findMany({
       where: { role: Role.ESTUDIANTE, isActive: true },
       orderBy: { nombre: 'asc' },
-      select: { id: true, nombre: true, dni: true, legajo: true, curso: { select: CURSO_SELECT } },
+      select: { id: true, nombre: true, dni: true, legajo: true, cursoId: true, curso: { select: CURSO_SELECT } },
     });
     res.json({
       exito: true,

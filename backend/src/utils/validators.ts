@@ -17,3 +17,8 @@ export const fechaNacimientoSchema = z.coerce
 export const legajoSchema = z.string().trim().min(2).max(20);
 
 export const estadoAlumnoSchema = z.enum(['ACTIVO', 'INACTIVO', 'EGRESADO']);
+
+// RF-12: ficha de profesor.
+export const especialidadSchema = z.string().trim().min(3).max(80);
+
+export const estadoProfesorSchema = z.enum(['ACTIVO', 'LICENCIA', 'INACTIVO']);
