@@ -191,22 +191,34 @@ REQUERIMIENTOS FUNCIONALES (RF-1 a RF-34)
 
 --- Módulo de Reportes ---
 
-[FALTA]   RF-25 Reporte "Por Alumno" (curso, materias, profesores,
+[OK]      RF-25 Reporte "Por Alumno" (curso, materias, profesores,
           deportes, horarios, transporte, comedor).
-[FALTA]   RF-26 Reporte "Por Docente" (cursos a cargo por nivel y horarios).
-[FALTA]   RF-27 Reporte "Listado de alumnos por curso".
-[FALTA]   RF-28 Reporte "Listado de alumnos por materia".
-[FALTA]   RF-29 Reporte "Listado de docentes por nivel educativo".
-[FALTA]   RF-30 Reporte "Listado de alumnos por deporte".
-[FALTA]   RF-31 Reporte "Listado de alumnos por deporte y por nivel".
-[FALTA]   RF-32 Reporte "Listado de alumnos por deporte, nivel, horario y
+[OK]      RF-26 Reporte "Por Docente" (cursos a cargo por nivel; el
+          "horario de cada curso" no existe como dato en el modelo — ver
+          nota debajo — se muestran en su lugar los horarios reales de
+          los grupos de deporte que el profesor dicta).
+[OK]      RF-27 Reporte "Listado de alumnos por curso".
+[OK]      RF-28 Reporte "Listado de alumnos por materia".
+[OK]      RF-29 Reporte "Listado de docentes por nivel educativo".
+[OK]      RF-30 Reporte "Listado de alumnos por deporte".
+[OK]      RF-31 Reporte "Listado de alumnos por deporte y por nivel".
+[OK]      RF-32 Reporte "Listado de alumnos por deporte, nivel, horario y
           profesor a cargo".
-[FALTA]   RF-33 Reporte "Listado de alumnos por recorrido de transporte".
-          Evidencia (para los 9 reportes): solo existe
-          GET /api/admin/stats con 6 contadores simples, mostrados como
-          tiles en DashboardPage.jsx. No hay reportes parametrizables,
-          filtrables ni exportables (no hay librerías de export como
-          jspdf/xlsx en client/package.json).
+[OK]      RF-33 Reporte "Listado de alumnos por recorrido de transporte".
+          Evidencia (para los 9 reportes, sesión 22/09): Motor de
+          Reportes con patrón Strategy en backend/src/services/reportes/
+          (9 archivos <clave>.strategy.ts + motor.ts + pdfHelpers.ts),
+          expuesto en GET /api/reportes (listado por rol) y
+          GET /api/reportes/:key/pdf (descarga), con tarjetas en
+          ReportesPage.jsx (panel Admin). Probados end-to-end: los 9
+          generan PDF válido (200), restricción de rol (403 para
+          DOCENTE), parámetro inexistente (404) y parámetro inválido
+          (400).
+          Nota (RF-26): el modelo de datos nunca definió un "horario de
+          clase por materia/curso" (decisión deliberada del Módulo
+          Administrador) — inventarlo sería fabricar un dato que no
+          existe, así que el reporte lo documenta explícitamente en vez
+          de simularlo.
 
 --- Desafío ---
 
@@ -218,10 +230,16 @@ REQUERIMIENTOS FUNCIONALES (RF-1 a RF-34)
           (AsistenciaPage.jsx) solo ofrece 3 opciones en la UI
           (presente/ausente/tarde) — "Justificado" solo es alcanzable
           llamando la API directamente.
-          Falta: no existe en ningún archivo del backend el cálculo de
-          inasistencias consecutivas ni el disparo de notificación
-          automática asociado (aunque sí existe un sistema genérico de
-          notificaciones reutilizable: notifications.routes.ts).
+          Resuelto (sesión 22/09): la notificación automática SÍ está
+          implementada — backend/src/services/asistencia.service.ts
+          (verificarInasistenciasConsecutivas) detecta 3 AUSENTE
+          consecutivas (con guarda anti-spam para no repetir el aviso
+          en cada inasistencia posterior) y dispara la notificación vía
+          Factory Method (backend/src/services/notificaciones/), que
+          elige canal EMAIL o INTERNA según la preferencia del padre
+          (User.canalNotificacion). Se llama desde
+          attendance.routes.ts tras cada alta de asistencia.
+          Sigue faltando: exponer "Justificado" en la UI del docente.
 
 ================================================================================
 REQUERIMIENTOS NO FUNCIONALES (RNF-35 a RNF-47)
@@ -290,8 +308,11 @@ REQUERIMIENTOS NO FUNCIONALES (RNF-35 a RNF-47)
           los routers.
 
 [FALTA]   RNF-45 Reportes de hasta 500 registros en <= 5s.
-          Estado: no aplica / no verificable — no existen los reportes
-          gerenciales sobre los que se debería medir (ver RF-25 a RF-33).
+          Estado (sesión 22/09): ya es verificable — los 9 reportes de
+          RF-25 a RF-33 existen y responden 200 con datos reales — pero
+          todavía no se midió formalmente el tiempo de generación con
+          un volumen de ~500 registros (el seed actual tiene mucho
+          menos matrícula que eso).
 
 [FALTA]   RNF-46 Log de auditoría (usuario, fecha y hora de cada alta,
           modificación o baja sobre alumnos, profesores e inscripciones).
@@ -314,10 +335,11 @@ RESUMEN NUMÉRICO
 ================================================================================
 
 Requerimientos Funcionales (34 totales, contando RF-4.1/RF-4.2 como RF-4):
-  OK      : 17  (RF-1, RF-3, RF-4, RF-5, RF-8, RF-9, RF-10, RF-11, RF-16,
-                RF-17, RF-18, RF-19, RF-20, RF-21, RF-22, RF-23, RF-24)
+  OK      : 26  (RF-1, RF-3, RF-4, RF-5, RF-8, RF-9, RF-10, RF-11, RF-16,
+                RF-17, RF-18, RF-19, RF-20, RF-21, RF-22, RF-23, RF-24,
+                RF-25 a RF-33)
   PARCIAL : 3   (RF-2, RF-7, RF-34)
-  FALTA   : 14  (RF-6, RF-12 a RF-15, RF-25 a RF-33)
+  FALTA   : 5   (RF-6, RF-12 a RF-15)
 
   NOTA: RF-14 y RF-15 (deportes/horarios/transporte/comedor) están
   marcados [OK] más arriba con evidencia (Franco, sesión 22/09), pero
@@ -340,9 +362,10 @@ BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
    armada la base de la que dependían RF-12/RF-13 (Módulo Profesores) y
    buena parte de los reportes por curso/materia.
 
-2. Motor de Reportes gerenciales (RF-25 a RF-33): hoy solo hay 6
-   contadores en un dashboard; faltan los 9 reportes filtrables
-   exigidos, y por lo tanto tampoco se puede verificar RNF-45.
+2. [RESUELTO] Motor de Reportes gerenciales (RF-25 a RF-33): los 9
+   reportes filtrables están implementados con patrón Strategy (sesión
+   22/09) y probados end-to-end. Sigue pendiente medir formalmente
+   RNF-45 (tiempo de generación con ~500 registros).
 
 3. [RESUELTO para Alumno] Ficha completa de Alumno (RF-9): ya tiene
    Legajo, Apellido, Fecha de nacimiento, Domicilio, Teléfono y Nivel
@@ -350,10 +373,11 @@ BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
    Legajo, Apellido, Especialidad, Teléfono — el modelo User no tiene
    esos campos para role=DOCENTE todavía.
 
-4. Notificación automática por 3 inasistencias consecutivas (parte de
-   RF-34) — el patrón Factory Method previsto en el diseño (Notificacion
-   / NotificacionFactory) tampoco está implementado en el código, aunque
-   sí hay un sistema de notificaciones genérico reutilizable como base.
+4. [RESUELTO] Notificación automática por 3 inasistencias consecutivas
+   (parte de RF-34) — implementada con Factory Method (Notificacion /
+   NotificacionFactory) en backend/src/services/notificaciones/, sesión
+   22/09. Sigue pendiente solo el detalle menor de exponer el estado
+   "Justificado" en la UI de carga de asistencia del docente.
 
 5. Auditoría (RNF-46) y ajustes de seguridad de sesión (RNF-39): falta
    una tabla/registro de auditoría y limitar la sesión por inactividad

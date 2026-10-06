@@ -1,11 +1,22 @@
 import { registrarEstrategia } from './motor';
 import { porAlumnoStrategy } from './porAlumno.strategy';
 import { listadoAlumnosPorCursoStrategy } from './listadoAlumnosPorCurso.strategy';
+import { porDocenteStrategy } from './porDocente.strategy';
+import { listadoAlumnosPorMateriaStrategy } from './listadoAlumnosPorMateria.strategy';
+import { listadoDocentesPorNivelStrategy } from './listadoDocentesPorNivel.strategy';
+import { listadoAlumnosPorDeporteStrategy } from './listadoAlumnosPorDeporte.strategy';
+import { listadoAlumnosPorDeporteYNivelStrategy } from './listadoAlumnosPorDeporteYNivel.strategy';
+import { listadoAlumnosPorDeporteNivelHorarioStrategy } from './listadoAlumnosPorDeporteNivelHorario.strategy';
+import { listadoAlumnosPorRecorridoStrategy } from './listadoAlumnosPorRecorrido.strategy';
 
-// Alta de estrategias del Motor de Reportes. Sumar un reporte nuevo es
-// agregar un archivo <clave>.strategy.ts + una línea acá — no hace
-// falta tocar el motor ni el router.
 registrarEstrategia(porAlumnoStrategy);
 registrarEstrategia(listadoAlumnosPorCursoStrategy);
+registrarEstrategia(porDocenteStrategy);
+registrarEstrategia(listadoAlumnosPorMateriaStrategy);
+registrarEstrategia(listadoDocentesPorNivelStrategy);
+registrarEstrategia(listadoAlumnosPorDeporteStrategy);
+registrarEstrategia(listadoAlumnosPorDeporteYNivelStrategy);
+registrarEstrategia(listadoAlumnosPorDeporteNivelHorarioStrategy);
+registrarEstrategia(listadoAlumnosPorRecorridoStrategy);
 
 export { obtenerEstrategia, listarEstrategias } from './motor';

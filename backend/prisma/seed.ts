@@ -3,6 +3,7 @@ import {
   Role,
   AttendanceStatus,
   DiaSemana,
+  CanalNotificacion,
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -31,6 +32,7 @@ type UserSeed = {
   fechaNacimiento?: Date;
   domicilio?: string;
   telefono?: string;
+  canalNotificacion?: CanalNotificacion; // RF-34 — Factory Method de notificaciones
 };
 
 const SEED_USERS: UserSeed[] = [
@@ -50,7 +52,7 @@ const SEED_USERS: UserSeed[] = [
   { usuario: 'vsanchez',   email: 'v.sanchez@et.edu.ar',   dni: '40000007', nombre: 'Valentina Sánchez',  role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0007', apellido: 'Sánchez', fechaNacimiento: new Date('2011-07-25'), domicilio: 'Av. Alberdi 1290, Resistencia', telefono: '3624000007' },
   { usuario: 'iflores',    email: 'i.flores@et.edu.ar',    dni: '40000008', nombre: 'Ignacio Flores',     role: Role.ESTUDIANTE, curso: 'Primaria — 6° grado', legajo: 'LEG-0008', apellido: 'Flores', fechaNacimiento: new Date('2014-02-09'), domicilio: 'Calle Güemes 78, Resistencia', telefono: '3624000008' },
 
-  { usuario: 'pbarrabino', email: 'p.barrabino@et.edu.ar', dni: '30000001', nombre: 'Patricia Barrabino', role: Role.PADRE, curso: null },
+  { usuario: 'pbarrabino', email: 'p.barrabino@et.edu.ar', dni: '30000001', nombre: 'Patricia Barrabino', role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
   { usuario: 'rperez',     email: 'r.perez@et.edu.ar',     dni: '30000002', nombre: 'Roberto Pérez',      role: Role.PADRE, curso: null },
   { usuario: 'mgomezp',    email: 'm.gomez.padre@et.edu.ar', dni: '30000003', nombre: 'Mariana Gómez',    role: Role.PADRE, curso: null },
 ];
@@ -223,6 +225,7 @@ async function main() {
       fechaNacimiento: u.fechaNacimiento ?? null,
       domicilio: u.domicilio ?? null,
       telefono: u.telefono ?? null,
+      canalNotificacion: u.canalNotificacion ?? CanalNotificacion.INTERNA,
     };
     await prisma.user.upsert({
       where: { usuario: u.usuario },

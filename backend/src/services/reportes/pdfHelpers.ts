@@ -8,6 +8,14 @@ export const COLOR_TITULO = '#1d4ed8';
 export const COLOR_TEXTO = '#1e293b';
 export const COLOR_MUTED = '#64748b';
 
+// Compartido por los reportes que muestran horarios de GrupoDeporte o
+// RecorridoTransporte (ambos guardan hora como DateTime @db.Time).
+export const DIA_LABEL: Record<string, string> = {
+  LUNES: 'Lunes', MARTES: 'Martes', MIERCOLES: 'Miércoles',
+  JUEVES: 'Jueves', VIERNES: 'Viernes', SABADO: 'Sábado',
+};
+export const horaLabel = (d: Date) => d.toISOString().slice(11, 16);
+
 export function margenIzquierdo(doc: PDFKit.PDFDocument) {
   return doc.page.margins.left;
 }
@@ -72,6 +80,7 @@ export function tabla(
   if (filas.length === 0) {
     doc.font('Helvetica-Oblique').fillColor(COLOR_MUTED).fontSize(9.5).text('Sin datos.', x0, doc.y);
     doc.moveDown(0.3);
+    doc.font('Helvetica');
     doc.x = x0;
     return;
   }
