@@ -4,6 +4,7 @@ import LandingPage from '../pages/public/LandingPage';
 
 import EstudianteShell from '../pages/estudiante/EstudianteShell';
 import PerfilPage from '../pages/estudiante/PerfilPage';
+import ServiciosEstudiantePage from '../pages/estudiante/ServiciosPage';
 import BoletinPage from '../pages/estudiante/BoletinPage';
 import PlanesPage from '../pages/estudiante/PlanesPage';
 import AsistenciasPage from '../pages/estudiante/AsistenciasPage';
@@ -31,6 +32,7 @@ import EmpleoPage from '../pages/admin/EmpleoPage';
 import VinculosPage from '../pages/admin/VinculosPage';
 import AcademicoPage from '../pages/admin/AcademicoPage';
 import ServiciosPage from '../pages/admin/ServiciosPage';
+import ReportesPage from '../pages/admin/ReportesPage';
 
 export default function AppRoutes() {
   return (
@@ -47,6 +49,7 @@ export default function AppRoutes() {
       >
         <Route index element={<BoletinPage />} />
         <Route path="perfil" element={<PerfilPage />} />
+        <Route path="servicios" element={<ServiciosEstudiantePage />} />
         <Route path="planes" element={<PlanesPage />} />
         <Route path="asistencias" element={<AsistenciasPage />} />
         <Route path="foros" element={<ForosPage />} />
@@ -95,6 +98,7 @@ export default function AppRoutes() {
         <Route path="vinculos" element={<VinculosPage />} />
         <Route path="academico" element={<AcademicoPage />} />
         <Route path="servicios" element={<ServiciosPage />} />
+        <Route path="reportes" element={<ReportesPage />} />
       </Route>
     </Routes>
   );

@@ -5,6 +5,7 @@ import { AttendanceStatus, Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { verificarInasistenciasConsecutivas } from '../services/asistencia.service';
 
 const router = Router();
 
@@ -50,6 +51,9 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req,
         observacion: data.observacion ?? null,
       },
     });
+
+    await verificarInasistenciasConsecutivas(data.estudiante_id, data.materia ?? '');
+
     res.json({ exito: true, asistencia: result });
   } catch (err) {
     next(err);
@@ -82,6 +86,11 @@ router.post('/bulk', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (
       }),
     );
     await prisma.$transaction(ops);
+
+    for (const r of data.records) {
+      await verificarInasistenciasConsecutivas(r.estudiante_id, materiaKey);
+    }
+
     res.json({ exito: true, total: data.records.length });
   } catch (err) {
     next(err);

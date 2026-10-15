@@ -46,6 +46,15 @@ enum DiaSemana {
   SABADO
 }
 
+// Canal por el que un padre/tutor prefiere recibir las notificaciones
+// automáticas (ej. RF-34, 3 inasistencias consecutivas). Es el dato que
+// el Factory Method de notificaciones usa para decidir qué clase
+// concreta instanciar (NotificacionEmail vs NotificacionInterna).
+enum CanalNotificacion {
+  INTERNA
+  EMAIL
+}
+
 // ---- Estructura académica (Módulo Alumnos / Profesores / Administración) ----
 
 model NivelEducativo {
@@ -114,6 +123,9 @@ model User {
   estado          EstadoAlumno?
   cursoId         Int?
   curso           Curso?        @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+
+  // Canal de notificaciones (RF-34) — se usa sobre todo para role = PADRE.
+  canalNotificacion CanalNotificacion @default(INTERNA)
 
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")
