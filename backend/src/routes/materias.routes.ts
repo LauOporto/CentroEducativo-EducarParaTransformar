@@ -5,6 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { crearAsignacion } from '../services/asignaciones.service';
 
 const router = Router();
 
@@ -103,25 +104,7 @@ const asignacionSchema = z.object({
 router.post('/asignaciones', async (req, res, next) => {
   try {
     const data = asignacionSchema.parse(req.body);
-
-    const [materia, curso, docente] = await Promise.all([
-      prisma.materia.findUnique({ where: { id: data.materiaId } }),
-      prisma.curso.findUnique({ where: { id: data.cursoId } }),
-      prisma.user.findUnique({ where: { id: data.docenteId } }),
-    ]);
-    if (!materia) throw HttpError.badRequest('La materia indicada no existe.');
-    if (!curso) throw HttpError.badRequest('El curso indicado no existe.');
-    if (!docente || docente.role !== Role.DOCENTE) throw HttpError.badRequest('El profesor indicado no es válido.');
-
-    const existe = await prisma.materiaCurso.findUnique({
-      where: { materiaId_cursoId_docenteId: data },
-    });
-    if (existe) throw HttpError.conflict('Esa asignación materia-curso-profesor ya existe.');
-
-    const asignacion = await prisma.materiaCurso.create({
-      data,
-      include: { materia: true, curso: { include: { nivel: true } }, docente: { select: { id: true, nombre: true } } },
-    });
+    const asignacion = await crearAsignacion(data);
     res.json({ exito: true, asignacion });
   } catch (err) { next(err); }
 });

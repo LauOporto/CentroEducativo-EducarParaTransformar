@@ -3,6 +3,7 @@ import {
   Role,
   AttendanceStatus,
   DiaSemana,
+  CanalNotificacion,
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -31,15 +32,17 @@ type UserSeed = {
   fechaNacimiento?: Date;
   domicilio?: string;
   telefono?: string;
+  canalNotificacion?: CanalNotificacion; // RF-34 — Factory Method de notificaciones
+  especialidad?: string;
 };
 
 const SEED_USERS: UserSeed[] = [
   { usuario: 'admin', email: 'admin@et.edu.ar', dni: '10000001', nombre: 'Administrador del Sistema', role: Role.ADMIN, curso: null },
 
-  { usuario: 'mlopez',    email: 'm.lopez@et.edu.ar',    dni: '20000001', nombre: 'María López',     role: Role.DOCENTE, curso: null },
-  { usuario: 'jgarcia',   email: 'j.garcia@et.edu.ar',   dni: '20000002', nombre: 'Javier García',   role: Role.DOCENTE, curso: null },
-  { usuario: 'csilva',    email: 'c.silva@et.edu.ar',    dni: '20000003', nombre: 'Carolina Silva',  role: Role.DOCENTE, curso: null },
-  { usuario: 'amartinez', email: 'a.martinez@et.edu.ar', dni: '20000004', nombre: 'Andrés Martínez', role: Role.DOCENTE, curso: null },
+  { usuario: 'mlopez',    email: 'm.lopez@et.edu.ar',    dni: '20000001', nombre: 'María López',     role: Role.DOCENTE, curso: null, legajo: 'DOC-0001', apellido: 'López',    telefono: '3624100001', especialidad: 'Matemática' },
+  { usuario: 'jgarcia',   email: 'j.garcia@et.edu.ar',   dni: '20000002', nombre: 'Javier García',   role: Role.DOCENTE, curso: null, legajo: 'DOC-0002', apellido: 'García',   telefono: '3624100002', especialidad: 'Lengua y Literatura' },
+  { usuario: 'csilva',    email: 'c.silva@et.edu.ar',    dni: '20000003', nombre: 'Carolina Silva',  role: Role.DOCENTE, curso: null, legajo: 'DOC-0003', apellido: 'Silva',    telefono: '3624100003', especialidad: 'Ciencias Naturales' },
+  { usuario: 'amartinez', email: 'a.martinez@et.edu.ar', dni: '20000004', nombre: 'Andrés Martínez', role: Role.DOCENTE, curso: null, legajo: 'DOC-0004', apellido: 'Martínez', telefono: '3624100004', especialidad: 'Ciencias Sociales y Educación Física' },
 
   { usuario: 'fbarrabino', email: 'f.barrabino@et.edu.ar', dni: '40000001', nombre: 'Franco Barrabino',   role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0001', apellido: 'Barrabino', fechaNacimiento: new Date('2011-03-14'), domicilio: 'Av. Sarmiento 1450, Resistencia', telefono: '3624000001' },
   { usuario: 'jperez',     email: 'j.perez@et.edu.ar',     dni: '40000002', nombre: 'Juan Pérez',         role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0002', apellido: 'Pérez', fechaNacimiento: new Date('2011-06-02'), domicilio: 'Ruta 63 Km 4, Resistencia', telefono: '3624000002' },
@@ -50,7 +53,7 @@ const SEED_USERS: UserSeed[] = [
   { usuario: 'vsanchez',   email: 'v.sanchez@et.edu.ar',   dni: '40000007', nombre: 'Valentina Sánchez',  role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0007', apellido: 'Sánchez', fechaNacimiento: new Date('2011-07-25'), domicilio: 'Av. Alberdi 1290, Resistencia', telefono: '3624000007' },
   { usuario: 'iflores',    email: 'i.flores@et.edu.ar',    dni: '40000008', nombre: 'Ignacio Flores',     role: Role.ESTUDIANTE, curso: 'Primaria — 6° grado', legajo: 'LEG-0008', apellido: 'Flores', fechaNacimiento: new Date('2014-02-09'), domicilio: 'Calle Güemes 78, Resistencia', telefono: '3624000008' },
 
-  { usuario: 'pbarrabino', email: 'p.barrabino@et.edu.ar', dni: '30000001', nombre: 'Patricia Barrabino', role: Role.PADRE, curso: null },
+  { usuario: 'pbarrabino', email: 'p.barrabino@et.edu.ar', dni: '30000001', nombre: 'Patricia Barrabino', role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
   { usuario: 'rperez',     email: 'r.perez@et.edu.ar',     dni: '30000002', nombre: 'Roberto Pérez',      role: Role.PADRE, curso: null },
   { usuario: 'mgomezp',    email: 'm.gomez.padre@et.edu.ar', dni: '30000003', nombre: 'Mariana Gómez',    role: Role.PADRE, curso: null },
 ];
@@ -223,6 +226,9 @@ async function main() {
       fechaNacimiento: u.fechaNacimiento ?? null,
       domicilio: u.domicilio ?? null,
       telefono: u.telefono ?? null,
+      canalNotificacion: u.canalNotificacion ?? CanalNotificacion.INTERNA,
+      especialidad: u.especialidad ?? null,
+      estadoProfesor: u.role === Role.DOCENTE ? ('ACTIVO' as const) : null,
     };
     await prisma.user.upsert({
       where: { usuario: u.usuario },

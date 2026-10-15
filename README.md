@@ -109,4 +109,39 @@ pnpm --filter client dev             # solo Vite, sin pasar por el script de ra�
 - **Padre / Tutor** — visualiza el boletín, las materias y la asistencia de los hijos vinculados a su cuenta.
 - **Admin** — administra usuarios, vínculos padre-hijo, aprobación de cuentas docentes y modera inscripciones, opiniones y postulaciones de empleo.
 
+## Patrones de diseño
+
+El proyecto aplica tres patrones, cada uno en un punto puntual del dominio donde existe una variación real que conviene aislar (no se aplicaron "porque sí" en todos lados).
+
+### Facade — panel Padre/Alumno
+
+**Problema:** una sola pantalla necesita combinar datos de varios servicios distintos (catálogo de deportes/transporte/comedor + el estado de inscripción de un alumno) sin que el frontend tenga que orquestar múltiples llamadas.
+
+**Dónde:**
+- `backend/src/services/panelFamilia.facade.ts` — la fachada: `obtenerResumenServicios(estudianteId)` combina 6 tablas de 2 dominios distintos (catálogo + inscripciones) detrás de una única función, más las operaciones de inscribir/desinscribir de deportes, transporte y comedor con sus reglas de negocio (máximo 2 deportes, solapamiento horario, sin duplicados).
+- Se usa desde `backend/src/routes/inscripciones.routes.ts`, y la misma fachada sirve tanto para el panel Padre como para que el propio alumno se autogestione (`backend/src/utils/studentAccess.ts`).
+
+### Strategy — Motor de Reportes
+
+**Problema:** los reportes gerenciales del TP (RF-25 a RF-33) comparten la misma forma general (reciben filtros, arman un PDF) pero cada uno agrega y muestra datos completamente distintos.
+
+**Dónde:** `backend/src/services/reportes/`
+- `types.ts` — interfaz `ReportStrategy` que toda estrategia cumple (clave, roles autorizados, `parseParams`, `obtenerDatos`, `renderPdf`, `nombreArchivo`).
+- Las 9 estrategias concretas (RF-25 a RF-33): `porAlumno`, `listadoAlumnosPorCurso`, `porDocente`, `listadoAlumnosPorMateria`, `listadoDocentesPorNivel`, `listadoAlumnosPorDeporte`, `listadoAlumnosPorDeporteYNivel`, `listadoAlumnosPorDeporteNivelHorario` y `listadoAlumnosPorRecorrido`.
+- `pdfHelpers.ts` — layout compartido (encabezado, secciones, tablas con salto de página automático) usado por todas las estrategias.
+- `motor.ts` — el registro de estrategias por clave (`registrarEstrategia` / `obtenerEstrategia`); no conoce el detalle interno de ninguna.
+- `index.ts` — alta de estrategias; sumar un reporte nuevo es agregar un archivo `<clave>.strategy.ts` + una línea acá, sin tocar el motor ni el router.
+- Se consume desde `backend/src/routes/reportes.routes.ts` (`GET /api/reportes/:key/pdf`), que solo conoce la interfaz, nunca las clases concretas.
+
+### Factory Method — Notificaciones automáticas (RF-34)
+
+**Problema:** al disparar la alerta automática por 3 inasistencias no justificadas consecutivas, el canal de envío depende de la preferencia configurada de cada padre/tutor (notificación interna o email); construir el objeto de notificación "a mano" según el canal obligaría a tocar el servicio de asistencia cada vez que se sume un canal nuevo.
+
+**Dónde:** `backend/src/services/notificaciones/`
+- `types.ts` — interfaz común `Notificacion` (`enviar()`).
+- `notificacionInterna.ts` / `notificacionEmail.ts` — las clases concretas por canal.
+- `notificacionFactory.ts` — el Factory Method: `crearNotificacion(canal, payload)` decide qué clase instanciar.
+- `enviarNotificacion.ts` — punto de entrada: resuelve el `canalNotificacion` real del destinatario (`User.canalNotificacion`, enum `INTERNA` | `EMAIL`) y delega en la fábrica.
+- Se dispara desde `backend/src/services/asistencia.service.ts` (`verificarInasistenciasConsecutivas`), llamado desde `backend/src/routes/attendance.routes.ts` después de cada alta de asistencia. Ese servicio nunca sabe si el padre recibe un email o una notificación interna.
+
 

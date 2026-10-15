@@ -20,9 +20,30 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req,
   try {
     const data = createGradeSchema.parse(req.body);
 
-    const student = await prisma.user.findUnique({ where: { id: data.estudiante_id } });
+    const student = await prisma.user.findUnique({ where: { id: data.estudiante_id }, select: { role: true, cursoId: true } });
     if (!student || student.role !== Role.ESTUDIANTE) {
       throw HttpError.badRequest('El estudiante seleccionado no existe.');
+    }
+
+    if (!student.cursoId) {
+      throw HttpError.badRequest('El estudiante no tiene un curso asignado.');
+    }
+
+    const materiaRecord = await prisma.materia.findUnique({ where: { nombre: data.materia } });
+    if (!materiaRecord) {
+      throw HttpError.badRequest('La materia especificada no existe.');
+    }
+
+    const assignment = await prisma.materiaCurso.findFirst({
+      where: {
+        cursoId: student.cursoId,
+        materiaId: materiaRecord.id,
+        docenteId: req.authUser!.id,
+      },
+    });
+
+    if (!assignment && req.authUser!.role !== Role.ADMIN) {
+      throw HttpError.forbidden('No tenés asignada esta materia en el curso del estudiante.');
     }
 
     await prisma.grade.create({

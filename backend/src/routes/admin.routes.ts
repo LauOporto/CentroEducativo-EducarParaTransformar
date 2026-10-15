@@ -8,7 +8,10 @@ import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { notify } from './notifications.routes';
 import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
-import { dniSchema, estadoAlumnoSchema, fechaNacimientoSchema, legajoSchema, telefonoSchema } from '../utils/validators';
+import {
+  dniSchema, especialidadSchema, estadoAlumnoSchema, estadoProfesorSchema,
+  fechaNacimientoSchema, legajoSchema, telefonoSchema,
+} from '../utils/validators';
 
 const router = Router();
 
@@ -65,6 +68,7 @@ router.get('/users', async (req, res, next) => {
         id: true, usuario: true, email: true, dni: true, nombre: true,
         role: true, curso: { select: CURSO_SELECT }, isActive: true, createdAt: true,
         legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
+        especialidad: true, estadoProfesor: true,
       },
     });
     res.json({
@@ -89,13 +93,20 @@ const createUserSchema = z
     fechaNacimiento: fechaNacimientoSchema.optional().nullable(),
     domicilio: z.string().trim().min(3).max(200).optional().nullable(),
     telefono: telefonoSchema.optional().nullable(),
+    // Ficha de profesor (RF-12) — obligatorios solo cuando role = DOCENTE.
+    especialidad: especialidadSchema.optional().nullable(),
+    estadoProfesor: estadoProfesorSchema.optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    if (data.role !== 'ESTUDIANTE') return;
-    const requeridos = ['legajo', 'apellido', 'fechaNacimiento', 'domicilio', 'telefono', 'curso'] as const;
+    const requeridos =
+      data.role === 'ESTUDIANTE'
+        ? (['legajo', 'apellido', 'fechaNacimiento', 'domicilio', 'telefono', 'curso'] as const)
+        : data.role === 'DOCENTE'
+          ? (['legajo', 'apellido', 'especialidad', 'telefono'] as const)
+          : ([] as const);
     for (const campo of requeridos) {
-      if (!data[campo]) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: 'Obligatorio para un alumno.' });
+      if (!(data as Record<string, unknown>)[campo]) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: `Obligatorio para un ${data.role === 'DOCENTE' ? 'profesor' : 'alumno'}.` });
       }
     }
   });
@@ -117,6 +128,7 @@ router.post('/users', async (req, res, next) => {
     if (exists) throw HttpError.conflict('Usuario, email, DNI o legajo ya existen.');
     const hash = await bcrypt.hash(data.password, 10);
     const esAlumno = data.role === 'ESTUDIANTE';
+    const esDocente = data.role === 'DOCENTE';
     const cursoId = esAlumno ? await resolveCursoId(prisma, data.curso) : null;
     const user = await prisma.user.create({
       data: {
@@ -127,17 +139,20 @@ router.post('/users', async (req, res, next) => {
         role: data.role as Role,
         cursoId,
         estado: esAlumno ? 'ACTIVO' : null,
-        legajo: esAlumno ? data.legajo : null,
-        apellido: esAlumno ? data.apellido : null,
+        estadoProfesor: esDocente ? (data.estadoProfesor ?? 'ACTIVO') : null,
+        especialidad: esDocente ? data.especialidad : null,
+        legajo: esAlumno || esDocente ? data.legajo : null,
+        apellido: esAlumno || esDocente ? data.apellido : null,
         fechaNacimiento: esAlumno ? data.fechaNacimiento : null,
         domicilio: esAlumno ? data.domicilio : null,
-        telefono: esAlumno ? data.telefono : null,
+        telefono: esAlumno || esDocente ? data.telefono : null,
         password: hash,
       },
       select: {
         id: true, usuario: true, nombre: true, role: true, dni: true, email: true,
         curso: { select: CURSO_SELECT }, isActive: true,
         legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
+        especialidad: true, estadoProfesor: true,
       },
     });
     res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
@@ -159,6 +174,8 @@ const updateUserSchema = z.object({
   domicilio: z.string().trim().min(3).max(200).nullable().optional(),
   telefono: telefonoSchema.nullable().optional(),
   estado: estadoAlumnoSchema.nullable().optional(),
+  especialidad: especialidadSchema.nullable().optional(),
+  estadoProfesor: estadoProfesorSchema.nullable().optional(),
 });
 
 router.patch('/users/:id', async (req, res, next) => {
@@ -204,6 +221,8 @@ router.patch('/users/:id', async (req, res, next) => {
     if (data.domicilio !== undefined) patch.domicilio = data.domicilio;
     if (data.telefono !== undefined) patch.telefono = data.telefono;
     if (data.estado !== undefined) patch.estado = data.estado;
+    if (data.especialidad !== undefined) patch.especialidad = data.especialidad;
+    if (data.estadoProfesor !== undefined) patch.estadoProfesor = data.estadoProfesor;
 
     // Si dejó de ser estudiante, limpiar curso y estado (la ficha de
     // alumno queda huérfana; legajo/apellido/etc. se conservan como
@@ -211,6 +230,13 @@ router.patch('/users/:id', async (req, res, next) => {
     if (data.role && data.role !== 'ESTUDIANTE') {
       if (patch.cursoId === undefined) patch.cursoId = null;
       if (patch.estado === undefined) patch.estado = null;
+    }
+    // Idem para profesor: el estado solo tiene sentido con role = DOCENTE.
+    if (data.role && data.role !== 'DOCENTE' && patch.estadoProfesor === undefined) {
+      patch.estadoProfesor = null;
+    }
+    if (data.role === 'DOCENTE' && patch.estadoProfesor === undefined) {
+      patch.estadoProfesor = 'ACTIVO';
     }
 
     const user = await prisma.user.update({
@@ -220,6 +246,7 @@ router.patch('/users/:id', async (req, res, next) => {
         id: true, usuario: true, nombre: true, role: true, dni: true, email: true,
         curso: { select: CURSO_SELECT }, isActive: true,
         legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
+        especialidad: true, estadoProfesor: true,
       },
     });
     res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
@@ -234,7 +261,11 @@ router.delete('/users/:id', async (req, res, next) => {
     if (!target) throw HttpError.notFound('Usuario no encontrado.');
     await prisma.user.update({
       where: { id },
-      data: { isActive: false, estado: target.role === Role.ESTUDIANTE ? 'INACTIVO' : undefined },
+      data: {
+        isActive: false,
+        estado: target.role === Role.ESTUDIANTE ? 'INACTIVO' : undefined,
+        estadoProfesor: target.role === Role.DOCENTE ? 'INACTIVO' : undefined,
+      },
     });
     res.json({ exito: true, mensaje: 'Usuario desactivado.' });
   } catch (err) { next(err); }
@@ -292,23 +323,49 @@ router.get('/teachers/pending', async (_req, res, next) => {
       orderBy: { createdAt: 'asc' },
       select: {
         id: true, usuario: true, email: true, dni: true, nombre: true,
-        createdAt: true,
+        createdAt: true, legajo: true, apellido: true, especialidad: true, telefono: true,
       },
     });
     res.json({ exito: true, docentes: pendientes });
   } catch (err) { next(err); }
 });
 
+// Al aprobar, el Admin completa la ficha del profesor (RF-12). Los campos
+// ya cargados antes (p. ej. desde Editar usuario) no hace falta reenviarlos.
+const approveTeacherSchema = z.object({
+  legajo: legajoSchema.optional(),
+  apellido: z.string().trim().min(2).max(60).optional(),
+  especialidad: especialidadSchema.optional(),
+  telefono: telefonoSchema.optional(),
+});
+
 router.post('/teachers/:id/approve', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const data = approveTeacherSchema.parse(req.body ?? {});
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw HttpError.notFound('Docente no encontrado.');
     if (user.role !== Role.DOCENTE) throw HttpError.badRequest('El usuario no es docente.');
     if (user.isActive) throw HttpError.badRequest('El docente ya fue aprobado.');
+
+    const ficha = {
+      legajo: data.legajo ?? user.legajo,
+      apellido: data.apellido ?? user.apellido,
+      especialidad: data.especialidad ?? user.especialidad,
+      telefono: data.telefono ?? user.telefono,
+    };
+    const faltantes = Object.entries(ficha).filter(([, v]) => !v).map(([k]) => k);
+    if (faltantes.length) {
+      throw HttpError.badRequest(`Completá la ficha del docente antes de aprobar: falta ${faltantes.join(', ')}.`);
+    }
+    if (data.legajo) {
+      const dup = await prisma.user.findFirst({ where: { legajo: data.legajo, NOT: { id } }, select: { id: true } });
+      if (dup) throw HttpError.conflict('Ese legajo ya está registrado.');
+    }
+
     const aprobado = await prisma.user.update({
       where: { id },
-      data: { isActive: true },
+      data: { ...ficha, isActive: true, estadoProfesor: 'ACTIVO' },
       select: { id: true, usuario: true, nombre: true, email: true, dni: true, isActive: true },
     });
     await notify({

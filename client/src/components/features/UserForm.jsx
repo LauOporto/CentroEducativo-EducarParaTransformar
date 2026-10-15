@@ -6,7 +6,7 @@ import { ROLES_ADMIN } from '../../domain/cursos';
 
 const EMPTY = {
   usuario: '', email: '', dni: '', nombre: '', role: '', curso: '', password: '',
-  legajo: '', apellido: '', fechaNacimiento: '', domicilio: '', telefono: '',
+  legajo: '', apellido: '', fechaNacimiento: '', domicilio: '', telefono: '', especialidad: '',
 };
 
 export default function UserForm({ onCreated }) {
@@ -14,12 +14,21 @@ export default function UserForm({ onCreated }) {
   const { cursos } = useCursos();
   const [form, setForm] = useState(EMPTY);
   const esAlumno = form.role === 'ESTUDIANTE';
+  const esDocente = form.role === 'DOCENTE';
 
   const submit = async (e) => {
     e.preventDefault();
-    const payload = esAlumno
-      ? form
-      : { ...form, curso: null, legajo: null, apellido: null, fechaNacimiento: null, domicilio: null, telefono: null };
+    const conFicha = esAlumno || esDocente;
+    const payload = {
+      ...form,
+      curso: esAlumno ? form.curso : null,
+      legajo: conFicha ? form.legajo : null,
+      apellido: conFicha ? form.apellido : null,
+      telefono: conFicha ? form.telefono : null,
+      fechaNacimiento: esAlumno ? form.fechaNacimiento : null,
+      domicilio: esAlumno ? form.domicilio : null,
+      especialidad: esDocente ? form.especialidad : null,
+    };
     const res = await adminService.createUser(payload);
     if (res.exito) {
       toast.success('Usuario creado: ' + res.usuario.usuario);
@@ -65,6 +74,18 @@ export default function UserForm({ onCreated }) {
             </label>
             <input required placeholder="Teléfono (solo dígitos)" pattern="[0-9]{6,20}" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={campo()} />
             <input required placeholder="Domicilio" value={form.domicilio} onChange={(e) => setForm({ ...form, domicilio: e.target.value })} className={campo('col-span-2')} />
+          </>
+        )}
+
+        {esDocente && (
+          <>
+            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Ficha de profesor
+            </div>
+            <input required placeholder="Legajo" value={form.legajo} onChange={(e) => setForm({ ...form, legajo: e.target.value })} className={campo()} />
+            <input required placeholder="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} className={campo()} />
+            <input required placeholder="Especialidad" value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={campo()} />
+            <input required placeholder="Teléfono (solo dígitos)" pattern="[0-9]{6,20}" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={campo()} />
           </>
         )}
 

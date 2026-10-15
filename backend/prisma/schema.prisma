@@ -37,6 +37,12 @@ enum EstadoAlumno {
   EGRESADO
 }
 
+enum EstadoProfesor {
+  ACTIVO
+  LICENCIA
+  INACTIVO
+}
+
 enum DiaSemana {
   LUNES
   MARTES
@@ -44,6 +50,15 @@ enum DiaSemana {
   JUEVES
   VIERNES
   SABADO
+}
+
+// Canal por el que un padre/tutor prefiere recibir las notificaciones
+// automáticas (ej. RF-34, 3 inasistencias consecutivas). Es el dato que
+// el Factory Method de notificaciones usa para decidir qué clase
+// concreta instanciar (NotificacionEmail vs NotificacionInterna).
+enum CanalNotificacion {
+  INTERNA
+  EMAIL
 }
 
 // ---- Estructura académica (Módulo Alumnos / Profesores / Administración) ----
@@ -114,6 +129,14 @@ model User {
   estado          EstadoAlumno?
   cursoId         Int?
   curso           Curso?        @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+
+  // Canal de notificaciones (RF-34) — se usa sobre todo para role = PADRE.
+  canalNotificacion CanalNotificacion @default(INTERNA)
+
+  // Ficha de profesor (RF-12) — solo se completan para role = DOCENTE.
+  // Reusa legajo / apellido / telefono de arriba.
+  especialidad    String?
+  estadoProfesor  EstadoProfesor?
 
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")

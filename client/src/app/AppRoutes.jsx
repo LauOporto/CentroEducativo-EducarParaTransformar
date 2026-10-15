@@ -4,6 +4,7 @@ import LandingPage from '../pages/public/LandingPage';
 
 import EstudianteShell from '../pages/estudiante/EstudianteShell';
 import PerfilPage from '../pages/estudiante/PerfilPage';
+import ServiciosEstudiantePage from '../pages/estudiante/ServiciosPage';
 import BoletinPage from '../pages/estudiante/BoletinPage';
 import PlanesPage from '../pages/estudiante/PlanesPage';
 import AsistenciasPage from '../pages/estudiante/AsistenciasPage';
@@ -11,6 +12,8 @@ import ForosPage from '../pages/estudiante/ForosPage';
 
 import DocenteShell from '../pages/docente/DocenteShell';
 import CalificacionesPage from '../pages/docente/CalificacionesPage';
+import PerfilDocentePage from '../pages/docente/PerfilPage';
+import MisCursosPage from '../pages/docente/MisCursosPage';
 import AsistenciaDocentePage from '../pages/docente/AsistenciaPage';
 import PlanesDocentePage from '../pages/docente/PlanesPage';
 import ForosDocentePage from '../pages/docente/ForosPage';
@@ -24,6 +27,7 @@ import ServiciosPadrePage from '../pages/padre/ServiciosPage';
 import AdminShell from '../pages/admin/AdminShell';
 import DashboardPage from '../pages/admin/DashboardPage';
 import UsuariosPage from '../pages/admin/UsuariosPage';
+import ProfesoresPage from '../pages/admin/ProfesoresPage';
 import DocentesPendientesPage from '../pages/admin/DocentesPendientesPage';
 import InscripcionesPage from '../pages/admin/InscripcionesPage';
 import OpinionesPage from '../pages/admin/OpinionesPage';
@@ -31,6 +35,7 @@ import EmpleoPage from '../pages/admin/EmpleoPage';
 import VinculosPage from '../pages/admin/VinculosPage';
 import AcademicoPage from '../pages/admin/AcademicoPage';
 import ServiciosPage from '../pages/admin/ServiciosPage';
+import ReportesPage from '../pages/admin/ReportesPage';
 
 export default function AppRoutes() {
   return (
@@ -47,6 +52,7 @@ export default function AppRoutes() {
       >
         <Route index element={<BoletinPage />} />
         <Route path="perfil" element={<PerfilPage />} />
+        <Route path="servicios" element={<ServiciosEstudiantePage />} />
         <Route path="planes" element={<PlanesPage />} />
         <Route path="asistencias" element={<AsistenciasPage />} />
         <Route path="foros" element={<ForosPage />} />
@@ -61,6 +67,8 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<CalificacionesPage />} />
+        <Route path="perfil" element={<PerfilDocentePage />} />
+        <Route path="cursos" element={<MisCursosPage />} />
         <Route path="asistencia" element={<AsistenciaDocentePage />} />
         <Route path="planes" element={<PlanesDocentePage />} />
         <Route path="foros" element={<ForosDocentePage />} />
@@ -88,6 +96,7 @@ export default function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="usuarios" element={<UsuariosPage />} />
+        <Route path="profesores" element={<ProfesoresPage />} />
         <Route path="docentes" element={<DocentesPendientesPage />} />
         <Route path="inscripciones" element={<InscripcionesPage />} />
         <Route path="opiniones" element={<OpinionesPage />} />
@@ -95,6 +104,7 @@ export default function AppRoutes() {
         <Route path="vinculos" element={<VinculosPage />} />
         <Route path="academico" element={<AcademicoPage />} />
         <Route path="servicios" element={<ServiciosPage />} />
+        <Route path="reportes" element={<ReportesPage />} />
       </Route>
     </Routes>
   );

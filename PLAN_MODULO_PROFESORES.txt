@@ -1,0 +1,172 @@
+================================================================================
+PLAN DE TRABAJO — MÓDULO PROFESORES
+Proyecto: Centro Educativo "Educar para Transformar" (Equipo FLCODE)
+Base: Plan de Trabajo FLCODE_3 FINAL + estado real del código (backend/ + client/)
+Fecha: 04/10/2026
+================================================================================
+
+ALCANCE EXACTO DE ESTE DOCUMENTO
+--------------------------------------------------------------------------------
+Requerimientos del Plan de Trabajo para el componente "Gestión de profesores":
+  RF-12  Ficha de profesor con 8 campos obligatorios: Legajo, DNI, Nombre,
+         Apellido, Especialidad, Correo electrónico, Teléfono y Estado.
+  RF-13  Asignar a cada profesor una o varias materias, indicando curso(s) y
+         nivel(es); una misma materia puede ser dictada por distintos
+         profesores según el curso. (HU4: POST /profesores/:id/materias,
+         rechazo de la terna profesor-materia-curso duplicada.)
+  RF-14  Cada actividad deportiva tiene un único profesor responsable,
+         pudiendo un deporte tener distintos grupos por nivel y horario.
+
+NFR que tocan a este módulo: RNF-40 (validaciones), RNF-43 (cambio en la
+ficha reflejado en todos los módulos), RNF-44 (acceso por rol), RNF-47
+(datos sensibles solo para Admin / el propio profesor).
+
+NO forma parte de este documento (otros módulos / responsables):
+  - RF-8 Calificaciones y RF-34 Asistencias (Barrabino). Solo se deja
+    anotado en la Fase 4 un ajuste opcional que se apoya en este módulo.
+  - RF-26 / RF-29 Reportes "Por Docente" y "Docentes por nivel" (Motor de
+    Reportes). Este módulo deja los datos listos para que los consuman.
+  - RNF-46 Auditoría (módulo aparte).
+
+--------------------------------------------------------------------------------
+1. QUÉ HAY HOY EN EL CÓDIGO (diagnóstico)
+--------------------------------------------------------------------------------
+
+Modelo (backend/prisma/schema.prisma):
+  - Profesor = `User` con role DOCENTE. Campos útiles ya existentes: dni,
+    nombre, email, isActive. Las columnas `legajo`, `apellido`, `telefono`
+    existen (se agregaron en el Módulo Alumnos) pero hoy solo se completan
+    para ESTUDIANTE.
+  - FALTA: `especialidad`. El campo `estado` es del enum `EstadoAlumno`
+    (ACTIVO/INACTIVO/EGRESADO) — "EGRESADO" no tiene sentido para un docente.
+  - RF-13: ya existe `MateriaCurso` (materia + curso + docente,
+    @@unique([materiaId, cursoId, docenteId])). El nivel sale de Curso.
+  - RF-14: ya existe `GrupoDeporte` (deporte + nivel + día + horario +
+    docente). Checklist lo marca [OK].
+
+Backend:
+  - admin.routes.ts: ABM de usuarios. createUserSchema solo exige ficha
+    cuando role=ESTUDIANTE; para DOCENTE no pide nada extra.
+  - Docentes que se auto-registran quedan isActive=false hasta que el
+    Admin los aprueba (/admin/teachers/:id/approve) — sin ficha.
+  - materias.routes.ts: GET/POST/DELETE /api/materias/asignaciones ya
+    cubre el backend de RF-13 (DOCENTE solo ve las suyas).
+  - deportes.routes.ts: /api/deportes/grupos ya cubre RF-14.
+  - NO existe /api/profesores (el Plan de Trabajo lo lista como endpoint
+    principal, y HU4 pide POST /profesores/:id/materias).
+
+Frontend:
+  - Admin: UserForm/EditUserModal solo muestran ficha extendida para
+    ESTUDIANTE. AcademicoPage tiene la pestaña Materia→Curso→Profesor y
+    ServiciosPage los grupos de deporte, pero NO hay una vista centrada
+    en el profesor (su ficha + todo lo que tiene a cargo).
+  - Panel Docente (DocenteShell): Calificaciones, Asistencia, Planes,
+    Foros. NO hay "Mi Perfil", ni "Mis cursos y materias", ni "Mis
+    deportes".
+
+Conclusión: RF-14 está resuelto y RF-13 tiene backend; lo que falta de
+verdad es la ficha (RF-12), la API /profesores y las pantallas.
+
+--------------------------------------------------------------------------------
+2. DECISIONES DE DISEÑO
+--------------------------------------------------------------------------------
+
+a) Ficha como extensión de `User` (mismo criterio que el Módulo Alumnos).
+   Se reutilizan legajo / apellido / telefono / dni / email / nombre y se
+   agrega `especialidad String?`. Evita una tabla 1:1 y cambios en auth.
+
+b) Estado del profesor: nuevo enum `EstadoProfesor` (ACTIVO / LICENCIA /
+   INACTIVO) en una columna propia `estadoProfesor`. No se reutiliza
+   `estado` porque su tipo es EstadoAlumno y Postgres no permite dos enums
+   en la misma columna. `isActive` sigue controlando el login.
+
+c) Router nuevo `profesores.routes.ts` (consulta + HU4) sin duplicar lógica:
+   la creación de asignaciones se extrae a un helper compartido
+   (services/asignaciones.service.ts) que usan tanto
+   POST /materias/asignaciones como POST /profesores/:id/materias.
+   Alta/edición/baja del profesor siguen en /admin/users (única fuente de
+   verdad, mismo desvío que se tomó en el Módulo Alumnos).
+
+d) Docentes auto-registrados: el Admin completa la ficha al aprobar
+   (el approve acepta los campos de ficha) o desde Editar usuario.
+
+e) Patrones: ninguno (ABM + consultas). Factory/Facade/Strategy están
+   reservados a Notificaciones, Panel Familia y Reportes.
+
+--------------------------------------------------------------------------------
+3. PLAN POR FASES
+--------------------------------------------------------------------------------
+
+FASE 1 — Modelo de datos
+  [ ] 1.1 enum EstadoProfesor { ACTIVO LICENCIA INACTIVO }
+  [ ] 1.2 User: `especialidad String?`, `estadoProfesor EstadoProfesor?`
+  [ ] 1.3 Migración (migrate diff + migrate deploy, como en módulos previos)
+  [ ] 1.4 seed.ts: completar ficha de los 4 docentes (mlopez, jgarcia,
+          csilva, amartinez): legajo, apellido, especialidad, teléfono,
+          estado ACTIVO. Separar nombre/apellido.
+
+FASE 2 — Backend
+  [ ] 2.1 validators.ts: `especialidadSchema`, `estadoProfesorSchema`.
+  [ ] 2.2 admin.routes.ts:
+          - POST /users: si role=DOCENTE exige legajo, apellido,
+            especialidad, telefono (superRefine, igual que ESTUDIANTE);
+            estadoProfesor=ACTIVO por defecto.
+          - PATCH /users/:id: acepta especialidad / estadoProfesor; al
+            cambiar de rol limpia el estado que no corresponde.
+          - DELETE /users/:id: si es DOCENTE → estadoProfesor=INACTIVO.
+          - POST /teachers/:id/approve: acepta la ficha opcionalmente.
+          - GET /users: devolver especialidad / estadoProfesor.
+  [ ] 2.3 services/asignaciones.service.ts: crearAsignacion() con las
+          validaciones actuales (existencia, rol DOCENTE, 409 duplicado).
+          materias.routes.ts pasa a usarlo (sin cambio de comportamiento).
+  [ ] 2.4 profesores.routes.ts (montado en /api/profesores):
+          - GET  /                  ADMIN — listado con ficha, filtros
+                                     ?q, ?estado, ?nivelId.
+          - GET  /me                DOCENTE — su ficha + materias/cursos
+                                     agrupadas por nivel + grupos deporte.
+          - PATCH /me               DOCENTE — solo email / telefono
+                                     (nunca legajo, DNI, especialidad,
+                                     estado).
+          - GET  /:id               ADMIN — ficha completa + materias +
+                                     grupos de deporte.
+          - GET  /:id/materias      ADMIN (o el propio docente).
+          - POST /:id/materias      ADMIN — HU4 { materiaId, cursoId }.
+          - DELETE /:id/materias/:asignacionId  ADMIN.
+          - GET  /:id/deportes      ADMIN (o el propio docente) — RF-14.
+          Datos sensibles (DNI, teléfono) nunca se exponen a ESTUDIANTE/
+          PADRE (RNF-47); los listados públicos de "profesor a cargo" ya
+          solo devuelven el nombre.
+  [ ] 2.5 Verificación: tsc --noEmit + pruebas con curl por rol (alta sin
+          ficha → 400, legajo duplicado → 409, terna duplicada → 409,
+          docente pidiendo /:id de otro → 403, alumno → 403).
+
+FASE 3 — Frontend
+  [ ] 3.1 services/api/profesoresService.js.
+  [ ] 3.2 Admin: UserForm / EditUserModal muestran ficha de profesor
+          cuando role=DOCENTE (legajo, apellido, especialidad, teléfono,
+          estado). UsuariosPage muestra especialidad.
+  [ ] 3.3 Admin: nueva ProfesoresPage (/admin/profesores, ítem de menú
+          "Profesores"): tabla de profesores + detalle con su ficha,
+          materias por curso/nivel (asignar / quitar — HU4) y grupos de
+          deporte a cargo.
+  [ ] 3.4 Admin: DocentesPendientesPage pide la ficha al aprobar.
+  [ ] 3.5 Docente: nueva PerfilPage (/docente/perfil, "Mi Perfil") con
+          ficha de solo lectura + edición de email/teléfono.
+  [ ] 3.6 Docente: nueva MisCursosPage (/docente/cursos, "Mis Cursos"):
+          materias y cursos agrupados por nivel (RF-13) + deportes a
+          cargo con día/horario (RF-14).
+  [ ] 3.7 Verificación: vite build + prueba en navegador como admin y
+          como docente.
+
+FASE 4 — Opcional / coordinar con Barrabino (RF-8)
+  [ ] 4.1 CalificacionesPage: reemplazar domain/materias.js por las
+          asignaciones reales del docente y filtrar alumnos por el curso
+          elegido (cumple el criterio de HU1: "solo alumnos de un curso
+          donde el profesor dicta la materia"). Validación equivalente en
+          POST /api/grades.
+
+FASE 5 — Actualizar CHECKLIST_REQUERIMIENTOS.txt (RF-12, RF-13 → [OK]).
+
+================================================================================
+Fin del documento.
+================================================================================
