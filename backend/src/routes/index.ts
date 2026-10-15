@@ -18,6 +18,7 @@ import { transporteRouter } from './transporte.routes';
 import { comedorRouter } from './comedor.routes';
 import { inscripcionesRouter } from './inscripciones.routes';
 import { reportesRouter } from './reportes.routes';
+import { profesoresRouter } from './profesores.routes';
 
 const router = Router();
 
@@ -47,5 +48,6 @@ router.use('/transporte', transporteRouter);
 router.use('/comedor', comedorRouter);
 router.use('/inscripciones', inscripcionesRouter);
 router.use('/reportes', reportesRouter);
+router.use('/profesores', profesoresRouter);
 
 export { router as apiRouter };

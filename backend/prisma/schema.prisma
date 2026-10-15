@@ -37,6 +37,12 @@ enum EstadoAlumno {
   EGRESADO
 }
 
+enum EstadoProfesor {
+  ACTIVO
+  LICENCIA
+  INACTIVO
+}
+
 enum DiaSemana {
   LUNES
   MARTES
@@ -126,6 +132,11 @@ model User {
 
   // Canal de notificaciones (RF-34) — se usa sobre todo para role = PADRE.
   canalNotificacion CanalNotificacion @default(INTERNA)
+
+  // Ficha de profesor (RF-12) — solo se completan para role = DOCENTE.
+  // Reusa legajo / apellido / telefono de arriba.
+  especialidad    String?
+  estadoProfesor  EstadoProfesor?
 
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")
