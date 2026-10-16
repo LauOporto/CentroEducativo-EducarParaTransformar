@@ -33,7 +33,7 @@ export default function CalificacionesPage() {
     const [stRes, grRes, profRes] = await Promise.all([
       studentsService.list(),
       gradesService.listMine(),
-      profesoresService.getMyAssignments()
+      profesoresService.me()
     ]);
     if (stRes.exito) setEstudiantes(stRes.estudiantes);
     if (grRes.exito) setHistorial(grRes.notas);
@@ -45,8 +45,8 @@ export default function CalificacionesPage() {
   }, []);
 
   const selectedMC = misCursos.find(mc => String(mc.id) === String(form.materiaCursoId));
-  const estudiantesFiltrados = selectedMC 
-    ? estudiantes.filter(e => e.cursoId === selectedMC.curso.id)
+  const estudiantesFiltrados = selectedMC
+    ? estudiantes.filter(e => e.cursoId === selectedMC.cursoId)
     : [];
 
   const submit = async (e) => {
@@ -55,7 +55,7 @@ export default function CalificacionesPage() {
 
     const res = await gradesService.create({
       estudiante_id: form.estudiante_id,
-      materia: selectedMC.materia.nombre,
+      materia: selectedMC.materia,
       instancia_evaluacion: form.instancia_evaluacion,
       nota: form.nota,
       fecha: form.fecha,
@@ -73,21 +73,21 @@ export default function CalificacionesPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
         Registro Oficial de Calificaciones (RF-8)
       </h3>
 
-      <form onSubmit={submit} className="mb-8 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800 sm:grid-cols-2">
+      <form onSubmit={submit} className="mb-8 grid gap-3 rounded-lg border border-blue-100 bg-blue-50 p-5 dark:border-slate-700 dark:bg-slate-800 sm:grid-cols-2">
         <select
           required
           value={form.materiaCursoId}
           onChange={(e) => setForm({ ...form, materiaCursoId: e.target.value, estudiante_id: '' })}
-          className="sm:col-span-2 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="sm:col-span-2 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Seleccioná una materia y curso…</option>
           {misCursos.map((mc) => (
             <option key={mc.id} value={mc.id}>
-              {mc.materia.nombre} — {mc.curso.nivel.toUpperCase()} {mc.curso.anio}° {mc.curso.division}
+              {mc.materia} — {mc.nivel} {mc.curso}
             </option>
           ))}
         </select>
@@ -97,7 +97,7 @@ export default function CalificacionesPage() {
           disabled={!form.materiaCursoId}
           value={form.estudiante_id}
           onChange={(e) => setForm({ ...form, estudiante_id: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm disabled:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:disabled:bg-slate-800"
+          className="rounded border border-blue-200 p-2 text-sm disabled:bg-blue-50 dark:border-slate-600 dark:bg-slate-900 dark:disabled:bg-slate-800"
         >
           <option value="">{form.materiaCursoId ? 'Alumno…' : 'Elegí materia y curso primero'}</option>
           {estudiantesFiltrados.map((al) => (
@@ -109,7 +109,7 @@ export default function CalificacionesPage() {
           required
           value={form.instancia_evaluacion}
           onChange={(e) => setForm({ ...form, instancia_evaluacion: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Instancia de evaluación…</option>
           {INSTANCIAS_EVALUACION.map((i) => (
@@ -125,14 +125,14 @@ export default function CalificacionesPage() {
           placeholder="Nota (1 al 10)"
           value={form.nota}
           onChange={(e) => setForm({ ...form, nota: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
         <input
           required
           type="date"
           value={form.fecha}
           onChange={(e) => setForm({ ...form, fecha: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
 
         <button type="submit" className="sm:col-span-2 sm:justify-self-end rounded bg-accent px-5 py-2 text-sm font-semibold text-white">
@@ -140,7 +140,7 @@ export default function CalificacionesPage() {
         </button>
       </form>
 
-      <h4 className="mb-3 font-semibold text-slate-600 dark:text-slate-300">Últimas notas asentadas</h4>
+      <h4 className="mb-3 font-semibold text-ink-soft dark:text-slate-300">Últimas notas asentadas</h4>
       <DataTable columns={columns} rows={historial ?? []} loading={historial === null} emptyMessage="Aún no cargaste calificaciones." />
     </div>
   );

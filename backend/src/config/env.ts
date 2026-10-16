@@ -13,7 +13,9 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET debe tener al menos 32 caracteres'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET debe tener al menos 32 caracteres'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  // RNF-38: tope absoluto de sesión de 24hs. La invalidación real vive en
+  // la tabla Session (ver auth.routes.ts); esto es solo el límite del JWT.
+  JWT_REFRESH_EXPIRES_IN: z.string().default('24h'),
 
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().positive().default(20),

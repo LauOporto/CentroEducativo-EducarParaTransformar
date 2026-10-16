@@ -6,6 +6,7 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { upload, publicUrlFor } from '../middleware/upload';
+import { registrarAuditoria } from '../services/auditoria.service';
 
 const publicRouter = Router();
 const adminRouter = Router();
@@ -56,6 +57,10 @@ adminRouter.post('/inscriptions/:id/approve', async (req, res, next) => {
       where: { id },
       data: { status: ModerationStatus.APROBADO, notaAdmin: notaAdmin ?? null, resolvedAt: new Date() },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'Inscription', entidadId: id,
+      detalle: `Aprobada — ${updated.nombreEstudiante}`,
+    });
     res.json({ exito: true, inscripcion: updated });
   } catch (err) { next(err); }
 });
@@ -68,13 +73,22 @@ adminRouter.post('/inscriptions/:id/reject', async (req, res, next) => {
       where: { id },
       data: { status: ModerationStatus.RECHAZADO, notaAdmin: notaAdmin ?? null, resolvedAt: new Date() },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'Inscription', entidadId: id,
+      detalle: `Rechazada — ${updated.nombreEstudiante}${notaAdmin ? `: ${notaAdmin}` : ''}`,
+    });
     res.json({ exito: true, inscripcion: updated });
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/inscriptions/:id', async (req, res, next) => {
   try {
-    await prisma.inscription.delete({ where: { id: Number(req.params.id) } });
+    const id = Number(req.params.id);
+    const borrada = await prisma.inscription.delete({ where: { id } });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'Inscription', entidadId: id,
+      detalle: borrada.nombreEstudiante,
+    });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });
@@ -84,6 +98,9 @@ adminRouter.delete('/inscriptions/:id', async (req, res, next) => {
 // ============================================================
 const opinionSchema = z.object({
   nombre: z.string().max(80).optional().nullable(),
+  // RF-2: dato que identifique a quien opina (DNI, email, etc.), distinto
+  // del nombre a mostrar públicamente.
+  identificacion: z.string().min(3).max(80),
   rol: z.string().min(1).max(40),
   texto: z.string().min(3).max(2000),
   rating: z.coerce.number().int().min(1).max(5),
@@ -95,6 +112,7 @@ publicRouter.post('/opinions', async (req, res, next) => {
     const created = await prisma.opinion.create({
       data: {
         nombre: data.nombre || null,
+        identificacion: data.identificacion,
         rol: data.rol,
         texto: data.texto,
         rating: data.rating,
@@ -138,6 +156,10 @@ adminRouter.post('/opinions/:id/approve', async (req, res, next) => {
       where: { id },
       data: { status: ModerationStatus.APROBADO, resolvedAt: new Date() },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'Opinion', entidadId: id,
+      detalle: `Aprobada — ${updated.nombre || 'Anónimo'}`,
+    });
     res.json({ exito: true, opinion: updated });
   } catch (err) { next(err); }
 });
@@ -149,13 +171,22 @@ adminRouter.post('/opinions/:id/reject', async (req, res, next) => {
       where: { id },
       data: { status: ModerationStatus.RECHAZADO, resolvedAt: new Date() },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'Opinion', entidadId: id,
+      detalle: `Rechazada — ${updated.nombre || 'Anónimo'}`,
+    });
     res.json({ exito: true, opinion: updated });
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/opinions/:id', async (req, res, next) => {
   try {
-    await prisma.opinion.delete({ where: { id: Number(req.params.id) } });
+    const id = Number(req.params.id);
+    const borrada = await prisma.opinion.delete({ where: { id } });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'Opinion', entidadId: id,
+      detalle: borrada.nombre || 'Anónimo',
+    });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });
@@ -203,6 +234,10 @@ adminRouter.post('/employment/:id/approve', async (req, res, next) => {
       where: { id },
       data: { status: ModerationStatus.APROBADO, notaAdmin: notaAdmin ?? null, resolvedAt: new Date() },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'EmploymentApplication', entidadId: id,
+      detalle: `Aprobada — ${updated.nombre}`,
+    });
     res.json({ exito: true, postulacion: updated });
   } catch (err) { next(err); }
 });
@@ -215,13 +250,22 @@ adminRouter.post('/employment/:id/reject', async (req, res, next) => {
       where: { id },
       data: { status: ModerationStatus.RECHAZADO, notaAdmin: notaAdmin ?? null, resolvedAt: new Date() },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'EmploymentApplication', entidadId: id,
+      detalle: `Rechazada — ${updated.nombre}${notaAdmin ? `: ${notaAdmin}` : ''}`,
+    });
     res.json({ exito: true, postulacion: updated });
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/employment/:id', async (req, res, next) => {
   try {
-    await prisma.employmentApplication.delete({ where: { id: Number(req.params.id) } });
+    const id = Number(req.params.id);
+    const borrada = await prisma.employmentApplication.delete({ where: { id } });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'EmploymentApplication', entidadId: id,
+      detalle: borrada.nombre,
+    });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });

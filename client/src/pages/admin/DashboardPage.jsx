@@ -7,7 +7,6 @@ const TILES = [
   { key: 'docentesActivos', label: 'Docentes activos', cls: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
   { key: 'padresActivos', label: 'Padres activos', cls: 'text-pink-600 bg-pink-50 dark:bg-pink-950/40' },
   { key: 'notasRegistradas', label: 'Notas registradas', cls: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
-  { key: 'temasForo', label: 'Temas del foro', cls: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40' },
 ];
 
 export default function DashboardPage() {
@@ -19,7 +18,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Dashboard institucional</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Dashboard institucional</h3>
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
         {TILES.map((t) => (
           <div key={t.key} className={`rounded-xl p-4 ${t.cls}`}>

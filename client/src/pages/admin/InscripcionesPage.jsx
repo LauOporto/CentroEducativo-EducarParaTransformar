@@ -5,6 +5,7 @@ import { useAdminPendingCounts } from '../../hooks/useAdminPendingCounts';
 import DataTable from '../../components/ui/DataTable';
 import ModerationStatusBadge from '../../components/features/ModerationStatusBadge';
 import ModerationActions from '../../components/features/ModerationActions';
+import HistorialPanel from '../../components/features/HistorialPanel';
 
 function formatFecha(iso) {
   return new Date(iso).toLocaleDateString('es-AR');
@@ -56,9 +57,9 @@ export default function InscripcionesPage() {
   const columns = [
     { key: 'id', label: 'ID' },
     { key: 'nombreTutor', label: 'Tutor', render: (i) => <b>{i.nombreTutor}</b> },
-    { key: 'contacto', label: 'Contacto', render: (i) => <>{i.emailTutor}<br /><span className="text-xs text-slate-400">{i.telefonoTutor}</span></> },
+    { key: 'contacto', label: 'Contacto', render: (i) => <>{i.emailTutor}<br /><span className="text-xs text-ink-faint">{i.telefonoTutor}</span></> },
     { key: 'nombreEstudiante', label: 'Estudiante' },
-    { key: 'nivel', label: 'Nivel / Curso', render: (i) => <>{i.nivel}<br /><span className="text-xs text-slate-400">{i.curso}</span></> },
+    { key: 'nivel', label: 'Nivel / Curso', render: (i) => <>{i.nivel}<br /><span className="text-xs text-ink-faint">{i.curso}</span></> },
     { key: 'mensaje', label: 'Mensaje', render: (i) => <span className="text-sm">{i.mensaje || '—'}</span> },
     { key: 'status', label: 'Estado', render: (i) => <ModerationStatusBadge status={i.status} /> },
     { key: 'createdAt', label: 'Recibida', render: (i) => formatFecha(i.createdAt) },
@@ -78,8 +79,9 @@ export default function InscripcionesPage() {
 
   return (
     <div>
-      <h3 className="mb-4 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Solicitudes de inscripción</h3>
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className="mb-4 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+      <h3 className="mb-4 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Solicitudes de inscripción</h3>
+      <HistorialPanel entidad="Inscription" />
+      <select value={status} onChange={(e) => setStatus(e.target.value)} className="mb-4 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
         <option value="PENDIENTE">Pendientes</option>
         <option value="APROBADO">Aprobadas</option>
         <option value="RECHAZADO">Rechazadas</option>

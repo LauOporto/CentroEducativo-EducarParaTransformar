@@ -4,7 +4,7 @@ import { studentsService } from '../../services/api/studentsService';
 import { useToast } from '../../hooks/useToast';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const ESTADOS = ['presente', 'ausente', 'tarde'];
+const ESTADOS = ['presente', 'ausente', 'tarde', 'justificado'];
 
 export default function AsistenciaPage() {
   const toast = useToast();
@@ -41,9 +41,9 @@ export default function AsistenciaPage() {
     }
     const res = await attendanceService.recordBulk({ fecha: hoy(), records });
     if (res.exito) {
-      const cont = { presente: 0, ausente: 0, tarde: 0 };
+      const cont = { presente: 0, ausente: 0, tarde: 0, justificado: 0 };
       Object.values(estado).forEach((s) => cont[s]++);
-      toast.success(`Planilla firmada — ${cont.presente} presentes, ${cont.ausente} ausentes, ${cont.tarde} tardes.`);
+      toast.success(`Planilla firmada — ${cont.presente} presentes, ${cont.ausente} ausentes, ${cont.tarde} tardes, ${cont.justificado} justificadas.`);
     } else {
       toast.error(res.mensaje || 'No se pudo guardar la planilla.');
     }
@@ -51,35 +51,35 @@ export default function AsistenciaPage() {
 
   return (
     <div>
-      <h3 className="mb-2 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">
+      <h3 className="mb-2 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
         Registro de Asistencia Diaria por Curso
       </h3>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-ink-faint">
         <i className="fas fa-calendar-day text-accent" /> Fecha:{' '}
         <strong>{new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
       </p>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+      <div className="overflow-x-auto rounded-lg border border-blue-100 dark:border-slate-700">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800">
-              <th className="border-b border-slate-200 px-4 py-2.5 text-left dark:border-slate-700">DNI</th>
-              <th className="border-b border-slate-200 px-4 py-2.5 text-left dark:border-slate-700">Alumno</th>
-              <th className="border-b border-slate-200 px-4 py-2.5 text-left dark:border-slate-700">Curso</th>
+            <tr className="bg-blue-50 dark:bg-slate-800">
+              <th className="border-b border-blue-100 px-4 py-2.5 text-left dark:border-slate-700">DNI</th>
+              <th className="border-b border-blue-100 px-4 py-2.5 text-left dark:border-slate-700">Alumno</th>
+              <th className="border-b border-blue-100 px-4 py-2.5 text-left dark:border-slate-700">Curso</th>
               {ESTADOS.map((s) => (
-                <th key={s} className="border-b border-slate-200 px-4 py-2.5 text-center capitalize dark:border-slate-700">{s}</th>
+                <th key={s} className="border-b border-blue-100 px-4 py-2.5 text-center capitalize dark:border-slate-700">{s}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {estudiantes === null && (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Cargando lista de alumnos…</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-ink-faint">Cargando lista de alumnos…</td></tr>
             )}
             {estudiantes?.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No hay alumnos cargados.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-ink-faint">No hay alumnos cargados.</td></tr>
             )}
             {estudiantes?.map((al) => (
-              <tr key={al.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
+              <tr key={al.id} className="border-b border-blue-100 last:border-0 dark:border-slate-800">
                 <td className="px-4 py-2.5">{al.dni}</td>
                 <td className="px-4 py-2.5">{al.nombre}</td>
                 <td className="px-4 py-2.5">{al.curso || '—'}</td>

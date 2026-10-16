@@ -3,6 +3,7 @@ import { adminService } from '../../services/api/adminService';
 import { useToast } from '../../hooks/useToast';
 import DataTable from '../../components/ui/DataTable';
 import EditUserModal from '../../components/features/EditUserModal';
+import AsignarMateriaModal from '../../components/features/AsignarMateriaModal';
 
 export default function ProfesoresPage() {
   const toast = useToast();
@@ -10,6 +11,7 @@ export default function ProfesoresPage() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
   const [editing, setEditing] = useState(null);
+  const [asignando, setAsignando] = useState(null);
 
   const cargar = async () => {
     const data = await adminService.listUsers({ role: 'DOCENTE', q });
@@ -41,7 +43,8 @@ export default function ProfesoresPage() {
       label: 'Acciones',
       render: (p) => (
         <div className="flex gap-1.5">
-          <button onClick={() => setEditing(p)} className="rounded bg-slate-500 px-2.5 py-1.5 text-xs text-white">Editar</button>
+          <button onClick={() => setEditing(p)} className="rounded bg-blue-500 px-2.5 py-1.5 text-xs text-white">Editar</button>
+          <button onClick={() => setAsignando(p)} className="rounded bg-accent px-2.5 py-1.5 text-xs text-white">Materias</button>
         </div>
       ),
     },
@@ -49,16 +52,16 @@ export default function ProfesoresPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Gestión de Profesores</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Gestión de Profesores</h3>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           placeholder="Buscar por nombre / legajo / DNI / email…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
-        <select value={estado} onChange={(e) => setEstado(e.target.value)} className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+        <select value={estado} onChange={(e) => setEstado(e.target.value)} className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
           <option value="">Todos los estados</option>
           <option value="ACTIVO">Activo</option>
           <option value="LICENCIA">Licencia</option>
@@ -76,6 +79,7 @@ export default function ProfesoresPage() {
           cargar();
         }}
       />
+      <AsignarMateriaModal profesor={asignando} onClose={() => setAsignando(null)} />
     </div>
   );
 }

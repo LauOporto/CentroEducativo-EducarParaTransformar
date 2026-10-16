@@ -66,21 +66,21 @@ export default function VinculosPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Vínculos Padre-Hijo</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Vínculos Padre-Hijo</h3>
 
-      <details className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+      <details className="mb-5 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-slate-700 dark:bg-slate-800">
         <summary className="cursor-pointer font-semibold"><i className="fas fa-plus-circle text-accent" /> Crear vínculo</summary>
         <form onSubmit={crear} className="mt-4 grid gap-3 sm:grid-cols-3 sm:items-end">
           <div>
             <label className="mb-1 block text-xs font-semibold">Padre</label>
-            <select required value={padreId} onChange={(e) => setPadreId(e.target.value)} className="w-full rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+            <select required value={padreId} onChange={(e) => setPadreId(e.target.value)} className="w-full rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
               <option value="">Seleccionar…</option>
               {padres.map((p) => <option key={p.id} value={p.id}>{p.nombre} (DNI {p.dni})</option>)}
             </select>
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold">Estudiante</label>
-            <select required value={estudianteId} onChange={(e) => setEstudianteId(e.target.value)} className="w-full rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+            <select required value={estudianteId} onChange={(e) => setEstudianteId(e.target.value)} className="w-full rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
               <option value="">Seleccionar…</option>
               {estudiantes.map((al) => <option key={al.id} value={al.id}>{al.nombre} — {al.curso || ''}</option>)}
             </select>

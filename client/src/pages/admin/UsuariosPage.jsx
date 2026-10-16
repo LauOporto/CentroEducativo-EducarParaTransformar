@@ -57,7 +57,7 @@ export default function UsuariosPage() {
       label: 'Acciones',
       render: (u) => (
         <div className="flex gap-1.5">
-          <button onClick={() => setEditing(u)} className="rounded bg-slate-500 px-2.5 py-1.5 text-xs text-white">Editar</button>
+          <button onClick={() => setEditing(u)} className="rounded bg-blue-500 px-2.5 py-1.5 text-xs text-white">Editar</button>
           <button onClick={() => desactivar(u)} disabled={!u.isActive} className="rounded bg-red-500 px-2.5 py-1.5 text-xs text-white disabled:opacity-40">
             Desactivar
           </button>
@@ -68,7 +68,7 @@ export default function UsuariosPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Gestión de Usuarios</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Gestión de Usuarios</h3>
 
       <UserForm onCreated={cargar} />
 
@@ -77,9 +77,9 @@ export default function UsuariosPage() {
           placeholder="Buscar por nombre / usuario / DNI / email…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+        <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
           <option value="">Todos los roles</option>
           {ROLES_ADMIN.map((r) => <option key={r.value} value={r.value}>{r.label}s</option>)}
         </select>

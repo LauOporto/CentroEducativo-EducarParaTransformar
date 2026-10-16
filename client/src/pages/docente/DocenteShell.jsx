@@ -6,8 +6,8 @@ const MENU = [
   { to: '/docente/perfil', label: 'Mi Perfil', icon: 'fa-user' },
   { to: '/docente/cursos', label: 'Mis Cursos', icon: 'fa-chalkboard' },
   { to: '/docente/asistencia', label: 'Asistencia Diaria', icon: 'fa-clipboard-check' },
+  { to: '/docente/historial-asistencia', label: 'Historial de Asistencia', icon: 'fa-history' },
   { to: '/docente/planes', label: 'Planes de Estudio', icon: 'fa-book' },
-  { to: '/docente/foros', label: 'Foros', icon: 'fa-comments' },
 ];
 
 export default function DocenteShell() {

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { assertCanViewStudent, assertCanManageStudentServices } from '../utils/studentAccess';
 import * as panelFamilia from '../services/panelFamilia.facade';
+import { registrarAuditoria } from '../services/auditoria.service';
 
 const router = Router();
 
@@ -26,6 +27,10 @@ router.post('/estudiantes/:id/deportes', async (req, res, next) => {
     await assertCanManageStudentServices(req, estudianteId);
     const { grupoDeporteId } = grupoDeporteSchema.parse(req.body);
     const grupo = await panelFamilia.inscribirDeporte(estudianteId, grupoDeporteId);
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'ALTA', entidad: 'InscripcionDeporte', entidadId: estudianteId,
+      detalle: grupo.deporte,
+    });
     res.json({ exito: true, grupo });
   } catch (err) { next(err); }
 });
@@ -36,6 +41,7 @@ router.delete('/estudiantes/:id/deportes/:grupoDeporteId', async (req, res, next
     await assertCanManageStudentServices(req, estudianteId);
     const grupoDeporteId = Number(req.params.grupoDeporteId);
     await panelFamilia.desinscribirDeporte(estudianteId, grupoDeporteId);
+    await registrarAuditoria({ usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'InscripcionDeporte', entidadId: estudianteId });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });
@@ -48,6 +54,10 @@ router.put('/estudiantes/:id/transporte', async (req, res, next) => {
     await assertCanManageStudentServices(req, estudianteId);
     const { recorridoId } = recorridoSchema.parse(req.body);
     const transporte = await panelFamilia.inscribirTransporte(estudianteId, recorridoId);
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'ALTA', entidad: 'InscripcionTransporte', entidadId: estudianteId,
+      detalle: transporte.recorrido,
+    });
     res.json({ exito: true, transporte });
   } catch (err) { next(err); }
 });
@@ -57,6 +67,7 @@ router.delete('/estudiantes/:id/transporte', async (req, res, next) => {
     const estudianteId = Number(req.params.id);
     await assertCanManageStudentServices(req, estudianteId);
     await panelFamilia.desinscribirTransporte(estudianteId);
+    await registrarAuditoria({ usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'InscripcionTransporte', entidadId: estudianteId });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });
@@ -69,6 +80,10 @@ router.put('/estudiantes/:id/comedor', async (req, res, next) => {
     await assertCanManageStudentServices(req, estudianteId);
     const { turnoId } = turnoSchema.parse(req.body);
     const comedor = await panelFamilia.inscribirComedor(estudianteId, turnoId);
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'ALTA', entidad: 'InscripcionComedor', entidadId: estudianteId,
+      detalle: comedor.turno,
+    });
     res.json({ exito: true, comedor });
   } catch (err) { next(err); }
 });
@@ -78,6 +93,7 @@ router.delete('/estudiantes/:id/comedor', async (req, res, next) => {
     const estudianteId = Number(req.params.id);
     await assertCanManageStudentServices(req, estudianteId);
     await panelFamilia.desinscribirComedor(estudianteId);
+    await registrarAuditoria({ usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'InscripcionComedor', entidadId: estudianteId });
     res.json({ exito: true });
   } catch (err) { next(err); }
 });

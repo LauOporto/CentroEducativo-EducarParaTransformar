@@ -22,10 +22,10 @@ export const DIAS_LABEL = {
 // como ISO completo (@db.Time), acá solo se necesita la parte HH:mm.
 export const horaLabel = (iso) => iso.slice(11, 16);
 
-const selectCls = 'min-w-[260px] flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900';
+const selectCls = 'min-w-[260px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900';
 const btnPrimary = 'rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50';
 const btnDanger = 'rounded bg-red-500 px-2.5 py-1 text-xs text-white';
-const cardCls = 'rounded-lg border border-slate-200 p-4 dark:border-slate-700';
+const cardCls = 'rounded-lg border border-blue-100 p-4 dark:border-slate-700';
 
 export function DeportesSection({ estudianteId, resumen, onCambio }) {
   const toast = useToast();
@@ -63,11 +63,11 @@ export function DeportesSection({ estudianteId, resumen, onCambio }) {
       <h4 className="mb-3 text-lg font-semibold">Deportes</h4>
 
       {resumen.inscriptos.length === 0 ? (
-        <p className="mb-3 text-sm text-slate-500">Todavía no está inscripto a ningún deporte.</p>
+        <p className="mb-3 text-sm text-ink-faint">Todavía no está inscripto a ningún deporte.</p>
       ) : (
         <ul className="mb-4 space-y-2">
           {resumen.inscriptos.map((g) => (
-            <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 p-2 text-sm dark:border-slate-700">
+            <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700">
               <span>
                 <b>{g.deporte}</b> — {g.nivel}, {DIAS_LABEL[g.diaSemana]} {g.horaInicio} a {g.horaFin} (prof. {g.docente})
               </span>
@@ -78,12 +78,12 @@ export function DeportesSection({ estudianteId, resumen, onCambio }) {
       )}
 
       {resumen.inscriptos.length >= 2 && (
-        <p className="mb-2 text-xs text-slate-400">
+        <p className="mb-2 text-xs text-ink-faint">
           Ya alcanzó el máximo de 2 deportes simultáneos. Para sumar otro, primero dé de baja alguno de los actuales.
         </p>
       )}
       {resumen.disponibles.length === 0 ? (
-        <p className="text-xs text-slate-400">No hay más grupos de deporte disponibles.</p>
+        <p className="text-xs text-ink-faint">No hay más grupos de deporte disponibles.</p>
       ) : (
         <form onSubmit={inscribir} className="flex flex-wrap gap-2">
           <select required value={grupoId} onChange={(e) => setGrupoId(e.target.value)} className={selectCls}>
@@ -139,12 +139,12 @@ export function TransporteSection({ estudianteId, resumen, catalogo, onCambio })
       <h4 className="mb-3 text-lg font-semibold">Transporte</h4>
 
       {resumen.actual ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 p-2 text-sm dark:border-slate-700">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700">
           <span>Recorrido actual: <b>{resumen.actual.recorrido}</b></span>
           <button onClick={quitar} className={btnDanger}>Quitar</button>
         </div>
       ) : (
-        <p className="mb-3 text-sm text-slate-500">Todavía no tiene un recorrido asignado.</p>
+        <p className="mb-3 text-sm text-ink-faint">Todavía no tiene un recorrido asignado.</p>
       )}
 
       <form onSubmit={asignar} className="flex flex-wrap gap-2">
@@ -200,12 +200,12 @@ export function ComedorSection({ estudianteId, resumen, catalogo, onCambio }) {
       <h4 className="mb-3 text-lg font-semibold">Comedor</h4>
 
       {resumen.actual ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 p-2 text-sm dark:border-slate-700">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700">
           <span>Turno actual: <b>{resumen.actual.turno}</b></span>
           <button onClick={quitar} className={btnDanger}>Quitar</button>
         </div>
       ) : (
-        <p className="mb-3 text-sm text-slate-500">Todavía no tiene un turno asignado.</p>
+        <p className="mb-3 text-sm text-ink-faint">Todavía no tiene un turno asignado.</p>
       )}
 
       <form onSubmit={asignar} className="flex flex-wrap gap-2">

@@ -5,6 +5,7 @@ import { useAdminPendingCounts } from '../../hooks/useAdminPendingCounts';
 import DataTable from '../../components/ui/DataTable';
 import ModerationStatusBadge from '../../components/features/ModerationStatusBadge';
 import ModerationActions from '../../components/features/ModerationActions';
+import HistorialPanel from '../../components/features/HistorialPanel';
 
 function formatFecha(iso) {
   return new Date(iso).toLocaleDateString('es-AR');
@@ -50,6 +51,7 @@ export default function OpinionesPage() {
   const columns = [
     { key: 'id', label: 'ID' },
     { key: 'nombre', label: 'Autor', render: (o) => o.nombre || 'Anónimo' },
+    { key: 'identificacion', label: 'Identificación' },
     { key: 'rol', label: 'Rol' },
     { key: 'texto', label: 'Texto', render: (o) => <span className="text-sm">"{o.texto}"</span> },
     { key: 'rating', label: 'Estrellas', render: (o) => <span className="text-amber-400">{'★'.repeat(o.rating)}{'☆'.repeat(5 - o.rating)}</span> },
@@ -71,8 +73,9 @@ export default function OpinionesPage() {
 
   return (
     <div>
-      <h3 className="mb-4 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Moderación de opiniones</h3>
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className="mb-4 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+      <h3 className="mb-4 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Moderación de opiniones</h3>
+      <HistorialPanel entidad="Opinion" />
+      <select value={status} onChange={(e) => setStatus(e.target.value)} className="mb-4 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
         <option value="PENDIENTE">Pendientes</option>
         <option value="APROBADO">Aprobadas</option>
         <option value="RECHAZADO">Rechazadas</option>

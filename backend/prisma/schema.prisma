@@ -135,9 +135,10 @@ model User {
 
   // Ficha de profesor (RF-12) — solo se completan para role = DOCENTE.
   // Reusa legajo / apellido / telefono de arriba.
-  especialidad    String?
-  estadoProfesor  EstadoProfesor?
+  especialidad   String?
+  estadoProfesor EstadoProfesor?
 
+  sesiones       Session[]
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")
   hijos          ParentStudentLink[] @relation("PadreLinks")
@@ -146,14 +147,12 @@ model User {
   asistencias           Attendance[]
   notificaciones        Notification[]
   planesDeEstudio       StudyPlan[]
-  forumPosts            ForumPost[]
-  forumReplies          ForumReply[]
   materiasDictadas      MateriaCurso[] @relation("DocenteMateriaCurso")
   gruposDeporteDictados GrupoDeporte[] @relation("DocenteGrupoDeporte")
 
-  inscripcionesDeporte   InscripcionDeporte[]   @relation("InscripcionesDeporte")
-  inscripcionTransporte  InscripcionTransporte?
-  inscripcionComedor     InscripcionComedor?
+  inscripcionesDeporte  InscripcionDeporte[]   @relation("InscripcionesDeporte")
+  inscripcionTransporte InscripcionTransporte?
+  inscripcionComedor    InscripcionComedor?
 
   @@index([role])
   @@index([cursoId])
@@ -214,34 +213,6 @@ model Notification {
   @@index([userId, isRead])
 }
 
-model ForumPost {
-  id        Int      @id @default(autoincrement())
-  authorId  Int
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  materia   String
-  titulo    String
-  contenido String
-  isPinned  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  replies ForumReply[]
-
-  @@index([materia])
-  @@index([createdAt])
-}
-
-model ForumReply {
-  id        Int       @id @default(autoincrement())
-  postId    Int
-  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId  Int
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  contenido String
-  createdAt DateTime  @default(now())
-
-  @@index([postId])
-}
-
 model Inscription {
   id               Int              @id @default(autoincrement())
   nombreTutor      String
@@ -261,14 +232,15 @@ model Inscription {
 }
 
 model Opinion {
-  id         Int              @id @default(autoincrement())
-  nombre     String?
-  rol        String
-  texto      String
-  rating     Int
-  status     ModerationStatus @default(PENDIENTE)
-  createdAt  DateTime         @default(now())
-  resolvedAt DateTime?
+  id             Int              @id @default(autoincrement())
+  nombre         String?
+  identificacion String
+  rol            String
+  texto          String
+  rating         Int
+  status         ModerationStatus @default(PENDIENTE)
+  createdAt      DateTime         @default(now())
+  resolvedAt     DateTime?
 
   @@index([status])
   @@index([createdAt])
@@ -414,4 +386,57 @@ model InscripcionComedor {
   turno        TurnoComedor @relation(fields: [turnoId], references: [id], onDelete: Restrict)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+}
+
+enum AccionAuditoria {
+  ALTA
+  MODIFICACION
+  BAJA
+}
+
+// RNF-46: trazabilidad de quién hizo cada alta/modificación/baja sobre
+// alumnos, profesores e inscripciones. usuarioId no tiene FK (se guarda
+// el id "congelado" aunque el usuario se borre después, que no pasa acá
+// porque solo desactivamos, pero es más robusto igual) ni relation para
+// no acoplar User a una tabla que solo se escribe, nunca se consulta
+// desde él.
+model AuditLog {
+  id        Int             @id @default(autoincrement())
+  usuarioId Int
+  accion    AccionAuditoria
+  entidad   String // "User" | "InscripcionDeporte" | "InscripcionTransporte" | "InscripcionComedor"
+  entidadId Int
+  detalle   String?
+  createdAt DateTime        @default(now())
+
+  @@index([entidad, entidadId])
+  @@index([usuarioId])
+  @@index([createdAt])
+}
+
+// RNF-38/39: sesión de refresh token con estado server-side, para poder
+// invalidarla antes de que el JWT expire por sí solo (tope absoluto de
+// 24hs desde el login + 30min de inactividad). Sin esta tabla un JWT de
+// refresh no se puede "apagar" antes de su propio exp.
+model Session {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int
+  usuario         User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  expiraEn        DateTime // createdAt + 24hs, fijo: nunca se extiende
+  ultimaActividad DateTime @default(now())
+
+  @@index([usuarioId])
+}
+
+// RF-7: galería de imágenes administrable desde el panel Admin (antes
+// eran URLs de Unsplash hardcodeadas en el frontend).
+model GaleriaImagen {
+  id        Int      @id @default(autoincrement())
+  url       String
+  alt       String
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([orden])
 }

@@ -9,7 +9,21 @@ export function setToken(token) {
   else sessionStorage.removeItem(TOKEN_KEY);
 }
 
+// Debe coincidir con USER_KEY en AuthContext.jsx. No se importa de ahí
+// para evitar un ciclo (AuthContext ya importa de este archivo).
+const USER_KEY = 'et_user';
+
 let refreshing = null;
+
+// Si el refresh falla de verdad (sesión inválida/vencida/por inactividad,
+// no un error de red transitorio), la sesión del lado del servidor ya no
+// existe: limpiar el estado local y mandar a login en vez de dejar al
+// usuario viendo páginas privadas sin datos, sin ningún aviso.
+function invalidarSesionLocal() {
+  setToken(null);
+  localStorage.removeItem(USER_KEY);
+  if (window.location.pathname !== '/') window.location.href = '/';
+}
 
 async function tryRefresh() {
   if (refreshing) return refreshing;
@@ -20,6 +34,7 @@ async function tryRefresh() {
         setToken(data.usuario.token);
         return data.usuario;
       }
+      invalidarSesionLocal();
       return null;
     })
     .catch(() => null)

@@ -13,8 +13,8 @@ function formatFecha(iso) {
 
 function Dato({ label, value }) {
   return (
-    <div className="flex justify-between border-b border-slate-100 py-2 text-sm last:border-0 dark:border-slate-800">
-      <span className="text-slate-500">{label}</span>
+    <div className="flex justify-between border-b border-blue-100 py-2 text-sm last:border-0 dark:border-slate-800">
+      <span className="text-ink-faint">{label}</span>
       <span className="font-semibold">{value || '—'}</span>
     </div>
   );
@@ -58,13 +58,13 @@ export default function PerfilPage() {
     }
   };
 
-  if (!alumno) return <p className="text-center text-slate-400">Cargando…</p>;
+  if (!alumno) return <p className="text-center text-ink-faint">Cargando…</p>;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div>
-        <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Mi Ficha</h3>
-        <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Mi Ficha</h3>
+        <div className="rounded-lg border border-blue-100 p-4 dark:border-slate-700">
           <Dato label="Legajo" value={alumno.legajo} />
           <Dato label="DNI" value={alumno.dni} />
           <Dato label="Nombre" value={alumno.nombre} />
@@ -74,32 +74,32 @@ export default function PerfilPage() {
           <Dato label="Estado" value={ESTADO_LABEL[alumno.estado] || alumno.estado} />
         </div>
 
-        <h3 className="mb-3 mt-6 border-b border-slate-200 pb-3 text-lg font-bold dark:border-slate-700">
-          Datos de contacto <span className="text-xs font-normal text-slate-400">(vos podés editarlos)</span>
+        <h3 className="mb-3 mt-6 border-b border-blue-100 pb-3 text-lg font-bold dark:border-slate-700">
+          Datos de contacto <span className="text-xs font-normal text-ink-faint">(vos podés editarlos)</span>
         </h3>
-        <form onSubmit={guardarContacto} className="grid gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-          <label className="flex flex-col gap-1 text-xs text-slate-500">
+        <form onSubmit={guardarContacto} className="grid gap-3 rounded-lg border border-blue-100 p-4 dark:border-slate-700">
+          <label className="flex flex-col gap-1 text-xs text-ink-faint">
             Email
             <input
               required type="email" value={contacto.email}
               onChange={(e) => setContacto({ ...contacto, email: e.target.value })}
-              className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+              className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-slate-500">
+          <label className="flex flex-col gap-1 text-xs text-ink-faint">
             Teléfono
             <input
               required pattern="[0-9]{6,20}" placeholder="Solo dígitos" value={contacto.telefono}
               onChange={(e) => setContacto({ ...contacto, telefono: e.target.value })}
-              className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+              className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-slate-500">
+          <label className="flex flex-col gap-1 text-xs text-ink-faint">
             Domicilio
             <input
               required value={contacto.domicilio}
               onChange={(e) => setContacto({ ...contacto, domicilio: e.target.value })}
-              className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+              className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
             />
           </label>
           <button type="submit" className="justify-self-end rounded bg-accent px-4 py-2 text-sm font-semibold text-white">
@@ -109,7 +109,7 @@ export default function PerfilPage() {
       </div>
 
       <div>
-        <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Materias que estoy cursando</h3>
+        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Materias que estoy cursando</h3>
         <MateriasCursoList materias={materias} loading={materias === null} mensaje={mensajeMaterias} />
       </div>
     </div>
