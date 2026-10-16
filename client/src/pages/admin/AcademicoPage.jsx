@@ -6,10 +6,10 @@ import { materiasService } from '../../services/api/materiasService';
 import { adminService } from '../../services/api/adminService';
 import DataTable from '../../components/ui/DataTable';
 
-const inputCls = 'rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900';
+const inputCls = 'rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900';
 const btnPrimary = 'rounded bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-50';
 const btnDanger = 'rounded bg-red-500 px-2.5 py-1.5 text-xs text-white';
-const btnMuted = 'rounded bg-slate-500 px-2.5 py-1.5 text-xs text-white';
+const btnMuted = 'rounded bg-blue-500 px-2.5 py-1.5 text-xs text-white';
 
 function confirmarBorrado(mensaje) {
   return window.confirm(mensaje);
@@ -230,6 +230,12 @@ function MateriasSection() {
   );
 }
 
+const ORDEN_OPCIONES = [
+  { key: 'materia', label: 'Materia' },
+  { key: 'curso', label: 'Curso' },
+  { key: 'docente', label: 'Profesor' },
+];
+
 function AsignacionesSection() {
   const toast = useToast();
   const [asignaciones, setAsignaciones] = useState(null);
@@ -237,6 +243,9 @@ function AsignacionesSection() {
   const [cursos, setCursos] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [form, setForm] = useState({ materiaId: '', cursoId: '', docenteId: '' });
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({ materiaId: '', cursoId: '', docenteId: '' });
+  const [orden, setOrden] = useState({ key: 'curso', dir: 'asc' });
 
   const cargar = async () => {
     const [a, m, c, d] = await Promise.all([
@@ -261,6 +270,19 @@ function AsignacionesSection() {
     else toast.error(res.message || res.mensaje || 'No se pudo crear.');
   };
 
+  const empezarEdicion = (a) => {
+    setEditId(a.id);
+    setEditForm({ materiaId: String(a.materiaId), cursoId: String(a.cursoId), docenteId: String(a.docenteId) });
+  };
+
+  const guardarEdicion = async (id) => {
+    const res = await materiasService.updateAsignacion(id, {
+      materiaId: Number(editForm.materiaId), cursoId: Number(editForm.cursoId), docenteId: Number(editForm.docenteId),
+    });
+    if (res.exito) { toast.success('Asignación actualizada.'); setEditId(null); cargar(); }
+    else toast.error(res.message || res.mensaje || 'No se pudo actualizar.');
+  };
+
   const borrar = async (a) => {
     if (!confirmarBorrado(`¿Quitar a ${a.docente} de "${a.materia}" en ${a.curso}?`)) return;
     const res = await materiasService.removeAsignacion(a.id);
@@ -268,19 +290,59 @@ function AsignacionesSection() {
     else toast.error(res.message || res.mensaje || 'No se pudo eliminar.');
   };
 
+  const cambiarOrden = (key) => {
+    setOrden((o) => (o.key === key ? { key, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+  };
+
+  const asignacionesOrdenadas = [...(asignaciones ?? [])].sort((a, b) => {
+    const cmp = String(a[orden.key]).localeCompare(String(b[orden.key]));
+    return orden.dir === 'asc' ? cmp : -cmp;
+  });
+
   const columns = [
-    { key: 'materia', label: 'Materia' },
-    { key: 'curso', label: 'Curso' },
-    { key: 'docente', label: 'Profesor' },
+    {
+      key: 'materia', label: 'Materia',
+      render: (a) => editId === a.id ? (
+        <select value={editForm.materiaId} onChange={(e) => setEditForm({ ...editForm, materiaId: e.target.value })} className={inputCls}>
+          {materias.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+        </select>
+      ) : a.materia,
+    },
+    {
+      key: 'curso', label: 'Curso',
+      render: (a) => editId === a.id ? (
+        <select value={editForm.cursoId} onChange={(e) => setEditForm({ ...editForm, cursoId: e.target.value })} className={inputCls}>
+          {cursos.map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
+        </select>
+      ) : a.curso,
+    },
+    {
+      key: 'docente', label: 'Profesor',
+      render: (a) => editId === a.id ? (
+        <select value={editForm.docenteId} onChange={(e) => setEditForm({ ...editForm, docenteId: e.target.value })} className={inputCls}>
+          {docentes.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+        </select>
+      ) : a.docente,
+    },
     {
       key: 'acciones', label: 'Acciones',
-      render: (a) => <button onClick={() => borrar(a)} className={btnDanger}>Quitar</button>,
+      render: (a) => editId === a.id ? (
+        <div className="flex gap-1.5">
+          <button onClick={() => guardarEdicion(a.id)} className={btnPrimary}>Guardar</button>
+          <button onClick={() => setEditId(null)} className={btnMuted}>Cancelar</button>
+        </div>
+      ) : (
+        <div className="flex gap-1.5">
+          <button onClick={() => empezarEdicion(a)} className={btnMuted}>Editar</button>
+          <button onClick={() => borrar(a)} className={btnDanger}>Quitar</button>
+        </div>
+      ),
     },
   ];
 
   return (
     <div>
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-ink-faint">
         Asigná qué profesor dicta cada materia en cada curso (una materia puede tener distintos profesores según el curso — RF-13).
       </p>
       <form onSubmit={crear} className="mb-4 flex flex-wrap gap-2">
@@ -298,7 +360,21 @@ function AsignacionesSection() {
         </select>
         <button type="submit" className={btnPrimary}><i className="fas fa-plus" /> Asignar</button>
       </form>
-      <DataTable columns={columns} rows={asignaciones ?? []} loading={asignaciones === null} emptyMessage="Sin asignaciones cargadas." />
+
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <span className="text-ink-faint">Ordenar por:</span>
+        {ORDEN_OPCIONES.map((o) => (
+          <button
+            key={o.key}
+            onClick={() => cambiarOrden(o.key)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${orden.key === o.key ? 'bg-accent text-white' : 'bg-blue-50 text-ink-soft dark:bg-slate-800 dark:text-slate-300'}`}
+          >
+            {o.label} {orden.key === o.key && <i className={`fas fa-arrow-${orden.dir === 'asc' ? 'up' : 'down'}`} />}
+          </button>
+        ))}
+      </div>
+
+      <DataTable columns={columns} rows={asignacionesOrdenadas} loading={asignaciones === null} emptyMessage="Sin asignaciones cargadas." />
     </div>
   );
 }
@@ -316,7 +392,7 @@ export default function AcademicoPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Estructura Académica</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Estructura Académica</h3>
 
       <div className="mb-5 flex flex-wrap gap-2">
         {TABS.map((t) => (
@@ -324,7 +400,7 @@ export default function AcademicoPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-              tab === t.key ? 'bg-accent text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+              tab === t.key ? 'bg-accent text-white' : 'bg-blue-50 text-ink-soft dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
             {t.label}

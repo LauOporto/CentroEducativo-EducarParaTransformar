@@ -8,5 +8,6 @@ export const materiasService = {
 
   listAsignaciones: () => httpClient.get('/api/materias/asignaciones'),
   createAsignacion: (payload) => httpClient.post('/api/materias/asignaciones', payload),
+  updateAsignacion: (id, payload) => httpClient.patch(`/api/materias/asignaciones/${id}`, payload),
   removeAsignacion: (id) => httpClient.delete(`/api/materias/asignaciones/${id}`),
 };

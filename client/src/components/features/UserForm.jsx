@@ -6,7 +6,7 @@ import { ROLES_ADMIN } from '../../domain/cursos';
 
 const EMPTY = {
   usuario: '', email: '', dni: '', nombre: '', role: '', curso: '', password: '',
-  legajo: '', apellido: '', fechaNacimiento: '', domicilio: '', telefono: '', especialidad: '',
+  apellido: '', fechaNacimiento: '', domicilio: '', telefono: '', especialidad: '',
 };
 
 export default function UserForm({ onCreated }) {
@@ -22,7 +22,6 @@ export default function UserForm({ onCreated }) {
     const payload = {
       ...form,
       curso: esAlumno ? form.curso : null,
-      legajo: conFicha ? form.legajo : null,
       apellido: conFicha ? form.apellido : null,
       telefono: conFicha ? form.telefono : null,
       fechaNacimiento: esAlumno ? form.fechaNacimiento : null,
@@ -40,10 +39,10 @@ export default function UserForm({ onCreated }) {
     }
   };
 
-  const campo = (extra = '') => `rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900 ${extra}`;
+  const campo = (extra = '') => `rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900 ${extra}`;
 
   return (
-    <details className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+    <details className="mb-5 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-slate-700 dark:bg-slate-800">
       <summary className="cursor-pointer font-semibold"><i className="fas fa-plus-circle text-accent" /> Crear nuevo usuario</summary>
       <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2">
         <input required placeholder="Usuario" value={form.usuario} onChange={(e) => setForm({ ...form, usuario: e.target.value })} className={campo()} />
@@ -63,12 +62,11 @@ export default function UserForm({ onCreated }) {
 
         {esAlumno && (
           <>
-            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Ficha de alumno
+            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Ficha de alumno (el legajo se genera automáticamente)
             </div>
-            <input required placeholder="Legajo" value={form.legajo} onChange={(e) => setForm({ ...form, legajo: e.target.value })} className={campo()} />
             <input required placeholder="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} className={campo()} />
-            <label className="flex flex-col gap-1 text-xs text-slate-500">
+            <label className="flex flex-col gap-1 text-xs text-ink-faint">
               Fecha de nacimiento
               <input required type="date" value={form.fechaNacimiento} onChange={(e) => setForm({ ...form, fechaNacimiento: e.target.value })} className={campo()} />
             </label>
@@ -79,10 +77,9 @@ export default function UserForm({ onCreated }) {
 
         {esDocente && (
           <>
-            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Ficha de profesor
+            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Ficha de profesor (el legajo se genera automáticamente)
             </div>
-            <input required placeholder="Legajo" value={form.legajo} onChange={(e) => setForm({ ...form, legajo: e.target.value })} className={campo()} />
             <input required placeholder="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} className={campo()} />
             <input required placeholder="Especialidad" value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={campo()} />
             <input required placeholder="Teléfono (solo dígitos)" pattern="[0-9]{6,20}" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={campo()} />
