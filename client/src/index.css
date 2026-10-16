@@ -5,3 +5,27 @@
 html {
   scroll-behavior: smooth;
 }
+
+body {
+  @apply font-sans text-ink antialiased;
+}
+
+h1, h2, h3, h4 {
+  @apply font-display;
+}
+
+/* Foco de teclado visible y consistente en toda la app, en vez del
+   anillo azul por defecto del navegador (que además desaparece contra
+   nuestro propio azul de marca). */
+:focus-visible {
+  outline: 2px solid theme('colors.blue.500');
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
