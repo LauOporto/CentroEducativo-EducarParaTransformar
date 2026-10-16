@@ -49,7 +49,7 @@ export default function PerfilPage() {
       <h2 className="mb-6 border-b pb-2 text-2xl font-bold dark:border-slate-700">Mi Perfil Docente</h2>
 
       <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-slate-800">
-        <div className="mb-6 grid grid-cols-2 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <span className="block text-sm font-medium text-ink-faint">Nombre</span>
             <span className="text-lg">{perfil.nombre}</span>
@@ -116,7 +116,7 @@ export default function PerfilPage() {
         ) : (
           <div className="border-t pt-4 dark:border-slate-700">
             <h3 className="mb-4 text-lg font-medium">Datos de Contacto</h3>
-            <div className="mb-4 grid grid-cols-2 gap-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <span className="block text-sm font-medium text-ink-faint">Email</span>
                 <span className="text-lg">{perfil.email || '—'}</span>
