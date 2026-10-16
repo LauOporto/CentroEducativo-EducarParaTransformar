@@ -7,6 +7,8 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { notify } from './notifications.routes';
+import { registrarAuditoria } from '../services/auditoria.service';
+import { generarLegajo } from '../utils/legajo';
 import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
 import {
   dniSchema, especialidadSchema, estadoAlumnoSchema, estadoProfesorSchema,
@@ -19,14 +21,13 @@ router.use(requireAuth, requireRole(Role.ADMIN));
 
 router.get('/stats', async (_req, res, next) => {
   try {
-    const [users, byRole, students, teachers, parents, grades, forumPosts] = await Promise.all([
+    const [users, byRole, students, teachers, parents, grades] = await Promise.all([
       prisma.user.count(),
       prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
       prisma.user.count({ where: { role: Role.ESTUDIANTE, isActive: true } }),
       prisma.user.count({ where: { role: Role.DOCENTE, isActive: true } }),
       prisma.user.count({ where: { role: Role.PADRE, isActive: true } }),
       prisma.grade.count(),
-      prisma.forumPost.count(),
     ]);
     res.json({
       exito: true,
@@ -36,9 +37,35 @@ router.get('/stats', async (_req, res, next) => {
         docentesActivos: teachers,
         padresActivos: parents,
         notasRegistradas: grades,
-        temasForo: forumPosts,
         porRol: byRole.map((r) => ({ role: r.role, count: r._count._all })),
       },
+    });
+  } catch (err) { next(err); }
+});
+
+// RNF-46: consulta del log de auditoría (alta/modificación/baja de
+// alumnos, profesores e inscripciones). Solo lectura, sin edición ni
+// borrado — es un registro, no se toca.
+const auditLogListSchema = z.object({
+  entidad: z.string().optional(),
+  take: z.coerce.number().int().positive().max(200).default(100),
+});
+
+router.get('/auditoria', async (req, res, next) => {
+  try {
+    const { entidad, take } = auditLogListSchema.parse(req.query);
+    const [registros, usuarios] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: entidad ? { entidad } : {},
+        orderBy: { createdAt: 'desc' },
+        take,
+      }),
+      prisma.user.findMany({ select: { id: true, nombre: true, usuario: true } }),
+    ]);
+    const nombrePorId = new Map(usuarios.map((u) => [u.id, `${u.nombre} (${u.usuario})`]));
+    res.json({
+      exito: true,
+      registros: registros.map((r) => ({ ...r, usuario: nombrePorId.get(r.usuarioId) ?? `#${r.usuarioId}` })),
     });
   } catch (err) { next(err); }
 });
@@ -88,7 +115,8 @@ const createUserSchema = z
     curso: z.string().optional().nullable(),
     password: z.string().min(6),
     // Ficha de alumno (RF-9) — obligatorios solo cuando role = ESTUDIANTE.
-    legajo: legajoSchema.optional().nullable(),
+    // legajo NO se pide acá: se genera automáticamente (pedido explícito,
+    // evita duplicados/errores de tipeo).
     apellido: z.string().trim().min(2).max(60).optional().nullable(),
     fechaNacimiento: fechaNacimientoSchema.optional().nullable(),
     domicilio: z.string().trim().min(3).max(200).optional().nullable(),
@@ -100,9 +128,9 @@ const createUserSchema = z
   .superRefine((data, ctx) => {
     const requeridos =
       data.role === 'ESTUDIANTE'
-        ? (['legajo', 'apellido', 'fechaNacimiento', 'domicilio', 'telefono', 'curso'] as const)
+        ? (['apellido', 'fechaNacimiento', 'domicilio', 'telefono', 'curso'] as const)
         : data.role === 'DOCENTE'
-          ? (['legajo', 'apellido', 'especialidad', 'telefono'] as const)
+          ? (['apellido', 'especialidad', 'telefono'] as const)
           : ([] as const);
     for (const campo of requeridos) {
       if (!(data as Record<string, unknown>)[campo]) {
@@ -120,16 +148,16 @@ router.post('/users', async (req, res, next) => {
           { usuario: data.usuario },
           { email: data.email },
           { dni: data.dni },
-          ...(data.legajo ? [{ legajo: data.legajo }] : []),
         ],
       },
       select: { id: true },
     });
-    if (exists) throw HttpError.conflict('Usuario, email, DNI o legajo ya existen.');
+    if (exists) throw HttpError.conflict('Usuario, email o DNI ya existen.');
     const hash = await bcrypt.hash(data.password, 10);
     const esAlumno = data.role === 'ESTUDIANTE';
     const esDocente = data.role === 'DOCENTE';
     const cursoId = esAlumno ? await resolveCursoId(prisma, data.curso) : null;
+    const legajo = esAlumno || esDocente ? await generarLegajo(data.role as Role) : null;
     const user = await prisma.user.create({
       data: {
         usuario: data.usuario,
@@ -141,7 +169,7 @@ router.post('/users', async (req, res, next) => {
         estado: esAlumno ? 'ACTIVO' : null,
         estadoProfesor: esDocente ? (data.estadoProfesor ?? 'ACTIVO') : null,
         especialidad: esDocente ? data.especialidad : null,
-        legajo: esAlumno || esDocente ? data.legajo : null,
+        legajo,
         apellido: esAlumno || esDocente ? data.apellido : null,
         fechaNacimiento: esAlumno ? data.fechaNacimiento : null,
         domicilio: esAlumno ? data.domicilio : null,
@@ -154,6 +182,10 @@ router.post('/users', async (req, res, next) => {
         legajo: true, apellido: true, fechaNacimiento: true, domicilio: true, telefono: true, estado: true,
         especialidad: true, estadoProfesor: true,
       },
+    });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'ALTA', entidad: 'User', entidadId: user.id,
+      detalle: `${data.role} — ${user.nombre}`,
     });
     res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
   } catch (err) { next(err); }
@@ -249,6 +281,10 @@ router.patch('/users/:id', async (req, res, next) => {
         especialidad: true, estadoProfesor: true,
       },
     });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'User', entidadId: user.id,
+      detalle: Object.keys(patch).join(', '),
+    });
     res.json({ exito: true, usuario: { ...user, curso: formatCursoLabel(user.curso) } });
   } catch (err) { next(err); }
 });
@@ -267,6 +303,7 @@ router.delete('/users/:id', async (req, res, next) => {
         estadoProfesor: target.role === Role.DOCENTE ? 'INACTIVO' : undefined,
       },
     });
+    await registrarAuditoria({ usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'User', entidadId: id });
     res.json({ exito: true, mensaje: 'Usuario desactivado.' });
   } catch (err) { next(err); }
 });
@@ -332,8 +369,8 @@ router.get('/teachers/pending', async (_req, res, next) => {
 
 // Al aprobar, el Admin completa la ficha del profesor (RF-12). Los campos
 // ya cargados antes (p. ej. desde Editar usuario) no hace falta reenviarlos.
+// legajo NO se pide: se genera automáticamente si todavía no tiene.
 const approveTeacherSchema = z.object({
-  legajo: legajoSchema.optional(),
   apellido: z.string().trim().min(2).max(60).optional(),
   especialidad: especialidadSchema.optional(),
   telefono: telefonoSchema.optional(),
@@ -349,7 +386,7 @@ router.post('/teachers/:id/approve', async (req, res, next) => {
     if (user.isActive) throw HttpError.badRequest('El docente ya fue aprobado.');
 
     const ficha = {
-      legajo: data.legajo ?? user.legajo,
+      legajo: user.legajo ?? (await generarLegajo(Role.DOCENTE)),
       apellido: data.apellido ?? user.apellido,
       especialidad: data.especialidad ?? user.especialidad,
       telefono: data.telefono ?? user.telefono,
@@ -357,10 +394,6 @@ router.post('/teachers/:id/approve', async (req, res, next) => {
     const faltantes = Object.entries(ficha).filter(([, v]) => !v).map(([k]) => k);
     if (faltantes.length) {
       throw HttpError.badRequest(`Completá la ficha del docente antes de aprobar: falta ${faltantes.join(', ')}.`);
-    }
-    if (data.legajo) {
-      const dup = await prisma.user.findFirst({ where: { legajo: data.legajo, NOT: { id } }, select: { id: true } });
-      if (dup) throw HttpError.conflict('Ese legajo ya está registrado.');
     }
 
     const aprobado = await prisma.user.update({
@@ -372,6 +405,10 @@ router.post('/teachers/:id/approve', async (req, res, next) => {
       userId: id,
       titulo: 'Cuenta aprobada',
       contenido: 'Un administrador aprobó tu cuenta de docente. Ya podés iniciar sesión.',
+    });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'MODIFICACION', entidad: 'DocentePendiente', entidadId: id,
+      detalle: `Aprobado — ${aprobado.nombre} (${aprobado.usuario})`,
     });
     res.json({ exito: true, docente: aprobado });
   } catch (err) { next(err); }
@@ -385,6 +422,10 @@ router.delete('/teachers/:id/reject', async (req, res, next) => {
     if (user.role !== Role.DOCENTE) throw HttpError.badRequest('El usuario no es docente.');
     if (user.isActive) throw HttpError.badRequest('No se puede rechazar un docente ya aprobado.');
     await prisma.user.delete({ where: { id } });
+    await registrarAuditoria({
+      usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'DocentePendiente', entidadId: id,
+      detalle: `Rechazado — ${user.nombre} (${user.usuario})`,
+    });
     res.json({ exito: true, mensaje: 'Solicitud de docente rechazada.' });
   } catch (err) { next(err); }
 });

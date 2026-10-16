@@ -11,12 +11,22 @@ import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLa
 import { dniSchema } from '../utils/validators';
 
 const REFRESH_COOKIE = 'et_refresh';
+
+// RNF-38/39: tope absoluto de 24hs desde el login, e invalidación tras
+// 30min de inactividad. El access token (15min, stateless) no se vuelve
+// a chequear contra la sesión en cada request — eso violaría el
+// principio de "capa de aplicación sin estado" del diseño — así que
+// estos dos límites se verifican acá, en el único punto con estado real:
+// cuando el cliente pide refrescar el access token vencido.
+const SESSION_MAX_MS = 1000 * 60 * 60 * 24; // 24hs
+const SESSION_INACTIVITY_MS = 1000 * 60 * 30; // 30min
+
 const refreshCookieOpts = {
   httpOnly: true,
   sameSite: 'lax' as const,
   secure: env.NODE_ENV === 'production',
   path: '/api/auth',
-  maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  maxAge: SESSION_MAX_MS,
 };
 
 const router = Router();
@@ -124,7 +134,10 @@ router.post('/login', async (req, res, next) => {
       usuario: user.usuario,
       role: user.role,
     });
-    const refresh = signRefreshToken({ id: user.id, v: 1 });
+    const session = await prisma.session.create({
+      data: { usuarioId: user.id, expiraEn: new Date(Date.now() + SESSION_MAX_MS) },
+    });
+    const refresh = signRefreshToken({ sessionId: session.id });
     res.cookie(REFRESH_COOKIE, refresh, refreshCookieOpts);
 
     res.json({
@@ -152,11 +165,38 @@ router.post('/refresh', async (req, res, next) => {
     } catch {
       throw HttpError.unauthorized('Refresh token inválido o expirado.');
     }
-    const user = await prisma.user.findUnique({ where: { id: payload.id } });
-    if (!user || !user.isActive) throw HttpError.unauthorized('Cuenta deshabilitada.');
+    // Cookies de refresh emitidas antes de la tabla Session (formato viejo
+    // {id, v}) verifican la firma OK pero no traen sessionId — tratarlas
+    // como sesión inválida en vez de dejar que Prisma explote con un 500.
+    if (typeof payload.sessionId !== 'number') {
+      throw HttpError.unauthorized('Sesión inválida. Iniciá sesión de nuevo.');
+    }
+
+    const session = await prisma.session.findUnique({ where: { id: payload.sessionId } });
+    if (!session) throw HttpError.unauthorized('Sesión inválida. Iniciá sesión de nuevo.');
+
+    const ahora = Date.now();
+    const vencida = ahora > session.expiraEn.getTime();
+    const inactiva = ahora - session.ultimaActividad.getTime() > SESSION_INACTIVITY_MS;
+    if (vencida || inactiva) {
+      await prisma.session.delete({ where: { id: session.id } });
+      throw HttpError.unauthorized(
+        vencida
+          ? 'La sesión expiró (máximo 24hs desde el login). Iniciá sesión de nuevo.'
+          : 'Sesión cerrada por 30min de inactividad. Iniciá sesión de nuevo.',
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: session.usuarioId } });
+    if (!user || !user.isActive) {
+      await prisma.session.delete({ where: { id: session.id } });
+      throw HttpError.unauthorized('Cuenta deshabilitada.');
+    }
+
+    await prisma.session.update({ where: { id: session.id }, data: { ultimaActividad: new Date() } });
 
     const access = signAccessToken({ id: user.id, usuario: user.usuario, role: user.role });
-    const newRefresh = signRefreshToken({ id: user.id, v: payload.v + 1 });
+    const newRefresh = signRefreshToken({ sessionId: session.id });
     res.cookie(REFRESH_COOKIE, newRefresh, refreshCookieOpts);
 
     res.json({
@@ -173,7 +213,16 @@ router.post('/refresh', async (req, res, next) => {
   }
 });
 
-router.post('/logout', (_req, res) => {
+router.post('/logout', async (req, res) => {
+  const token = req.cookies?.[REFRESH_COOKIE];
+  if (token) {
+    try {
+      const { sessionId } = verifyRefreshToken(token);
+      await prisma.session.delete({ where: { id: sessionId } });
+    } catch {
+      // Token inválido, ya vencido, o sesión ya borrada: nada que hacer.
+    }
+  }
   res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
   res.json({ exito: true });
 });

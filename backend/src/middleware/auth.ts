@@ -12,8 +12,7 @@ interface AccessTokenPayload {
 }
 
 interface RefreshTokenPayload {
-  id: number;
-  v: number;
+  sessionId: number;
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {
