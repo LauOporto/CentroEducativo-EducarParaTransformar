@@ -8,15 +8,14 @@ import ServiciosEstudiantePage from '../pages/estudiante/ServiciosPage';
 import BoletinPage from '../pages/estudiante/BoletinPage';
 import PlanesPage from '../pages/estudiante/PlanesPage';
 import AsistenciasPage from '../pages/estudiante/AsistenciasPage';
-import ForosPage from '../pages/estudiante/ForosPage';
 
 import DocenteShell from '../pages/docente/DocenteShell';
 import CalificacionesPage from '../pages/docente/CalificacionesPage';
 import PerfilDocentePage from '../pages/docente/PerfilPage';
 import MisCursosPage from '../pages/docente/MisCursosPage';
 import AsistenciaDocentePage from '../pages/docente/AsistenciaPage';
+import HistorialAsistenciaPage from '../pages/docente/HistorialAsistenciaPage';
 import PlanesDocentePage from '../pages/docente/PlanesPage';
-import ForosDocentePage from '../pages/docente/ForosPage';
 
 import PadreShell from '../pages/padre/PadreShell';
 import BoletinPadrePage from '../pages/padre/BoletinPage';
@@ -36,6 +35,8 @@ import VinculosPage from '../pages/admin/VinculosPage';
 import AcademicoPage from '../pages/admin/AcademicoPage';
 import ServiciosPage from '../pages/admin/ServiciosPage';
 import ReportesPage from '../pages/admin/ReportesPage';
+import AuditoriaPage from '../pages/admin/AuditoriaPage';
+import GaleriaPage from '../pages/admin/GaleriaPage';
 
 export default function AppRoutes() {
   return (
@@ -55,7 +56,6 @@ export default function AppRoutes() {
         <Route path="servicios" element={<ServiciosEstudiantePage />} />
         <Route path="planes" element={<PlanesPage />} />
         <Route path="asistencias" element={<AsistenciasPage />} />
-        <Route path="foros" element={<ForosPage />} />
       </Route>
 
       <Route
@@ -70,8 +70,8 @@ export default function AppRoutes() {
         <Route path="perfil" element={<PerfilDocentePage />} />
         <Route path="cursos" element={<MisCursosPage />} />
         <Route path="asistencia" element={<AsistenciaDocentePage />} />
+        <Route path="historial-asistencia" element={<HistorialAsistenciaPage />} />
         <Route path="planes" element={<PlanesDocentePage />} />
-        <Route path="foros" element={<ForosDocentePage />} />
       </Route>
       <Route
         path="/padre"
@@ -105,6 +105,8 @@ export default function AppRoutes() {
         <Route path="academico" element={<AcademicoPage />} />
         <Route path="servicios" element={<ServiciosPage />} />
         <Route path="reportes" element={<ReportesPage />} />
+        <Route path="auditoria" element={<AuditoriaPage />} />
+        <Route path="galeria" element={<GaleriaPage />} />
       </Route>
     </Routes>
   );

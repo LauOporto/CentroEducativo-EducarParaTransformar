@@ -7,7 +7,6 @@ const MENU = [
   { to: '/estudiante/servicios', label: 'Deportes y Servicios', icon: 'fa-futbol' },
   { to: '/estudiante/planes', label: 'Planes de Estudio', icon: 'fa-book' },
   { to: '/estudiante/asistencias', label: 'Mis Asistencias', icon: 'fa-clipboard-check' },
-  { to: '/estudiante/foros', label: 'Foros', icon: 'fa-comments' },
 ];
 
 export default function EstudianteShell() {
