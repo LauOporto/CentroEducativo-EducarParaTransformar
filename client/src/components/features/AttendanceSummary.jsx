@@ -47,8 +47,8 @@ export default function AttendanceSummary({ rows, loading }) {
     <div>
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tiles.map((t) => (
-          <div key={t.label} className="rounded-lg border border-slate-200 p-3.5 dark:border-slate-700">
-            <div className="text-xs font-semibold text-slate-500">{t.label}</div>
+          <div key={t.label} className="rounded-lg border border-blue-100 p-3.5 dark:border-slate-700">
+            <div className="text-xs font-semibold text-ink-faint">{t.label}</div>
             <div className={`text-2xl font-bold ${t.cls}`}>{t.value}</div>
           </div>
         ))}

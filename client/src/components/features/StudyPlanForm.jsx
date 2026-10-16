@@ -27,7 +27,7 @@ export default function StudyPlanForm({ onCreated }) {
   };
 
   return (
-    <details className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+    <details className="mb-6 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-slate-700 dark:bg-slate-800">
       <summary className="cursor-pointer font-semibold"><i className="fas fa-plus-circle text-accent" /> Cargar nuevo plan de estudios</summary>
       <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2">
         <input
@@ -35,14 +35,14 @@ export default function StudyPlanForm({ onCreated }) {
           placeholder="Materia"
           value={form.materia}
           onChange={(e) => setForm({ ...form, materia: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
         <input
           required
           placeholder="Título"
           value={form.titulo}
           onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
         <textarea
           required
@@ -50,7 +50,7 @@ export default function StudyPlanForm({ onCreated }) {
           rows={2}
           value={form.objetivos}
           onChange={(e) => setForm({ ...form, objetivos: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm sm:col-span-2 dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm sm:col-span-2 dark:border-slate-600 dark:bg-slate-900"
         />
         <textarea
           required
@@ -58,7 +58,7 @@ export default function StudyPlanForm({ onCreated }) {
           rows={3}
           value={form.contenidos}
           onChange={(e) => setForm({ ...form, contenidos: e.target.value })}
-          className="rounded border border-slate-300 p-2 text-sm sm:col-span-2 dark:border-slate-600 dark:bg-slate-900"
+          className="rounded border border-blue-200 p-2 text-sm sm:col-span-2 dark:border-slate-600 dark:bg-slate-900"
         />
         <input type="file" onChange={(e) => setFile(e.target.files[0])} className="text-sm sm:col-span-2" />
         <button type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white sm:col-span-2 sm:justify-self-end">

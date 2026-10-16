@@ -22,9 +22,9 @@ const historialColumns = [
 ];
 
 export default function BoletinResumen({ notas, loading }) {
-  if (loading) return <p className="text-center text-slate-400">Cargando…</p>;
+  if (loading) return <p className="text-center text-ink-faint">Cargando…</p>;
   if (!notas || notas.length === 0) {
-    return <p className="text-center text-slate-400">No se registran calificaciones emitidas para el alumno.</p>;
+    return <p className="text-center text-ink-faint">No se registran calificaciones emitidas para el alumno.</p>;
   }
 
   const materias = [...new Set(notas.map((n) => n.materia))].sort();
@@ -59,20 +59,20 @@ export default function BoletinResumen({ notas, loading }) {
         ))}
       </div>
 
-      <h4 className="mb-2 mt-6 font-semibold text-slate-600 dark:text-slate-300">Notas por materia y trimestre</h4>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+      <h4 className="mb-2 mt-6 font-semibold text-ink-soft dark:text-slate-300">Notas por materia y trimestre</h4>
+      <div className="overflow-x-auto rounded-lg border border-blue-100 dark:border-slate-700">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800">
-              <th className="border-b border-slate-200 px-4 py-2.5 text-left dark:border-slate-700">Materia</th>
-              {TRIMESTRES.map((t) => <th key={t} className="border-b border-slate-200 px-4 py-2.5 text-center dark:border-slate-700">{t.replace('Trimestre', 'Trim.')}</th>)}
-              <th className="border-b border-slate-200 px-4 py-2.5 text-center dark:border-slate-700">Promedio</th>
-              <th className="border-b border-slate-200 px-4 py-2.5 text-center dark:border-slate-700">Estado</th>
+            <tr className="bg-blue-50 dark:bg-slate-800">
+              <th className="border-b border-blue-100 px-4 py-2.5 text-left dark:border-slate-700">Materia</th>
+              {TRIMESTRES.map((t) => <th key={t} className="border-b border-blue-100 px-4 py-2.5 text-center dark:border-slate-700">{t.replace('Trimestre', 'Trim.')}</th>)}
+              <th className="border-b border-blue-100 px-4 py-2.5 text-center dark:border-slate-700">Promedio</th>
+              <th className="border-b border-blue-100 px-4 py-2.5 text-center dark:border-slate-700">Estado</th>
             </tr>
           </thead>
           <tbody>
             {filasAgrupadas.map((f) => (
-              <tr key={f.materia} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
+              <tr key={f.materia} className="border-b border-blue-100 last:border-0 dark:border-slate-800">
                 <td className="px-4 py-2.5 font-semibold">{f.materia}</td>
                 {f.porTrim.map((v, i) => (
                   <td key={i} className={`px-4 py-2.5 text-center font-bold ${notaColor(v)}`}>{v ?? '—'}</td>
@@ -85,7 +85,7 @@ export default function BoletinResumen({ notas, loading }) {
         </table>
       </div>
 
-      <h4 className="mb-2 mt-6 font-semibold text-slate-600 dark:text-slate-300">Historial completo (todas las evaluaciones)</h4>
+      <h4 className="mb-2 mt-6 font-semibold text-ink-soft dark:text-slate-300">Historial completo (todas las evaluaciones)</h4>
       <DataTable columns={historialColumns} rows={notas} />
     </div>
   );

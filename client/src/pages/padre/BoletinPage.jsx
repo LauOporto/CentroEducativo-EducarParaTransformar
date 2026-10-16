@@ -18,9 +18,9 @@ export default function BoletinPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Boletín e Historial Académico</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Boletín e Historial Académico</h3>
       {!hijoId ? (
-        <p className="text-center text-slate-400">Seleccioná o vinculá un hijo para ver su boletín.</p>
+        <p className="text-center text-ink-faint">Seleccioná o vinculá un hijo para ver su boletín.</p>
       ) : (
         <BoletinResumen notas={notas} loading={notas === null} />
       )}

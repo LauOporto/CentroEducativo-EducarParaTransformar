@@ -37,17 +37,17 @@ export default function ServiciosPage() {
   }, [cargar]);
 
   if (!hijoId) {
-    return <p className="text-center text-slate-400">Seleccioná o vinculá un hijo primero.</p>;
+    return <p className="text-center text-ink-faint">Seleccioná o vinculá un hijo primero.</p>;
   }
 
   if (!resumen) {
-    return <p className="text-center text-slate-400">Cargando…</p>;
+    return <p className="text-center text-ink-faint">Cargando…</p>;
   }
 
   return (
     <div>
-      <h3 className="mb-2 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Deportes y Servicios</h3>
-      <p className="mb-5 text-sm text-slate-500">Gestioná la inscripción de <b>{hijo?.nombre}</b> a deportes, transporte y comedor.</p>
+      <h3 className="mb-2 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Deportes y Servicios</h3>
+      <p className="mb-5 text-sm text-ink-faint">Gestioná la inscripción de <b>{hijo?.nombre}</b> a deportes, transporte y comedor.</p>
 
       <div className="space-y-6">
         <DeportesSection estudianteId={hijoId} resumen={resumen.deportes} onCambio={cargar} />

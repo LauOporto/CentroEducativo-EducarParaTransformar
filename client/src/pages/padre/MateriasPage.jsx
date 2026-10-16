@@ -36,7 +36,7 @@ function InscribirCursado({ hijoId, onInscripto }) {
       <form onSubmit={submit} className="flex flex-wrap gap-2">
         <select
           required value={cursoId} onChange={(e) => setCursoId(e.target.value)}
-          className="min-w-[220px] flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="min-w-[220px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Elegir curso…</option>
           {cursos.map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
@@ -81,23 +81,23 @@ export default function MateriasPage() {
   }, [hijoId, hijo?.curso]);
 
   if (!hijoId) {
-    return <p className="text-center text-slate-400">Seleccioná o vinculá un hijo primero.</p>;
+    return <p className="text-center text-ink-faint">Seleccioná o vinculá un hijo primero.</p>;
   }
 
   return (
     <div>
-      <h3 className="mb-2 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Materias que está cursando</h3>
+      <h3 className="mb-2 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Materias que está cursando</h3>
 
       {hijo && !hijo.curso ? (
         <InscribirCursado hijoId={hijoId} onInscripto={refrescarHijos} />
       ) : (
         <>
-          <p className="mb-3 text-sm text-slate-500">
+          <p className="mb-3 text-sm text-ink-faint">
             Curso: <b>{hijo?.curso}</b> — profesor a cargo de cada materia (RF-11).
           </p>
           <MateriasCursoList materias={materias} loading={materias === null} mensaje={mensajeMaterias} />
 
-          <p className="mb-2 mt-8 text-sm text-slate-500">Resumen de calificaciones por materia.</p>
+          <p className="mb-2 mt-8 text-sm text-ink-faint">Resumen de calificaciones por materia.</p>
           <MateriasGrid notas={notas} loading={notas === null} />
         </>
       )}

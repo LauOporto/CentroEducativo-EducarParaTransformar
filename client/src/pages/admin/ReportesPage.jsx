@@ -48,15 +48,15 @@ function PorAlumnoCard() {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
+    <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
       <h4 className="mb-1 text-lg font-semibold"><i className="fas fa-file-pdf mr-2 text-accent" />Reporte por Alumno</h4>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-ink-faint">
         Curso, materias con profesor a cargo, deportes con horarios, transporte y comedor de un alumno.
       </p>
       <form onSubmit={descargar} className="flex flex-wrap gap-2">
         <select
           required value={estudianteId} onChange={(e) => setEstudianteId(e.target.value)}
-          className="min-w-[280px] flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="min-w-[280px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Elegir alumno…</option>
           {estudiantes.map((a) => (
@@ -96,15 +96,15 @@ function ListadoPorCursoCard() {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
+    <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
       <h4 className="mb-1 text-lg font-semibold"><i className="fas fa-file-pdf mr-2 text-accent" />Listado de Alumnos por Curso</h4>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-ink-faint">
         Nivel, curso, legajo, apellido y nombre — de toda la matrícula o de un curso puntual.
       </p>
       <form onSubmit={descargar} className="flex flex-wrap gap-2">
         <select
           value={cursoId} onChange={(e) => setCursoId(e.target.value)}
-          className="min-w-[280px] flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="min-w-[280px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Todos los cursos</option>
           {cursos.map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
@@ -142,9 +142,9 @@ function FiltroReporteCard({ titulo, descripcion, reportKey, nombreArchivo, camp
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
+    <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
       <h4 className="mb-1 text-lg font-semibold"><i className="fas fa-file-pdf mr-2 text-accent" />{titulo}</h4>
-      <p className="mb-4 text-sm text-slate-500">{descripcion}</p>
+      <p className="mb-4 text-sm text-ink-faint">{descripcion}</p>
       <form onSubmit={descargar} className="flex flex-wrap gap-2">
         {campos.map((c) => (
           <select
@@ -152,7 +152,7 @@ function FiltroReporteCard({ titulo, descripcion, reportKey, nombreArchivo, camp
             required={c.required}
             value={c.value}
             onChange={(e) => c.onChange(e.target.value)}
-            className="min-w-[200px] flex-1 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+            className="min-w-[200px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
           >
             <option value="">{c.placeholder}</option>
             {c.opciones.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
@@ -353,7 +353,7 @@ function ListadoPorRecorridoCard() {
 export default function ReportesPage() {
   return (
     <div>
-      <h3 className="mb-5 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Reportes Gerenciales</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Reportes Gerenciales</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <PorAlumnoCard />
         <ListadoPorCursoCard />

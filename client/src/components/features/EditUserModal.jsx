@@ -65,7 +65,7 @@ export default function EditUserModal({ user, onClose, onSaved }) {
     }
   };
 
-  const campo = (extra = '') => `rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900 ${extra}`;
+  const campo = (extra = '') => `rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900 ${extra}`;
 
   return (
     <Modal open onClose={onClose} title="Editar usuario" wide>
@@ -85,12 +85,12 @@ export default function EditUserModal({ user, onClose, onSaved }) {
               {cursos.map((c) => <option key={c.id} value={c.etiqueta}>{c.etiqueta}</option>)}
             </select>
 
-            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-ink-faint">
               Ficha de alumno
             </div>
             <input placeholder="Legajo" value={form.legajo} onChange={(e) => setForm({ ...form, legajo: e.target.value })} className={campo()} />
             <input placeholder="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} className={campo()} />
-            <label className="flex flex-col gap-1 text-xs text-slate-500">
+            <label className="flex flex-col gap-1 text-xs text-ink-faint">
               Fecha de nacimiento
               <input type="date" value={form.fechaNacimiento} onChange={(e) => setForm({ ...form, fechaNacimiento: e.target.value })} className={campo()} />
             </label>
@@ -104,7 +104,7 @@ export default function EditUserModal({ user, onClose, onSaved }) {
 
         {esDocente && (
           <>
-            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <div className="col-span-2 -mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-ink-faint">
               Ficha de profesor
             </div>
             <input placeholder="Legajo" value={form.legajo} onChange={(e) => setForm({ ...form, legajo: e.target.value })} className={campo()} />
@@ -118,7 +118,7 @@ export default function EditUserModal({ user, onClose, onSaved }) {
         )}
 
         <div className="col-span-2 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded bg-slate-500 px-4 py-2 text-sm text-white">Cancelar</button>
+          <button type="button" onClick={onClose} className="rounded bg-blue-500 px-4 py-2 text-sm text-white">Cancelar</button>
           <button type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white"><i className="fas fa-save" /> Guardar cambios</button>
         </div>
       </form>
