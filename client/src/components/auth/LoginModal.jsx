@@ -5,6 +5,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { ROLE_ROUTES } from '../../domain/roles';
 
+const campo = 'w-full rounded border border-blue-200 px-4 py-3 text-ink placeholder:text-ink-faint focus:border-blue-500';
+
 export default function LoginModal({ open, onClose, onSwitchToRegister }) {
   const { login } = useAuth();
   const toast = useToast();
@@ -28,29 +30,15 @@ export default function LoginModal({ open, onClose, onSwitchToRegister }) {
   return (
     <Modal open={open} onClose={onClose} title="Iniciar sesión">
       <form onSubmit={submit} className="flex flex-col gap-3">
-        <input
-          required
-          placeholder="Usuario"
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          className="rounded-lg border border-slate-300 p-2.5 dark:border-slate-600 dark:bg-slate-800"
-        />
-        <input
-          required
-          type="password"
-          placeholder="Contraseña"
-          minLength={6}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border border-slate-300 p-2.5 dark:border-slate-600 dark:bg-slate-800"
-        />
-        <button type="submit" className="rounded-lg bg-accent py-2.5 font-semibold text-white">
+        <input required placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} className={campo} />
+        <input required type="password" placeholder="Contraseña" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className={campo} />
+        <button type="submit" className="mt-1 rounded bg-blue-500 py-3 font-semibold text-white transition hover:bg-blue-600">
           Ingresar
         </button>
       </form>
-      <p className="mt-4 text-center text-sm text-slate-500">
+      <p className="mt-5 text-center text-sm text-ink-soft">
         ¿No tenés cuenta?{' '}
-        <button onClick={onSwitchToRegister} className="font-semibold text-accent">
+        <button onClick={onSwitchToRegister} className="font-semibold text-blue-500 hover:text-blue-600">
           Registrate acá
         </button>
       </p>
