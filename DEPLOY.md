@@ -75,6 +75,7 @@ Cambiá la contraseña y el email antes de correrlo.
 
 ## Problemas conocidos / troubleshooting
 
+- **El build falla con `Error: Cannot find matching keyid` en `corepack`**: bug conocido de `corepack enable` (intenta resolver la última versión de pnpm contra el registro de npm y falla verificando la firma). Por eso `render.yaml` ya instala pnpm directo con `npm install -g pnpm@11.1.1` en vez de usar corepack — si lo ves igual, confirmá que el build command no haya vuelto a tener `corepack enable`.
 - **El build falla compilando `bcrypt`**: es un módulo nativo. Si el build falla justo ahí, la solución es migrar `bcrypt` → `bcryptjs` (API idéntica, sin compilación nativa) en `backend/package.json` y en los 2 imports (`auth.routes.ts`, `admin.routes.ts`).
 - **Error de conexión a la base**: confirmá que el connection string de Neon tenga `?sslmode=require` al final y que no le falte ningún caracter al copiarlo.
 - **Error de CORS en el navegador**: no debería pasar en este esquema (mismo origen), pero si lo ves, confirmá que `CORS_ORIGIN` tenga el dominio público exacto que te dio Render, sin `/` al final.
