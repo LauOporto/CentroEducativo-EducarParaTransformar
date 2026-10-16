@@ -18,27 +18,40 @@ expira a los 90 días en el plan free; el de Neon no expira.)
 
 ## 2. Web Service — Render
 
-1. [render.com](https://render.com) → crear cuenta con GitHub (sin tarjeta) → **New** → **Web Service** → elegí este repositorio.
-2. Render va a detectar `render.yaml` (ya está en el repo) y precargar build/start command solos. Si te pregunta el **Root Directory**, dejalo vacío (raíz del repo) — el build compila `client/` y `backend/` juntos, y en runtime el backend busca `client/dist` como carpeta hermana.
-3. Plan: **Free**.
+`render.yaml` solo se aplica automáticamente si creás el servicio con **New → Blueprint** (apunta al repo, Render lee el archivo y precarga todo: build command, start command y variables). Si en cambio usás **New → Web Service** y elegís el repo a mano, Render **ignora `render.yaml`** — hay que cargar cada cosa vos mismo en el dashboard (es lo que pasó en el primer intento de este proyecto). Las dos sirven, elegí una:
 
-## 3. Variables de entorno
+- **Blueprint** (menos pasos, recomendado): `New` → `Blueprint` → este repo → Render arma el servicio con el build command, el start command y los secretos JWT ya generados. Solo te va a faltar completar `DATABASE_URL` y `CORS_ORIGIN` a mano (ver paso 3).
+- **Web Service manual**: `New` → `Web Service` → este repo → plan **Free** → cargá vos el Build Command y el Start Command (ver paso 3) y **todas** las variables de entorno.
 
-`render.yaml` ya define casi todo. Las que quedan en blanco (`sync: false`) las completás vos en **Environment** una vez creado el servicio:
+En cualquiera de los dos casos, si te pregunta el **Root Directory**, dejalo vacío (raíz del repo) — el build compila `client/` y `backend/` juntos, y en runtime el backend busca `client/dist` como carpeta hermana.
+
+## 3. Build/Start command y variables de entorno
+
+Si usaste **Web Service manual**, en Settings cargá:
+
+- **Build Command**: `npm install -g pnpm@11.1.1 && pnpm install --frozen-lockfile && pnpm run build`
+- **Start Command**: `pnpm --filter backend run deploy:start`
+
+Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo las dos marcadas):
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | El connection string de Neon (paso 1). |
-| `CORS_ORIGIN` | El dominio que Render te asigna — lo ves recién después del primer deploy (`https://educar-para-transformar.onrender.com` o similar, sin `/` al final). |
-
-El resto (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `NODE_ENV`, etc.) ya vienen generadas/seteadas por el blueprint.
+| `NODE_ENV` | `production` |
+| `JWT_ACCESS_EXPIRES_IN` | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | `24h` |
+| `UPLOAD_DIR` | `uploads` |
+| `MAX_UPLOAD_SIZE_MB` | `20` |
+| `JWT_ACCESS_SECRET` | Generalo con `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` — 32+ caracteres, obligatorio. |
+| `JWT_REFRESH_SECRET` | Mismo comando, otra corrida (tiene que ser distinto al anterior). |
+| `DATABASE_URL` ⚠️ siempre manual | El connection string de Neon (paso 1). |
+| `CORS_ORIGIN` ⚠️ siempre manual | El dominio que Render te asigna — lo ves arriba del dashboard del servicio una vez creado (`https://algo.onrender.com`, sin `/` al final). |
 
 ## 4. Deploy
 
-Guardá las variables → Render buildea y levanta solo. La secuencia:
+Guardá → Render buildea y levanta solo. La secuencia:
 
 ```
-corepack enable && pnpm install --frozen-lockfile && pnpm run build
+npm install -g pnpm@11.1.1 && pnpm install --frozen-lockfile && pnpm run build
 pnpm --filter backend run deploy:start   # prisma migrate deploy && node dist/index.js
 ```
 
@@ -75,6 +88,7 @@ Cambiá la contraseña y el email antes de correrlo.
 
 ## Problemas conocidos / troubleshooting
 
+- **`Variables de entorno inválidas` / `JWT_ACCESS_SECRET debe tener al menos 32 caracteres`**: falta cargar esa variable (o `JWT_REFRESH_SECRET`) en Environment — pasa si el servicio se creó como Web Service manual y no con Blueprint, ver paso 3.
 - **El build falla con `Error: Cannot find matching keyid` en `corepack`**: bug conocido de `corepack enable` (intenta resolver la última versión de pnpm contra el registro de npm y falla verificando la firma). Por eso `render.yaml` ya instala pnpm directo con `npm install -g pnpm@11.1.1` en vez de usar corepack — si lo ves igual, confirmá que el build command no haya vuelto a tener `corepack enable`.
 - **El build falla compilando `bcrypt`**: es un módulo nativo. Si el build falla justo ahí, la solución es migrar `bcrypt` → `bcryptjs` (API idéntica, sin compilación nativa) en `backend/package.json` y en los 2 imports (`auth.routes.ts`, `admin.routes.ts`).
 - **Error de conexión a la base**: confirmá que el connection string de Neon tenga `?sslmode=require` al final y que no le falte ningún caracter al copiarlo.
