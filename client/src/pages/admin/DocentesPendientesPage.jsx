@@ -4,6 +4,7 @@ import { useToast } from '../../hooks/useToast';
 import { useAdminPendingCounts } from '../../hooks/useAdminPendingCounts';
 import DataTable from '../../components/ui/DataTable';
 import ApproveTeacherModal from '../../components/features/ApproveTeacherModal';
+import HistorialPanel from '../../components/features/HistorialPanel';
 
 function formatFecha(iso) {
   const d = new Date(iso);
@@ -69,8 +70,9 @@ export default function DocentesPendientesPage() {
 
   return (
     <div>
-      <h3 className="mb-2 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Docentes pendientes de aprobación</h3>
-      <p className="mb-4 text-sm text-slate-500">Estos usuarios se registraron como docentes y necesitan tu autorización para poder iniciar sesión.</p>
+      <h3 className="mb-2 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Docentes pendientes de aprobación</h3>
+      <p className="mb-4 text-sm text-ink-faint">Estos usuarios se registraron como docentes y necesitan tu autorización para poder iniciar sesión.</p>
+      <HistorialPanel entidad="DocentePendiente" />
       <DataTable columns={columns} rows={docentes ?? []} loading={docentes === null} emptyMessage="No hay docentes esperando aprobación." />
       {approving && (
         <ApproveTeacherModal

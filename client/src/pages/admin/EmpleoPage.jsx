@@ -5,6 +5,7 @@ import { useAdminPendingCounts } from '../../hooks/useAdminPendingCounts';
 import DataTable from '../../components/ui/DataTable';
 import ModerationStatusBadge from '../../components/features/ModerationStatusBadge';
 import ModerationActions from '../../components/features/ModerationActions';
+import HistorialPanel from '../../components/features/HistorialPanel';
 
 function formatFecha(iso) {
   return new Date(iso).toLocaleDateString('es-AR');
@@ -63,7 +64,7 @@ export default function EmpleoPage() {
       label: 'CV',
       render: (p) => (p.cvUrl
         ? <a href={p.cvUrl} target="_blank" rel="noreferrer" className="font-semibold text-accent"><i className="fas fa-file-pdf" /> Ver CV</a>
-        : <span className="text-slate-400">Sin CV</span>),
+        : <span className="text-ink-faint">Sin CV</span>),
     },
     { key: 'status', label: 'Estado', render: (p) => <ModerationStatusBadge status={p.status} /> },
     { key: 'createdAt', label: 'Recibida', render: (p) => formatFecha(p.createdAt) },
@@ -83,8 +84,9 @@ export default function EmpleoPage() {
 
   return (
     <div>
-      <h3 className="mb-4 border-b border-slate-200 pb-3 text-xl font-bold dark:border-slate-700">Postulaciones de empleo</h3>
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className="mb-4 rounded border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+      <h3 className="mb-4 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Postulaciones de empleo</h3>
+      <HistorialPanel entidad="EmploymentApplication" />
+      <select value={status} onChange={(e) => setStatus(e.target.value)} className="mb-4 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
         <option value="PENDIENTE">Pendientes</option>
         <option value="APROBADO">Aprobadas</option>
         <option value="RECHAZADO">Rechazadas</option>
