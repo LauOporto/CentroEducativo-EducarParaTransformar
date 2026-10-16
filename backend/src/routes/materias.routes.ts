@@ -5,7 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
-import { crearAsignacion } from '../services/asignaciones.service';
+import { crearAsignacion, actualizarAsignacion } from '../services/asignaciones.service';
 
 const router = Router();
 
@@ -105,6 +105,15 @@ router.post('/asignaciones', async (req, res, next) => {
   try {
     const data = asignacionSchema.parse(req.body);
     const asignacion = await crearAsignacion(data);
+    res.json({ exito: true, asignacion });
+  } catch (err) { next(err); }
+});
+
+router.patch('/asignaciones/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const data = asignacionSchema.parse(req.body);
+    const asignacion = await actualizarAsignacion(id, data);
     res.json({ exito: true, asignacion });
   } catch (err) { next(err); }
 });

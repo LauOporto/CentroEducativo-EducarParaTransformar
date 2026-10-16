@@ -7,7 +7,6 @@ import { parentRouter } from './parent.routes';
 import { attendanceRouter } from './attendance.routes';
 import { notificationsRouter } from './notifications.routes';
 import { studyPlansRouter } from './studyPlans.routes';
-import { forumRouter } from './forum.routes';
 import { adminRouter } from './admin.routes';
 import { moderationPublicRouter, moderationAdminRouter, requireAdmin } from './moderation.routes';
 import { nivelesRouter } from './niveles.routes';
@@ -19,6 +18,7 @@ import { comedorRouter } from './comedor.routes';
 import { inscripcionesRouter } from './inscripciones.routes';
 import { reportesRouter } from './reportes.routes';
 import { profesoresRouter } from './profesores.routes';
+import { galeriaPublicRouter, galeriaAdminRouter } from './galeria.routes';
 
 const router = Router();
 
@@ -36,7 +36,6 @@ router.use('/parent', parentRouter);
 router.use('/attendance', attendanceRouter);
 router.use('/notifications', notificationsRouter);
 router.use('/study-plans', studyPlansRouter);
-router.use('/forum', forumRouter);
 router.use('/admin', adminRouter);
 router.use('/public', moderationPublicRouter);
 router.use('/admin', ...requireAdmin(), moderationAdminRouter);
@@ -49,5 +48,7 @@ router.use('/comedor', comedorRouter);
 router.use('/inscripciones', inscripcionesRouter);
 router.use('/reportes', reportesRouter);
 router.use('/profesores', profesoresRouter);
+router.use('/public', galeriaPublicRouter);
+router.use('/admin', ...requireAdmin(), galeriaAdminRouter);
 
 export { router as apiRouter };
