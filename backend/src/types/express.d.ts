@@ -8,6 +8,8 @@ declare global {
         role: Role;
         usuario: string;
       };
+      /** URL pública (Cloudinary) del archivo subido en este request, si lo hubo. Ver middleware/upload.ts. */
+      fileUrl?: string;
     }
   }
 }

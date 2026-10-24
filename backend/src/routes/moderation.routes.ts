@@ -5,7 +5,7 @@ import { ModerationStatus, Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
-import { upload, publicUrlFor } from '../middleware/upload';
+import { upload } from '../middleware/upload';
 import { registrarAuditoria } from '../services/auditoria.service';
 
 const publicRouter = Router();
@@ -203,7 +203,7 @@ const employmentSchema = z.object({
 publicRouter.post('/employment', upload.single('cv'), async (req, res, next) => {
   try {
     const data = employmentSchema.parse(req.body);
-    const cvUrl = req.file ? publicUrlFor(req.file.filename) : null;
+    const cvUrl = req.fileUrl ?? null;
     const created = await prisma.employmentApplication.create({
       data: { ...data, cvUrl },
     });

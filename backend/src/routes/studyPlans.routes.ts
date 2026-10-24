@@ -4,7 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { requireAuth, requireRole } from '../middleware/auth';
-import { upload, publicUrlFor } from '../middleware/upload';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
@@ -51,7 +51,7 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), upload.sing
         titulo: data.titulo,
         objetivos: data.objetivos,
         contenidos: data.contenidos,
-        fileUrl: req.file ? publicUrlFor(req.file.filename) : null,
+        fileUrl: req.fileUrl ?? null,
       },
     });
     res.json({ exito: true, plan: created });

@@ -17,8 +17,14 @@ const envSchema = z.object({
   // la tabla Session (ver auth.routes.ts); esto es solo el límite del JWT.
   JWT_REFRESH_EXPIRES_IN: z.string().default('24h'),
 
-  UPLOAD_DIR: z.string().default('uploads'),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().positive().default(20),
+
+  // Cloudinary: storage externo para los archivos subidos (galería, CVs,
+  // planes de estudio). El plan free de Render no tiene disco persistente
+  // — sin esto, cada reinicio del servicio borra los archivos.
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME es obligatorio'),
+  CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY es obligatorio'),
+  CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET es obligatorio'),
 });
 
 const parsed = envSchema.safeParse(process.env);

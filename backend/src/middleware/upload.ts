@@ -1,31 +1,47 @@
-import path from 'node:path';
-import fs from 'node:fs';
+import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
+import type { NextFunction, Request, Response } from 'express';
 import { env } from '../config/env';
+import { HttpError } from '../utils/httpError';
 
-const uploadsAbs = path.resolve(process.cwd(), env.UPLOAD_DIR);
-if (!fs.existsSync(uploadsAbs)) {
-  fs.mkdirSync(uploadsAbs, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsAbs),
-  filename: (_req, file, cb) => {
-    const ts = Date.now();
-    const rnd = Math.random().toString(36).slice(2, 8);
-    const safe = file.originalname
-      .replace(/[^a-zA-Z0-9.\-_]/g, '_')
-      .slice(0, 80);
-    cb(null, `${ts}-${rnd}-${safe}`);
-  },
+cloudinary.config({
+  cloud_name: env.CLOUDINARY_CLOUD_NAME,
+  api_key: env.CLOUDINARY_API_KEY,
+  api_secret: env.CLOUDINARY_API_SECRET,
 });
 
-export const upload = multer({
-  storage,
+const multerUpload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: env.MAX_UPLOAD_SIZE_MB * 1024 * 1024 },
 });
 
-/** Devuelve la URL pública servida por Express para un archivo guardado. */
-export function publicUrlFor(filename: string): string {
-  return `/uploads/${filename}`;
+/**
+ * Middleware de subida de un único archivo: lo recibe en memoria (multer) y
+ * lo sube a Cloudinary, dejando la URL pública en `req.fileUrl`. Reemplaza
+ * al disco local porque el plan free de Render no tiene almacenamiento
+ * persistente entre reinicios del servicio.
+ */
+function single(fieldName: string) {
+  const parseField = multerUpload.single(fieldName);
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    parseField(req, res, (err) => {
+      if (err) return next(err);
+      if (!req.file) return next();
+
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'educar-para-transformar', resource_type: 'auto' },
+        (uploadErr, result) => {
+          if (uploadErr || !result) {
+            return next(uploadErr ?? HttpError.internal('No se pudo subir el archivo.'));
+          }
+          req.fileUrl = result.secure_url;
+          next();
+        },
+      );
+      stream.end(req.file.buffer);
+    });
+  };
 }
+
+export const upload = { single };
