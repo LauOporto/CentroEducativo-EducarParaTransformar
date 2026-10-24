@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
@@ -25,6 +26,7 @@ export function createApp() {
       credentials: true,
     }),
   );
+  app.use(compression());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
@@ -40,15 +42,12 @@ export function createApp() {
     });
   });
 
-  const uploadsAbsPath = path.resolve(process.cwd(), env.UPLOAD_DIR);
-  app.use('/uploads', express.static(uploadsAbsPath));
-
   app.use('/api', apiRouter);
 
   const clientDistDir = path.resolve(process.cwd(), '..', 'client', 'dist');
   app.use(express.static(clientDistDir));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+    if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(clientDistDir, 'index.html'));
   });
 

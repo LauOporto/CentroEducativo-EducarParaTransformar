@@ -40,10 +40,6 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-# Uploads (archivos subidos por usuarios)
-backend/uploads/*
-!backend/uploads/.gitkeep
-
 # Cache
 .cache/
 .turbo/

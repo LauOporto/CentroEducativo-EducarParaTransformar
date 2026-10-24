@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
-import { upload, publicUrlFor } from '../middleware/upload';
+import { upload } from '../middleware/upload';
 import { registrarAuditoria } from '../services/auditoria.service';
 
 // RF-7: galería administrable desde el panel Admin (antes eran URLs de
@@ -25,10 +25,10 @@ const crearSchema = z.object({
 
 adminRouter.post('/galeria', upload.single('imagen'), async (req, res, next) => {
   try {
-    if (!req.file) throw HttpError.badRequest('Falta el archivo de imagen.');
+    if (!req.fileUrl) throw HttpError.badRequest('Falta el archivo de imagen.');
     const data = crearSchema.parse(req.body);
     const imagen = await prisma.galeriaImagen.create({
-      data: { url: publicUrlFor(req.file.filename), alt: data.alt, orden: data.orden ?? 0 },
+      data: { url: req.fileUrl, alt: data.alt, orden: data.orden ?? 0 },
     });
     await registrarAuditoria({
       usuarioId: req.authUser!.id, accion: 'ALTA', entidad: 'GaleriaImagen', entidadId: imagen.id, detalle: imagen.alt,
@@ -40,10 +40,9 @@ adminRouter.post('/galeria', upload.single('imagen'), async (req, res, next) => 
 adminRouter.delete('/galeria/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    // ponytail: no se borra el archivo físico en uploads/, solo la fila.
-    // Para un proyecto de cátedra no justifica el manejo de errores extra
-    // de borrar-archivo-que-capaz-no-existe; si el disco crece, agregar
-    // fs.unlink acá.
+    // ponytail: no se borra el archivo en Cloudinary, solo la fila. Para un
+    // proyecto de cátedra no justifica guardar el public_id y llamar a la
+    // API de borrado; si el storage gratuito se llena, agregarlo acá.
     await prisma.galeriaImagen.delete({ where: { id } });
     await registrarAuditoria({ usuarioId: req.authUser!.id, accion: 'BAJA', entidad: 'GaleriaImagen', entidadId: id });
     res.json({ exito: true });
