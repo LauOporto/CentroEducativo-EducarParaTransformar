@@ -12,11 +12,6 @@ services:
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 24h
-      # Sin disco persistente en el plan free: los archivos subidos se
-      # pierden si el servicio se reinicia/redeploya. Limitación
-      # conocida, ver DEPLOY.md.
-      - key: UPLOAD_DIR
-        value: uploads
       - key: MAX_UPLOAD_SIZE_MB
         value: 20
       - key: JWT_ACCESS_SECRET
@@ -24,9 +19,16 @@ services:
       - key: JWT_REFRESH_SECRET
         generateValue: true
       # Se completan a mano en el dashboard de Render (ver DEPLOY.md):
-      # DATABASE_URL depende de Neon, CORS_ORIGIN del dominio que
-      # Render asigna recién en el primer deploy.
+      # DATABASE_URL depende de Neon, CORS_ORIGIN del dominio que Render
+      # asigna recién en el primer deploy, y las 3 de Cloudinary de la
+      # cuenta free (sin disco persistente, los archivos subidos viven ahí).
       - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGIN
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false

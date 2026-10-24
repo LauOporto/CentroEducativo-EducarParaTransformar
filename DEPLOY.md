@@ -16,16 +16,24 @@ expira a los 90 días en el plan free; el de Neon no expira.)
    postgresql://usuario:password@ep-algo.region.aws.neon.tech/neondb?sslmode=require
    ```
 
-## 2. Web Service — Render
+## 2. Storage de archivos — Cloudinary
+
+Los archivos que suben los usuarios (imágenes de la galería, CVs de postulaciones, planes de estudio) se guardan en Cloudinary en vez del disco del servidor, porque el plan free de Render no tiene disco persistente — cualquier archivo guardado localmente se pierde en el próximo deploy o reinicio del servicio.
+
+1. [cloudinary.com](https://cloudinary.com) → crear cuenta (sin tarjeta).
+2. En el dashboard, sección **Product Environment Credentials** / **API Keys**, vas a ver tres valores: **Cloud name**, **API Key** y **API Secret**. Guardalos — son `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET`.
+3. El plan free incluye 25GB de storage, de sobra para este proyecto.
+
+## 3. Web Service — Render
 
 `render.yaml` solo se aplica automáticamente si creás el servicio con **New → Blueprint** (apunta al repo, Render lee el archivo y precarga todo: build command, start command y variables). Si en cambio usás **New → Web Service** y elegís el repo a mano, Render **ignora `render.yaml`** — hay que cargar cada cosa vos mismo en el dashboard (es lo que pasó en el primer intento de este proyecto). Las dos sirven, elegí una:
 
-- **Blueprint** (menos pasos, recomendado): `New` → `Blueprint` → este repo → Render arma el servicio con el build command, el start command y los secretos JWT ya generados. Solo te va a faltar completar `DATABASE_URL` y `CORS_ORIGIN` a mano (ver paso 3).
-- **Web Service manual**: `New` → `Web Service` → este repo → plan **Free** → cargá vos el Build Command y el Start Command (ver paso 3) y **todas** las variables de entorno.
+- **Blueprint** (menos pasos, recomendado): `New` → `Blueprint` → este repo → Render arma el servicio con el build command, el start command y los secretos JWT ya generados. Solo te va a faltar completar `DATABASE_URL`, `CORS_ORIGIN` y las 3 de Cloudinary a mano (ver paso 4).
+- **Web Service manual**: `New` → `Web Service` → este repo → plan **Free** → cargá vos el Build Command y el Start Command (ver paso 4) y **todas** las variables de entorno.
 
 En cualquiera de los dos casos, si te pregunta el **Root Directory**, dejalo vacío (raíz del repo) — el build compila `client/` y `backend/` juntos, y en runtime el backend busca `client/dist` como carpeta hermana.
 
-## 3. Build/Start command y variables de entorno
+## 4. Build/Start command y variables de entorno
 
 Si usaste **Web Service manual**, en Settings cargá:
 
@@ -39,14 +47,16 @@ Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo la
 | `NODE_ENV` | `production` |
 | `JWT_ACCESS_EXPIRES_IN` | `15m` |
 | `JWT_REFRESH_EXPIRES_IN` | `24h` |
-| `UPLOAD_DIR` | `uploads` |
 | `MAX_UPLOAD_SIZE_MB` | `20` |
 | `JWT_ACCESS_SECRET` | Generalo con `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` — 32+ caracteres, obligatorio. |
 | `JWT_REFRESH_SECRET` | Mismo comando, otra corrida (tiene que ser distinto al anterior). |
 | `DATABASE_URL` ⚠️ siempre manual | El connection string de Neon (paso 1). |
 | `CORS_ORIGIN` ⚠️ siempre manual | El dominio que Render te asigna — lo ves arriba del dashboard del servicio una vez creado (`https://algo.onrender.com`, sin `/` al final). |
+| `CLOUDINARY_CLOUD_NAME` ⚠️ siempre manual | De tu cuenta de Cloudinary (paso 2). |
+| `CLOUDINARY_API_KEY` ⚠️ siempre manual | Ídem. |
+| `CLOUDINARY_API_SECRET` ⚠️ siempre manual | Ídem. |
 
-## 4. Deploy
+## 5. Deploy
 
 Guardá → Render buildea y levanta solo. La secuencia:
 
@@ -59,7 +69,7 @@ pnpm --filter backend run deploy:start   # prisma migrate deploy && node dist/in
 
 Con la URL ya generada, volvé a **Environment** y completá `CORS_ORIGIN` con esa URL exacta — eso dispara un redeploy automático.
 
-## 5. Crear el primer admin real
+## 6. Crear el primer admin real
 
 Desde el **Shell** del servicio en Render (pestaña "Shell" del dashboard), corré una sola vez:
 
@@ -83,12 +93,11 @@ Cambiá la contraseña y el email antes de correrlo.
 
 ## Limitaciones conocidas del plan free
 
-- **Los archivos subidos no persisten**: el plan free de Render no tiene disco persistente (a diferencia de Railway, acá ni pagando el plan más chico lo da). Cada CV de una postulación y cada imagen de la galería se pierde en el próximo deploy o reinicio del servicio. Para una demo académica es aceptable; si en algún momento hace falta que persistan de verdad, la solución es subirlos a un storage externo (ej. Cloudinary, tiene plan free) en vez de al disco local — eso sí implica cambiar código (`backend/src/middleware/upload.ts`), no es solo configuración.
-- **El servicio "duerme"**: sin tráfico durante 15 minutos, Render apaga la instancia. El próximo request la despierta, pero tarda entre 30 y 50 segundos en responder. No es un error — si vas a hacer una demo en vivo, abrí la URL un par de minutos antes para que esté despierta.
+- **El servicio "duerme"**: sin tráfico durante 15 minutos, Render apaga la instancia. El próximo request la despierta, pero tarda entre 30 y 50 segundos en responder. No es un error — si vas a hacer una demo en vivo, abrí la URL un par de minutos antes para que esté despierta. (Los archivos subidos no se pierden con esto: viven en Cloudinary, no en el disco del servicio.)
 
 ## Problemas conocidos / troubleshooting
 
-- **`Variables de entorno inválidas` / `JWT_ACCESS_SECRET debe tener al menos 32 caracteres`**: falta cargar esa variable (o `JWT_REFRESH_SECRET`) en Environment — pasa si el servicio se creó como Web Service manual y no con Blueprint, ver paso 3.
+- **`Variables de entorno inválidas` / `JWT_ACCESS_SECRET debe tener al menos 32 caracteres`** (o `CLOUDINARY_...` / `DATABASE_URL`)**:** falta cargar esa variable en Environment — pasa si el servicio se creó como Web Service manual y no con Blueprint, ver paso 4.
 - **El build falla con `Error: Cannot find matching keyid` en `corepack`**: bug conocido de `corepack enable` (intenta resolver la última versión de pnpm contra el registro de npm y falla verificando la firma). Por eso `render.yaml` ya instala pnpm directo con `npm install -g pnpm@11.1.1` en vez de usar corepack — si lo ves igual, confirmá que el build command no haya vuelto a tener `corepack enable`.
 - **El build falla compilando `bcrypt`**: es un módulo nativo. Si el build falla justo ahí, la solución es migrar `bcrypt` → `bcryptjs` (API idéntica, sin compilación nativa) en `backend/package.json` y en los 2 imports (`auth.routes.ts`, `admin.routes.ts`).
 - **Error de conexión a la base**: confirmá que el connection string de Neon tenga `?sslmode=require` al final y que no le falte ningún caracter al copiarlo.
