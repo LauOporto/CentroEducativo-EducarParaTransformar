@@ -39,4 +39,26 @@ describe('RF-18 · Máximo 2 deportes simultáneos por alumno', () => {
     cy.contains('Inscripto al deporte.').should('be.visible');
     cy.get('[data-cy=deportes-inscriptos] li').should('have.length', 2).and('contain', 'Básquet');
   });
+
+  // HU2 está escrita desde el Padre/Tutor: la regla vale igual para él, y un
+  // padre no vinculado ni siquiera llega a la regla (403).
+  it('HU2: el padre vinculado recibe el mismo rechazo y otro padre no puede inscribirlo', () => {
+    cy.loginApi('fbarrabino').then(({ id, token }) => {
+      cy.api('GET', `/api/inscripciones/estudiantes/${id}/resumen`, token).then(({ body }) => {
+        const basquet = body.deportes.disponibles.find((g) => g.deporte === 'Básquet');
+        const inscribir = (padre) =>
+          cy
+            .loginApi(padre)
+            .then((p) =>
+              cy.api('POST', `/api/inscripciones/estudiantes/${id}/deportes`, p.token, { grupoDeporteId: basquet.id }),
+            );
+
+        inscribir('pbarrabino').then((res) => {
+          expect(res.status).to.eq(409);
+          expect(JSON.stringify(res.body)).to.contain('ya está inscripto en 2 deportes');
+        });
+        inscribir('rperez').its('status').should('eq', 403);
+      });
+    });
+  });
 });

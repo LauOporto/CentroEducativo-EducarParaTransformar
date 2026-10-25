@@ -44,7 +44,10 @@ export default tseslint.config(
 
   {
     files: ['scripts/**/*.mjs', '*.config.{js,mjs}', 'client/*.config.js', 'client/cypress/**/*.js'],
-    languageOptions: { globals: { ...globals.node, ...globals.mocha, cy: 'readonly', Cypress: 'readonly' } },
+    // Cypress expone cy, Cypress y expect (Chai) como globales.
+    languageOptions: {
+      globals: { ...globals.node, ...globals.mocha, cy: 'readonly', Cypress: 'readonly', expect: 'readonly' },
+    },
   },
 
   prettier,
