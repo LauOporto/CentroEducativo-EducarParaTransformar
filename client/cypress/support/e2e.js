@@ -23,18 +23,23 @@ Cypress.Commands.add('loginUI', (usuario) => {
 
 // Deja a fbarrabino como en el seed: Fútbol y Vóley de Secundaria. Así cada
 // prueba arranca del mismo estado, sin depender del orden en que corren.
-const DEPORTES_SEED = ['Fútbol', 'Vóley'];
+// Hay varios grupos por deporte: se identifica el del seed por día y nivel.
+const GRUPOS_SEED = [
+  { deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: 'MARTES' },
+  { deporte: 'Vóley', nivel: 'Secundaria', diaSemana: 'MIERCOLES' },
+];
+const esDelSeed = (g, s) => g.deporte === s.deporte && g.nivel === s.nivel && g.diaSemana === s.diaSemana;
 const BASE_INSCRIPCIONES = '/api/inscripciones/estudiantes';
 
 Cypress.Commands.add('restaurarDeportesSeed', () => {
   cy.loginApi('fbarrabino').then(({ id, token }) => {
     cy.api('GET', `${BASE_INSCRIPCIONES}/${id}/resumen`, token).then(({ body }) => {
       const { inscriptos, disponibles } = body.deportes;
-      for (const g of inscriptos.filter((g) => !DEPORTES_SEED.includes(g.deporte))) {
+      for (const g of inscriptos.filter((g) => !GRUPOS_SEED.some((s) => esDelSeed(g, s)))) {
         cy.api('DELETE', `${BASE_INSCRIPCIONES}/${id}/deportes/${g.id}`, token);
       }
-      for (const deporte of DEPORTES_SEED.filter((d) => !inscriptos.some((g) => g.deporte === d))) {
-        const grupo = disponibles.find((g) => g.deporte === deporte && g.nivel === 'Secundaria');
+      for (const s of GRUPOS_SEED.filter((s) => !inscriptos.some((g) => esDelSeed(g, s)))) {
+        const grupo = disponibles.find((g) => esDelSeed(g, s));
         cy.api('POST', `${BASE_INSCRIPCIONES}/${id}/deportes`, token, { grupoDeporteId: grupo.id });
       }
     });

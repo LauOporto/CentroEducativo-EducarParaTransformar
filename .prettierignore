@@ -4,3 +4,5 @@ pnpm-lock.yaml
 frontend
 backend/prisma/migrations
 *.md
+# Datos del seed alineados en columnas a propósito (se leen como tabla).
+backend/prisma/seed.ts
