@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 import { profesoresService } from '../../services/api/profesoresService';
 import { useToast } from '../../hooks/useToast';
 
 export default function PerfilPage() {
-  const { user } = useAuth();
   const toast = useToast();
   const [perfil, setPerfil] = useState(null);
   const [editando, setEditando] = useState(false);

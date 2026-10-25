@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { adminService } from '../../services/api/adminService';
-import { useToast } from '../../hooks/useToast';
 import DataTable from '../../components/ui/DataTable';
 import EditUserModal from '../../components/features/EditUserModal';
 import AsignarMateriaModal from '../../components/features/AsignarMateriaModal';
 
 export default function ProfesoresPage() {
-  const toast = useToast();
   const [profesores, setProfesores] = useState(null);
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
@@ -18,7 +16,7 @@ export default function ProfesoresPage() {
     if (data.exito) {
       let filtrados = data.usuarios;
       if (estado) {
-        filtrados = filtrados.filter(p => p.estadoProfesor === estado);
+        filtrados = filtrados.filter((p) => p.estadoProfesor === estado);
       }
       setProfesores(filtrados);
     } else {
@@ -43,8 +41,12 @@ export default function ProfesoresPage() {
       label: 'Acciones',
       render: (p) => (
         <div className="flex gap-1.5">
-          <button onClick={() => setEditing(p)} className="rounded bg-blue-500 px-2.5 py-1.5 text-xs text-white">Editar</button>
-          <button onClick={() => setAsignando(p)} className="rounded bg-accent px-2.5 py-1.5 text-xs text-white">Materias</button>
+          <button onClick={() => setEditing(p)} className="rounded bg-blue-500 px-2.5 py-1.5 text-xs text-white">
+            Editar
+          </button>
+          <button onClick={() => setAsignando(p)} className="rounded bg-accent px-2.5 py-1.5 text-xs text-white">
+            Materias
+          </button>
         </div>
       ),
     },
@@ -52,7 +54,9 @@ export default function ProfesoresPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Gestión de Profesores</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+        Gestión de Profesores
+      </h3>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
@@ -61,7 +65,11 @@ export default function ProfesoresPage() {
           onChange={(e) => setQ(e.target.value)}
           className="flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
-        <select value={estado} onChange={(e) => setEstado(e.target.value)} className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+        <select
+          value={estado}
+          onChange={(e) => setEstado(e.target.value)}
+          className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+        >
           <option value="">Todos los estados</option>
           <option value="ACTIVO">Activo</option>
           <option value="LICENCIA">Licencia</option>
@@ -69,7 +77,12 @@ export default function ProfesoresPage() {
         </select>
       </div>
 
-      <DataTable columns={columns} rows={profesores ?? []} loading={profesores === null} emptyMessage="Sin resultados." />
+      <DataTable
+        columns={columns}
+        rows={profesores ?? []}
+        loading={profesores === null}
+        emptyMessage="Sin resultados."
+      />
 
       <EditUserModal
         user={editing}

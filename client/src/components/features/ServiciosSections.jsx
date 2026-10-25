@@ -22,7 +22,8 @@ export const DIAS_LABEL = {
 // como ISO completo (@db.Time), acá solo se necesita la parte HH:mm.
 export const horaLabel = (iso) => iso.slice(11, 16);
 
-const selectCls = 'min-w-[260px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900';
+const selectCls =
+  'min-w-[260px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900';
 const btnPrimary = 'rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50';
 const btnDanger = 'rounded bg-red-500 px-2.5 py-1 text-xs text-white';
 const cardCls = 'rounded-lg border border-blue-100 p-4 dark:border-slate-700';
@@ -59,19 +60,25 @@ export function DeportesSection({ estudianteId, resumen, onCambio }) {
   };
 
   return (
-    <div className={cardCls}>
+    <div className={cardCls} data-cy="deportes">
       <h4 className="mb-3 text-lg font-semibold">Deportes</h4>
 
       {resumen.inscriptos.length === 0 ? (
         <p className="mb-3 text-sm text-ink-faint">Todavía no está inscripto a ningún deporte.</p>
       ) : (
-        <ul className="mb-4 space-y-2">
+        <ul className="mb-4 space-y-2" data-cy="deportes-inscriptos">
           {resumen.inscriptos.map((g) => (
-            <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700">
+            <li
+              key={g.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700"
+            >
               <span>
-                <b>{g.deporte}</b> — {g.nivel}, {DIAS_LABEL[g.diaSemana]} {g.horaInicio} a {g.horaFin} (prof. {g.docente})
+                <b>{g.deporte}</b> — {g.nivel}, {DIAS_LABEL[g.diaSemana]} {g.horaInicio} a {g.horaFin} (prof.{' '}
+                {g.docente})
               </span>
-              <button onClick={() => desinscribir(g)} className={btnDanger}>Dar de baja</button>
+              <button onClick={() => desinscribir(g)} className={btnDanger}>
+                Dar de baja
+              </button>
             </li>
           ))}
         </ul>
@@ -140,8 +147,12 @@ export function TransporteSection({ estudianteId, resumen, catalogo, onCambio })
 
       {resumen.actual ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700">
-          <span>Recorrido actual: <b>{resumen.actual.recorrido}</b></span>
-          <button onClick={quitar} className={btnDanger}>Quitar</button>
+          <span>
+            Recorrido actual: <b>{resumen.actual.recorrido}</b>
+          </span>
+          <button onClick={quitar} className={btnDanger}>
+            Quitar
+          </button>
         </div>
       ) : (
         <p className="mb-3 text-sm text-ink-faint">Todavía no tiene un recorrido asignado.</p>
@@ -201,8 +212,12 @@ export function ComedorSection({ estudianteId, resumen, catalogo, onCambio }) {
 
       {resumen.actual ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-blue-100 p-2 text-sm dark:border-slate-700">
-          <span>Turno actual: <b>{resumen.actual.turno}</b></span>
-          <button onClick={quitar} className={btnDanger}>Quitar</button>
+          <span>
+            Turno actual: <b>{resumen.actual.turno}</b>
+          </span>
+          <button onClick={quitar} className={btnDanger}>
+            Quitar
+          </button>
         </div>
       ) : (
         <p className="mb-3 text-sm text-ink-faint">Todavía no tiene un turno asignado.</p>

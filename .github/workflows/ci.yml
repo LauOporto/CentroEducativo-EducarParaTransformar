@@ -1,5 +1,5 @@
 # Integración Continua: cada PR hacia main y cada push a main pasan por
-# Build → Test → Package. Render despliega main solo si este CI pasó
+# Lint → Build → Test → Package. Render despliega main solo si este CI pasó
 # (autoDeployTrigger: checksPass en render.yaml).
 name: CI
 
@@ -29,8 +29,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile # incluye prisma generate (postinstall)
+      - run: pnpm exec eslint backend scripts
       - run: pnpm --filter backend typecheck
-      - run: pnpm --filter backend test
+      - run: pnpm --filter backend test:coverage # tests unitarios + reporte de cobertura
       - run: pnpm --filter backend build
       - uses: actions/upload-artifact@v4
         with:
@@ -49,9 +50,49 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec eslint client
       - run: pnpm --filter client build
       - uses: actions/upload-artifact@v4
         with:
           name: client-dist-${{ github.sha }}
           path: client/dist
           retention-days: 14
+
+  # Pruebas E2E con Cypress (QA): la app compilada contra un Postgres
+  # descartable, con el seed. Es la suite de regresión de cada PR.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: educar_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://e2e:e2e@localhost:5432/educar_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter client exec cypress install
+      - run: pnpm build
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots-${{ github.sha }}
+          path: client/cypress/screenshots
+          retention-days: 7

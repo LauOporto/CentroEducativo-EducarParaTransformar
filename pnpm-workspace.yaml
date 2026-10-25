@@ -1,6 +1,6 @@
 packages:
-  - "backend"
-  - "client"
+  - 'backend'
+  - 'client'
 
 # Habilita los install scripts nativos que necesitan estas deps:
 # - prisma / @prisma/* descargan engines nativos
@@ -12,3 +12,6 @@ allowBuilds:
   bcrypt: true
   esbuild: true
   prisma: true
+  # cypress: el binario (~500 MB) se baja aparte con `pnpm --filter client exec cypress install`,
+  # solo donde se corren las pruebas E2E (local y CI), nunca en el build de Render.
+  cypress: false
