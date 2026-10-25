@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-3">
         <div>
           <div className="flex items-center gap-2.5">
-            <BrandMark className="h-7 w-7" />
+            <BrandMark className="h-9 w-9 shrink-0 rounded-full bg-white p-0.5" />
             <span className="font-display text-base text-white">Educar Para Transformar</span>
           </div>
           <p className="mt-3 text-sm">Educar es construir comunidad, un vínculo a la vez.</p>

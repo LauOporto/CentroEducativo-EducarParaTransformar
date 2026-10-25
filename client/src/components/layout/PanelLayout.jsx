@@ -24,7 +24,7 @@ export default function PanelLayout({ title, menuItems, topBar, children }) {
         }`}
       >
         <Link to="/" className="flex items-center gap-2.5 px-5 py-5">
-          <BrandMark className="h-8 w-8 shrink-0" />
+          <BrandMark className="h-9 w-9 shrink-0 rounded-full bg-white p-0.5" />
           <span className="font-display text-base leading-tight text-white">Educar Para Transformar</span>
         </Link>
         <p className="px-5 pb-3 text-xs font-medium text-blue-200">{title}</p>

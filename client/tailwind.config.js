@@ -57,9 +57,17 @@ export default {
           '0%': { opacity: '0', transform: 'scale(0.92) rotate(-4deg)' },
           '100%': { opacity: '1', transform: 'scale(1) rotate(0deg)' },
         },
+        // Figuras del isologo (ejes locales de BrandMark): se alejan, y luego
+        // avanzan hasta que la mano interior (punta en 0.5,-3.5) llega justo
+        // al centro de la ronda, se sostienen un instante y vuelven.
+        reach: {
+          '0%, 100%': { transform: 'translate(0.45px, -3.2px)' },
+          '42%, 58%': { transform: 'translate(-0.5px, 3.5px)' },
+        },
       },
       animation: {
         'orbit-in': 'orbit-in 900ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        reach: 'reach 3s ease-in-out infinite',
       },
     },
   },

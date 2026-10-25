@@ -1,25 +1,4 @@
-const PUNTOS = [
-  { color: '#0F9E86', x: 78, y: 40 },
-  { color: '#D1348A', x: 150, y: 28 },
-  { color: '#7A4FCB', x: 168, y: 100 },
-  { color: '#E85A32', x: 108, y: 150 },
-  { color: '#1D63B4', x: 42, y: 112 },
-];
-
-function OrbitoMotif() {
-  return (
-    <svg viewBox="0 0 200 180" className="h-full w-full motion-safe:animate-orbit-in" aria-hidden="true">
-      <circle cx="105" cy="90" r="72" fill="none" stroke="#AFCCF0" strokeWidth="1.5" strokeDasharray="4 7" />
-      {PUNTOS.map((p) => (
-        <line key={`l-${p.color}`} x1="105" y1="90" x2={p.x} y2={p.y} stroke="#AFCCF0" strokeWidth="1.5" />
-      ))}
-      {PUNTOS.map((p) => (
-        <circle key={p.color} cx={p.x} cy={p.y} r="9" fill={p.color} />
-      ))}
-      <circle cx="105" cy="90" r="6" fill="#163A68" />
-    </svg>
-  );
-}
+import BrandMark from './BrandMark';
 
 export default function Hero() {
   return (
@@ -46,8 +25,8 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="hidden h-64 lg:block">
-          <OrbitoMotif />
+        <div className="mx-auto w-full max-w-[16rem] sm:max-w-xs lg:max-w-sm">
+          <BrandMark full animated className="h-auto w-full motion-safe:animate-orbit-in" />
         </div>
       </div>
     </section>
