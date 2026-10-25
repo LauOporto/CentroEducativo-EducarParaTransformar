@@ -1,0 +1,57 @@
+# Integración Continua: cada PR hacia main y cada push a main pasan por
+# Build → Test → Package. Render despliega main solo si este CI pasó
+# (autoDeployTrigger: checksPass en render.yaml).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Un push nuevo a la misma rama cancela la corrida anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # versión de pnpm tomada de packageManager
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile # incluye prisma generate (postinstall)
+      - run: pnpm --filter backend typecheck
+      - run: pnpm --filter backend test
+      - run: pnpm --filter backend build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist-${{ github.sha }}
+          path: backend/dist
+          retention-days: 14
+
+  client:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter client build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-dist-${{ github.sha }}
+          path: client/dist
+          retention-days: 14

@@ -1,0 +1,13 @@
+{
+  "ventana": "2026-09-11 → 2026-10-07T04:00",
+  "prsMergeados": 4,
+  "frecuenciaPRsPorSemana": 1.1,
+  "leadTimeMedianaH": 7,
+  "leadTimeMaximoH": 52.3,
+  "commitsPorPRMediana": 6.5,
+  "commitsPorPRMaximo": 20,
+  "diasDesdeUltimoMerge": 18.3,
+  "ramasConCommitsSinIntegrar": 2,
+  "commitsSinIntegrar": 3,
+  "antiguedadCommitMasViejoSinIntegrarDias": 14.5
+}
