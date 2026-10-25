@@ -44,3 +44,7 @@ coverage/
 .cache/
 .turbo/
 .eslintcache
+
+# Cypress
+client/cypress/screenshots/
+client/cypress/videos/

@@ -1,0 +1,6 @@
+dist
+node_modules
+pnpm-lock.yaml
+frontend
+backend/prisma/migrations
+*.md

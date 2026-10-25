@@ -3,6 +3,8 @@ services:
     name: educar-para-transformar
     runtime: node
     plan: free
+    # Solo despliega commits de main cuyo CI (GitHub Actions) pasó.
+    autoDeployTrigger: checksPass
     buildCommand: npm install -g pnpm@11.1.1 && pnpm install --frozen-lockfile && pnpm run build
     startCommand: pnpm --filter backend run deploy:start
     envVars:

@@ -37,6 +37,8 @@ export function createApp() {
       status: 'ok',
       service: 'educar-para-transformar-api',
       env: env.NODE_ENV,
+      // Commit desplegado: Render expone RENDER_GIT_COMMIT en cada deploy.
+      version: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'local',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });

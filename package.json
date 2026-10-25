@@ -8,11 +8,35 @@
     "build": "pnpm --filter client build && pnpm --filter backend build",
     "backend:dev": "pnpm --filter backend dev",
     "client:dev": "pnpm --filter client dev",
-    "client:build": "pnpm --filter client build"
+    "client:build": "pnpm --filter client build",
+    "test": "pnpm --filter backend test",
+    "metricas": "node scripts/metricas.mjs",
+    "lint": "eslint backend client scripts",
+    "format": "prettier --write",
+    "prepare": "husky || true",
+    "e2e": "node scripts/e2e.mjs"
   },
   "engines": {
     "node": ">=22.13",
     "pnpm": ">=9"
   },
-  "packageManager": "pnpm@11.1.1"
+  "packageManager": "pnpm@11.1.1",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.0"
+  },
+  "lint-staged": {
+    "*.{ts,js,jsx,mjs}": [
+      "eslint --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,css,yml,yaml,html}": "prettier --write"
+  }
 }
