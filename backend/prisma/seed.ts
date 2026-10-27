@@ -4,8 +4,11 @@ import {
   AttendanceStatus,
   DiaSemana,
   CanalNotificacion,
+  ModerationStatus,
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
+
+import { generarLegajo } from '../src/utils/legajo';
 
 const prisma = new PrismaClient();
 
@@ -43,6 +46,16 @@ const SEED_USERS: UserSeed[] = [
   { usuario: 'jgarcia',   email: 'j.garcia@et.edu.ar',   dni: '20000002', nombre: 'Javier García',   role: Role.DOCENTE, curso: null, legajo: 'DOC-0002', apellido: 'García',   telefono: '3624100002', especialidad: 'Lengua y Literatura' },
   { usuario: 'csilva',    email: 'c.silva@et.edu.ar',    dni: '20000003', nombre: 'Carolina Silva',  role: Role.DOCENTE, curso: null, legajo: 'DOC-0003', apellido: 'Silva',    telefono: '3624100003', especialidad: 'Ciencias Naturales' },
   { usuario: 'amartinez', email: 'a.martinez@et.edu.ar', dni: '20000004', nombre: 'Andrés Martínez', role: Role.DOCENTE, curso: null, legajo: 'DOC-0004', apellido: 'Martínez', telefono: '3624100004', especialidad: 'Ciencias Sociales y Educación Física' },
+  { usuario: 'rfernandez', email: 'r.fernandez@et.edu.ar', dni: '20000005', nombre: 'Romina Fernández', role: Role.DOCENTE, curso: null, legajo: 'DOC-0005', apellido: 'Fernández', telefono: '3624100005', especialidad: 'Inglés' },
+  { usuario: 'gacosta',    email: 'g.acosta@et.edu.ar',    dni: '20000006', nombre: 'Gustavo Acosta',   role: Role.DOCENTE, curso: null, legajo: 'DOC-0006', apellido: 'Acosta',    telefono: '3624100006', especialidad: 'Educación Física' },
+  { usuario: 'vromero',    email: 'v.romero@et.edu.ar',    dni: '20000007', nombre: 'Verónica Romero',  role: Role.DOCENTE, curso: null, legajo: 'DOC-0007', apellido: 'Romero',    telefono: '3624100007', especialidad: 'Música y Artes Visuales' },
+  { usuario: 'dbenitez',   email: 'd.benitez@et.edu.ar',   dni: '20000008', nombre: 'Diego Benítez',    role: Role.DOCENTE, curso: null, legajo: 'DOC-0008', apellido: 'Benítez',   telefono: '3624100008', especialidad: 'Informática y Tecnología' },
+  { usuario: 'cmedina',    email: 'c.medina@et.edu.ar',    dni: '20000009', nombre: 'Claudia Medina',   role: Role.DOCENTE, curso: null, legajo: 'DOC-0009', apellido: 'Medina',    telefono: '3624100009', especialidad: 'Nivel Inicial' },
+  { usuario: 'pquiroga',   email: 'p.quiroga@et.edu.ar',   dni: '20000010', nombre: 'Pablo Quiroga',    role: Role.DOCENTE, curso: null, legajo: 'DOC-0010', apellido: 'Quiroga',   telefono: '3624100010', especialidad: 'Historia y Formación Ciudadana' },
+  { usuario: 'lcastro',    email: 'l.castro@et.edu.ar',    dni: '20000011', nombre: 'Lorena Castro',    role: Role.DOCENTE, curso: null, legajo: 'DOC-0011', apellido: 'Castro',    telefono: '3624100011', especialidad: 'Lengua (Primaria)' },
+  { usuario: 'mherrera',   email: 'm.herrera@et.edu.ar',   dni: '20000012', nombre: 'Martín Herrera',   role: Role.DOCENTE, curso: null, legajo: 'DOC-0012', apellido: 'Herrera',   telefono: '3624100012', especialidad: 'Matemática (Primaria)' },
+  { usuario: 'sdominguez', email: 's.dominguez@et.edu.ar', dni: '20000013', nombre: 'Sergio Domínguez', role: Role.DOCENTE, curso: null, legajo: 'DOC-0013', apellido: 'Domínguez', telefono: '3624100013', especialidad: 'Geografía y Economía' },
+  { usuario: 'nvega',      email: 'n.vega@et.edu.ar',      dni: '20000014', nombre: 'Natalia Vega',     role: Role.DOCENTE, curso: null, legajo: 'DOC-0014', apellido: 'Vega',      telefono: '3624100014', especialidad: 'Biología y Ciencias Naturales' },
 
   { usuario: 'fbarrabino', email: 'f.barrabino@et.edu.ar', dni: '40000001', nombre: 'Franco Barrabino',   role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0001', apellido: 'Barrabino', fechaNacimiento: new Date('2011-03-14'), domicilio: 'Av. Sarmiento 1450, Resistencia', telefono: '3624000001' },
   { usuario: 'jperez',     email: 'j.perez@et.edu.ar',     dni: '40000002', nombre: 'Juan Pérez',         role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0002', apellido: 'Pérez', fechaNacimiento: new Date('2011-06-02'), domicilio: 'Ruta 63 Km 4, Resistencia', telefono: '3624000002' },
@@ -52,14 +65,34 @@ const SEED_USERS: UserSeed[] = [
   { usuario: 'tmoreno',    email: 't.moreno@et.edu.ar',    dni: '40000006', nombre: 'Tomás Moreno',       role: Role.ESTUDIANTE, curso: 'Primaria — 5° grado', legajo: 'LEG-0006', apellido: 'Moreno', fechaNacimiento: new Date('2015-04-18'), domicilio: 'Calle Necochea 512, Resistencia', telefono: '3624000006' },
   { usuario: 'vsanchez',   email: 'v.sanchez@et.edu.ar',   dni: '40000007', nombre: 'Valentina Sánchez',  role: Role.ESTUDIANTE, curso: 'Secundaria — 1° año', legajo: 'LEG-0007', apellido: 'Sánchez', fechaNacimiento: new Date('2011-07-25'), domicilio: 'Av. Alberdi 1290, Resistencia', telefono: '3624000007' },
   { usuario: 'iflores',    email: 'i.flores@et.edu.ar',    dni: '40000008', nombre: 'Ignacio Flores',     role: Role.ESTUDIANTE, curso: 'Primaria — 6° grado', legajo: 'LEG-0008', apellido: 'Flores', fechaNacimiento: new Date('2014-02-09'), domicilio: 'Calle Güemes 78, Resistencia', telefono: '3624000008' },
+  { usuario: 'nruiz',      email: 'n.ruiz@et.edu.ar',      dni: '40000009', nombre: 'Nicolás Ruiz',       role: Role.ESTUDIANTE, curso: 'Secundaria — 4° año',   legajo: 'LEG-0009', apellido: 'Ruiz',    fechaNacimiento: new Date('2008-05-03'), domicilio: 'Av. Castelli 950, Resistencia',     telefono: '3624000009' },
+  { usuario: 'cgimenez',   email: 'c.gimenez@et.edu.ar',   dni: '40000010', nombre: 'Camila Giménez',     role: Role.ESTUDIANTE, curso: 'Secundaria — 5° año',   legajo: 'LEG-0010', apellido: 'Giménez', fechaNacimiento: new Date('2007-08-19'), domicilio: 'Calle French 410, Resistencia',     telefono: '3624000010' },
+  { usuario: 'bortiz',     email: 'b.ortiz@et.edu.ar',     dni: '40000011', nombre: 'Bruno Ortiz',        role: Role.ESTUDIANTE, curso: 'Secundaria — 2° año',   legajo: 'LEG-0011', apellido: 'Ortiz',   fechaNacimiento: new Date('2010-02-11'), domicilio: 'Av. Avalos 1720, Resistencia',      telefono: '3624000011' },
+  { usuario: 'mcabrera',   email: 'm.cabrera@et.edu.ar',   dni: '40000012', nombre: 'Milagros Cabrera',   role: Role.ESTUDIANTE, curso: 'Secundaria — 3° año',   legajo: 'LEG-0012', apellido: 'Cabrera', fechaNacimiento: new Date('2009-06-27'), domicilio: 'Calle Obligado 655, Resistencia',   telefono: '3624000012' },
+  { usuario: 'aluna',      email: 'a.luna@et.edu.ar',      dni: '40000013', nombre: 'Agustina Luna',      role: Role.ESTUDIANTE, curso: 'Primaria — 1° grado',   legajo: 'LEG-0013', apellido: 'Luna',    fechaNacimiento: new Date('2019-09-05'), domicilio: 'Calle Brown 330, Resistencia',      telefono: '3624000013' },
+  { usuario: 'fluna',      email: 'f.luna@et.edu.ar',      dni: '40000014', nombre: 'Facundo Luna',       role: Role.ESTUDIANTE, curso: 'Primaria — 3° grado',   legajo: 'LEG-0014', apellido: 'Luna',    fechaNacimiento: new Date('2017-03-21'), domicilio: 'Calle Brown 330, Resistencia',      telefono: '3624000014' },
+  { usuario: 'etorres',    email: 'e.torres@et.edu.ar',    dni: '40000015', nombre: 'Emilia Torres',      role: Role.ESTUDIANTE, curso: 'Primaria — 2° grado',   legajo: 'LEG-0015', apellido: 'Torres',  fechaNacimiento: new Date('2018-07-14'), domicilio: 'Av. Hernandarias 2100, Resistencia', telefono: '3624000015' },
+  { usuario: 'rortiz',     email: 'r.ortiz@et.edu.ar',     dni: '40000016', nombre: 'Ramiro Ortiz',       role: Role.ESTUDIANTE, curso: 'Primaria — 4° grado',   legajo: 'LEG-0016', apellido: 'Ortiz',   fechaNacimiento: new Date('2016-10-02'), domicilio: 'Av. Avalos 1720, Resistencia',      telefono: '3624000016' },
+  { usuario: 'jtorres',    email: 'j.torres@et.edu.ar',    dni: '40000017', nombre: 'Joaquín Torres',     role: Role.ESTUDIANTE, curso: 'Inicial — Sala de 5',   legajo: 'LEG-0017', apellido: 'Torres',  fechaNacimiento: new Date('2021-04-12'), domicilio: 'Av. Hernandarias 2100, Resistencia', telefono: '3624000017' },
+  { usuario: 'ocabrera',   email: 'o.cabrera@et.edu.ar',   dni: '40000018', nombre: 'Olivia Cabrera',     role: Role.ESTUDIANTE, curso: 'Inicial — Sala de 3',   legajo: 'LEG-0018', apellido: 'Cabrera', fechaNacimiento: new Date('2023-01-30'), domicilio: 'Calle Obligado 655, Resistencia',   telefono: '3624000018' },
 
   { usuario: 'pbarrabino', email: 'p.barrabino@et.edu.ar', dni: '30000001', nombre: 'Patricia Barrabino', role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
   { usuario: 'rperez',     email: 'r.perez@et.edu.ar',     dni: '30000002', nombre: 'Roberto Pérez',      role: Role.PADRE, curso: null },
   { usuario: 'mgomezp',    email: 'm.gomez.padre@et.edu.ar', dni: '30000003', nombre: 'Mariana Gómez',    role: Role.PADRE, curso: null },
+  { usuario: 'aferreyra',  email: 'a.ferreyra@et.edu.ar',  dni: '30000004', nombre: 'Adriana Ferreyra',  role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
+  { usuario: 'hrodriguez', email: 'h.rodriguez@et.edu.ar', dni: '30000005', nombre: 'Hernán Rodríguez',  role: Role.PADRE, curso: null },
+  { usuario: 'smoreno',    email: 's.moreno@et.edu.ar',    dni: '30000006', nombre: 'Silvia Moreno',     role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
+  { usuario: 'gsanchez',   email: 'g.sanchez@et.edu.ar',   dni: '30000007', nombre: 'Gabriel Sánchez',   role: Role.PADRE, curso: null },
+  { usuario: 'mruiz',      email: 'm.ruiz@et.edu.ar',      dni: '30000008', nombre: 'Marcelo Ruiz',      role: Role.PADRE, curso: null },
+  { usuario: 'egimenez',   email: 'e.gimenez@et.edu.ar',   dni: '30000009', nombre: 'Elena Giménez',     role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
+  { usuario: 'cortiz',     email: 'c.ortiz@et.edu.ar',     dni: '30000010', nombre: 'Carlos Ortiz',      role: Role.PADRE, curso: null },
+  { usuario: 'pcabrera',   email: 'p.cabrera@et.edu.ar',   dni: '30000011', nombre: 'Paula Cabrera',     role: Role.PADRE, curso: null, canalNotificacion: CanalNotificacion.EMAIL },
+  { usuario: 'dluna',      email: 'd.luna@et.edu.ar',      dni: '30000012', nombre: 'Daniela Luna',      role: Role.PADRE, curso: null },
+  { usuario: 'rtorres',    email: 'r.torres@et.edu.ar',    dni: '30000013', nombre: 'Ricardo Torres',    role: Role.PADRE, curso: null },
 ];
 
 // ---- Deportes, grupos de deporte, transporte y comedor ----
-const DEPORTES = ['Fútbol', 'Vóley', 'Básquet'] as const;
+const DEPORTES = ['Fútbol', 'Vóley', 'Básquet', 'Handball', 'Hockey', 'Atletismo', 'Natación', 'Ajedrez'] as const;
 
 type GrupoDeporteSeed = {
   deporte: (typeof DEPORTES)[number];
@@ -75,6 +108,21 @@ const GRUPOS_DEPORTE: GrupoDeporteSeed[] = [
   { deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30', docente: 'amartinez' },
   { deporte: 'Vóley', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
   { deporte: 'Básquet', nivel: 'Primaria', diaSemana: DiaSemana.VIERNES, horaInicio: '13:30', horaFin: '14:30', docente: 'jgarcia' },
+  // Grupos agregados para tener un catálogo amplio. Un mismo docente no
+  // tiene dos grupos superpuestos.
+  { deporte: 'Fútbol',    nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:30', docente: 'gacosta' },
+  { deporte: 'Vóley',     nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
+  { deporte: 'Básquet',   nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '15:00', horaFin: '16:30', docente: 'gacosta' },
+  { deporte: 'Handball',  nivel: 'Secundaria', diaSemana: DiaSemana.VIERNES,   horaInicio: '15:00', horaFin: '16:30', docente: 'gacosta' },
+  { deporte: 'Handball',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00', docente: 'amartinez' },
+  { deporte: 'Hockey',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30', docente: 'gacosta' },
+  { deporte: 'Hockey',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00', docente: 'amartinez' },
+  { deporte: 'Atletismo', nivel: 'Inicial',    diaSemana: DiaSemana.VIERNES,   horaInicio: '10:00', horaFin: '11:00', docente: 'cmedina' },
+  { deporte: 'Atletismo', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '16:00', horaFin: '17:30', docente: 'gacosta' },
+  { deporte: 'Natación',  nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:00', docente: 'amartinez' },
+  { deporte: 'Natación',  nivel: 'Inicial',    diaSemana: DiaSemana.MARTES,    horaInicio: '10:00', horaFin: '11:00', docente: 'cmedina' },
+  { deporte: 'Ajedrez',   nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '16:00', horaFin: '17:00', docente: 'dbenitez' },
+  { deporte: 'Ajedrez',   nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:30', docente: 'dbenitez' },
 ];
 
 const RECORRIDOS_TRANSPORTE = [
@@ -88,6 +136,8 @@ const TURNOS_COMEDOR = [
   { nombre: 'Primer turno', horaInicio: '12:00', horaFin: '13:00' },
   { nombre: 'Segundo turno', horaInicio: '13:00', horaFin: '14:00' },
   { nombre: 'Turno extendido', horaInicio: '14:00', horaFin: '15:00' },
+  { nombre: 'Desayuno', horaInicio: '08:00', horaFin: '08:30' },
+  { nombre: 'Merienda', horaInicio: '16:00', horaFin: '16:30' },
 ];
 
 // ---- Inscripciones de ejemplo a Deportes / Transporte / Comedor ----
@@ -111,16 +161,70 @@ const INSCRIPCIONES_DEPORTE: InscripcionDeporteSeed[] = [
   { estudiante: 'fbarrabino', deporte: 'Vóley', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
   { estudiante: 'jperez', deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30' },
   { estudiante: 'mgomez', deporte: 'Básquet', nivel: 'Primaria', diaSemana: DiaSemana.VIERNES, horaInicio: '13:30', horaFin: '14:30' },
+  // El resto respeta las mismas reglas: máximo 2 deportes y sin superposición.
+  { estudiante: 'jperez',     deporte: 'Ajedrez',   nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:30' },
+  { estudiante: 'mgomez',     deporte: 'Vóley',     nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'lferreyra',  deporte: 'Handball',  nivel: 'Secundaria', diaSemana: DiaSemana.VIERNES,   horaInicio: '15:00', horaFin: '16:30' },
+  { estudiante: 'lferreyra',  deporte: 'Hockey',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30' },
+  { estudiante: 'srodriguez', deporte: 'Atletismo', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '16:00', horaFin: '17:30' },
+  { estudiante: 'vsanchez',   deporte: 'Vóley',     nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'vsanchez',   deporte: 'Básquet',   nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '15:00', horaFin: '16:30' },
+  { estudiante: 'tmoreno',    deporte: 'Natación',  nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:00' },
+  { estudiante: 'tmoreno',    deporte: 'Handball',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'iflores',    deporte: 'Ajedrez',   nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '16:00', horaFin: '17:00' },
+  { estudiante: 'iflores',    deporte: 'Hockey',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00' },
+  { estudiante: 'nruiz',      deporte: 'Fútbol',    nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:30' },
+  { estudiante: 'nruiz',      deporte: 'Hockey',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30' },
+  { estudiante: 'cgimenez',   deporte: 'Ajedrez',   nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:30' },
+  { estudiante: 'bortiz',     deporte: 'Fútbol',    nivel: 'Secundaria', diaSemana: DiaSemana.MARTES,    horaInicio: '15:00', horaFin: '16:30' },
+  { estudiante: 'bortiz',     deporte: 'Atletismo', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '16:00', horaFin: '17:30' },
+  { estudiante: 'mcabrera',   deporte: 'Vóley',     nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'aluna',      deporte: 'Natación',  nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:00' },
+  { estudiante: 'fluna',      deporte: 'Fútbol',    nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '14:00', horaFin: '15:30' },
+  { estudiante: 'fluna',      deporte: 'Básquet',   nivel: 'Primaria',   diaSemana: DiaSemana.VIERNES,   horaInicio: '13:30', horaFin: '14:30' },
+  { estudiante: 'etorres',    deporte: 'Hockey',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00' },
+  { estudiante: 'rortiz',     deporte: 'Handball',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'rortiz',     deporte: 'Ajedrez',   nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '16:00', horaFin: '17:00' },
+  { estudiante: 'jtorres',    deporte: 'Natación',  nivel: 'Inicial',    diaSemana: DiaSemana.MARTES,    horaInicio: '10:00', horaFin: '11:00' },
+  { estudiante: 'ocabrera',   deporte: 'Atletismo', nivel: 'Inicial',    diaSemana: DiaSemana.VIERNES,   horaInicio: '10:00', horaFin: '11:00' },
 ];
 
+// RF-18: 1 de los 4 recorridos por alumno (no se agregan recorridos).
 const INSCRIPCIONES_TRANSPORTE: { estudiante: string; recorrido: string }[] = [
   { estudiante: 'fbarrabino', recorrido: 'Recorrido Norte' },
   { estudiante: 'jperez', recorrido: 'Recorrido Sur' },
+  { estudiante: 'mgomez', recorrido: 'Recorrido Este' },
+  { estudiante: 'iflores', recorrido: 'Recorrido Este' },
+  { estudiante: 'lferreyra', recorrido: 'Recorrido Oeste' },
+  { estudiante: 'tmoreno', recorrido: 'Recorrido Norte' },
+  { estudiante: 'vsanchez', recorrido: 'Recorrido Sur' },
+  { estudiante: 'nruiz', recorrido: 'Recorrido Oeste' },
+  { estudiante: 'bortiz', recorrido: 'Recorrido Norte' },
+  { estudiante: 'rortiz', recorrido: 'Recorrido Norte' },
+  { estudiante: 'aluna', recorrido: 'Recorrido Sur' },
+  { estudiante: 'fluna', recorrido: 'Recorrido Sur' },
+  { estudiante: 'etorres', recorrido: 'Recorrido Este' },
+  { estudiante: 'jtorres', recorrido: 'Recorrido Este' },
+  { estudiante: 'ocabrera', recorrido: 'Recorrido Oeste' },
 ];
 
 const INSCRIPCIONES_COMEDOR: { estudiante: string; turno: string }[] = [
   { estudiante: 'fbarrabino', turno: 'Primer turno' },
   { estudiante: 'mgomez', turno: 'Segundo turno' },
+  { estudiante: 'jperez', turno: 'Segundo turno' },
+  { estudiante: 'tmoreno', turno: 'Primer turno' },
+  { estudiante: 'iflores', turno: 'Primer turno' },
+  { estudiante: 'srodriguez', turno: 'Turno extendido' },
+  { estudiante: 'lferreyra', turno: 'Segundo turno' },
+  { estudiante: 'vsanchez', turno: 'Desayuno' },
+  { estudiante: 'cgimenez', turno: 'Merienda' },
+  { estudiante: 'mcabrera', turno: 'Merienda' },
+  { estudiante: 'aluna', turno: 'Primer turno' },
+  { estudiante: 'fluna', turno: 'Primer turno' },
+  { estudiante: 'etorres', turno: 'Segundo turno' },
+  { estudiante: 'rortiz', turno: 'Segundo turno' },
+  { estudiante: 'jtorres', turno: 'Desayuno' },
+  { estudiante: 'ocabrera', turno: 'Desayuno' },
 ];
 
 // Los campos de hora de GrupoDeporte, RecorridoTransporte y TurnoComedor son
@@ -133,7 +237,59 @@ const LINKS = [
   { padre: 'pbarrabino', hijos: ['fbarrabino'] },
   { padre: 'rperez',     hijos: ['jperez'] },
   { padre: 'mgomezp',    hijos: ['mgomez', 'iflores'] },
+  { padre: 'aferreyra',  hijos: ['lferreyra'] },
+  { padre: 'hrodriguez', hijos: ['srodriguez'] },
+  { padre: 'smoreno',    hijos: ['tmoreno'] },
+  { padre: 'gsanchez',   hijos: ['vsanchez'] },
+  { padre: 'mruiz',      hijos: ['nruiz'] },
+  { padre: 'egimenez',   hijos: ['cgimenez'] },
+  { padre: 'cortiz',     hijos: ['bortiz', 'rortiz'] },
+  { padre: 'pcabrera',   hijos: ['mcabrera', 'ocabrera'] },
+  { padre: 'dluna',      hijos: ['aluna', 'fluna'] },
+  { padre: 'rtorres',    hijos: ['jtorres', 'etorres'] },
 ];
+
+// Materias de cada nivel con su docente: se asignan a todos los cursos del
+// nivel (salvo las combinaciones materia–curso que ya salen de GRADES).
+const MATERIAS_POR_NIVEL: Record<(typeof NIVELES)[number], { materia: string; docente: string }[]> = {
+  Inicial: [
+    { materia: 'Juego y Expresión', docente: 'cmedina' },
+    { materia: 'Iniciación Musical', docente: 'vromero' },
+    { materia: 'Expresión Corporal', docente: 'gacosta' },
+    { materia: 'Inglés Inicial', docente: 'rfernandez' },
+  ],
+  Primaria: [
+    { materia: 'Matemáticas', docente: 'mherrera' },
+    { materia: 'Prácticas del Lenguaje', docente: 'lcastro' },
+    { materia: 'Ciencias Naturales', docente: 'nvega' },
+    { materia: 'Ciencias Sociales', docente: 'sdominguez' },
+    { materia: 'Inglés', docente: 'rfernandez' },
+    { materia: 'Educación Física', docente: 'gacosta' },
+    { materia: 'Música', docente: 'vromero' },
+    { materia: 'Plástica', docente: 'vromero' },
+    { materia: 'Tecnología', docente: 'dbenitez' },
+    { materia: 'Formación Ética y Ciudadana', docente: 'pquiroga' },
+  ],
+  Secundaria: [
+    { materia: 'Álgebra y Geometría', docente: 'mlopez' },
+    { materia: 'Literatura', docente: 'jgarcia' },
+    { materia: 'Física', docente: 'csilva' },
+    { materia: 'Química', docente: 'csilva' },
+    { materia: 'Biología', docente: 'nvega' },
+    { materia: 'Historia', docente: 'pquiroga' },
+    { materia: 'Geografía', docente: 'sdominguez' },
+    { materia: 'Inglés', docente: 'rfernandez' },
+    { materia: 'Educación Física', docente: 'gacosta' },
+    { materia: 'Informática', docente: 'dbenitez' },
+    { materia: 'Formación Ética y Ciudadana', docente: 'pquiroga' },
+    { materia: 'Economía', docente: 'sdominguez' },
+    { materia: 'Arte', docente: 'vromero' },
+  ],
+};
+
+// Pseudoaleatorio determinístico: el seed genera siempre los mismos datos.
+const hashTexto = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+const NOTAS = [6, 7, 7, 8, 8, 8, 9, 9, 10, 5, 4];
 
 type GradeSeed = {
   estudiante: string;
@@ -218,10 +374,18 @@ async function main() {
   const passwordHash = await bcrypt.hash('123456', 10);
   for (const u of SEED_USERS) {
     const cursoId = u.curso ? cursoIdByLabel.get(u.curso) ?? null : null;
+    // La app genera legajos correlativos: en una base con usuarios cargados
+    // desde la plataforma, el legajo fijo del seed puede estar ocupado. En
+    // ese caso se usa el próximo libre, y un usuario existente conserva el suyo.
+    const existente = await prisma.user.findUnique({ where: { usuario: u.usuario }, select: { legajo: true } });
+    let legajo = existente?.legajo ?? u.legajo ?? null;
+    if (legajo && !existente?.legajo && (await prisma.user.findUnique({ where: { legajo } }))) {
+      legajo = await generarLegajo(u.role);
+    }
     const ficha = {
       cursoId,
       estado: u.role === Role.ESTUDIANTE ? ('ACTIVO' as const) : null,
-      legajo: u.legajo ?? null,
+      legajo,
       apellido: u.apellido ?? null,
       fechaNacimiento: u.fechaNacimiento ?? null,
       domicilio: u.domicilio ?? null,
@@ -259,11 +423,14 @@ async function main() {
   const cursoLabelByUsername = new Map(SEED_USERS.map((u) => [u.usuario, u.curso]));
   const materiaIdByNombre = new Map<string, number>();
   const seenAsignaciones = new Set<string>();
+  // "<materia>|<curso>" → usuario del docente que la dicta en ese curso.
+  const docentePorMateriaCurso = new Map<string, string>();
 
   for (const g of GRADES) {
     const cursoLabel = cursoLabelByUsername.get(g.estudiante);
     const cursoId = cursoLabel ? cursoIdByLabel.get(cursoLabel) : undefined;
     if (!cursoId) continue;
+    docentePorMateriaCurso.set(`${g.materia}|${cursoLabel}`, g.docente);
 
     let materiaId = materiaIdByNombre.get(g.materia);
     if (!materiaId) {
@@ -285,6 +452,30 @@ async function main() {
       update: {},
       create: { materiaId, cursoId, docenteId: uid(g.docente) },
     });
+  }
+
+  // Resto del plan: cada materia del nivel en cada curso del nivel.
+  for (const nivel of NIVELES) {
+    for (const cursoNombre of CURSOS_POR_NIVEL[nivel]) {
+      const cursoLabel = `${nivel} — ${cursoNombre}`;
+      const cursoId = cursoIdByLabel.get(cursoLabel)!;
+      for (const { materia, docente } of MATERIAS_POR_NIVEL[nivel]) {
+        if (docentePorMateriaCurso.has(`${materia}|${cursoLabel}`)) continue;
+        docentePorMateriaCurso.set(`${materia}|${cursoLabel}`, docente);
+
+        let materiaId = materiaIdByNombre.get(materia);
+        if (!materiaId) {
+          materiaId = (await prisma.materia.upsert({ where: { nombre: materia }, update: {}, create: { nombre: materia } })).id;
+          materiaIdByNombre.set(materia, materiaId);
+        }
+        seenAsignaciones.add(`${materiaId}-${cursoId}-${uid(docente)}`);
+        await prisma.materiaCurso.upsert({
+          where: { materiaId_cursoId_docenteId: { materiaId, cursoId, docenteId: uid(docente) } },
+          update: {},
+          create: { materiaId, cursoId, docenteId: uid(docente) },
+        });
+      }
+    }
   }
 
   for (const link of LINKS) {
@@ -343,6 +534,21 @@ async function main() {
     turnoIdByNombre.set(t.nombre, turno.id);
   }
 
+  // Los datos de ejemplo también cumplen RF-18 (máx. 2) y RF-21 (sin superposición).
+  for (const u of SEED_USERS) {
+    const propias = INSCRIPCIONES_DEPORTE.filter((i) => i.estudiante === u.usuario);
+    const superpuestas = propias.some((a, n) =>
+      propias.slice(n + 1).some((b) => a.diaSemana === b.diaSemana && a.horaInicio < b.horaFin && b.horaInicio < a.horaFin),
+    );
+    if (propias.length > 2 || superpuestas) throw new Error(`Inscripciones de ejemplo inválidas para ${u.usuario} (RF-18/RF-21).`);
+    // Cada alumno del seed queda exactamente con sus inscripciones de ejemplo:
+    // si se le sumó otro deporte a mano, el upsert lo dejaría con 3 (RF-18).
+    if (u.role === Role.ESTUDIANTE) {
+      const deportes = propias.map((i) => deporteIdByNombre.get(i.deporte)!);
+      await prisma.inscripcionDeporte.deleteMany({ where: { estudianteId: uid(u.usuario), deporteId: { notIn: deportes } } });
+    }
+  }
+
   for (const i of INSCRIPCIONES_DEPORTE) {
     const grupoId = grupoIdByKey.get(`${i.deporte}|${i.nivel}|${i.diaSemana}|${i.horaInicio}|${i.horaFin}`);
     if (!grupoId) throw new Error(`Grupo de deporte no encontrado para la inscripción de ${i.estudiante} (${i.deporte}/${i.nivel}).`);
@@ -380,9 +586,27 @@ async function main() {
     return d;
   };
 
+  // Notas generadas: cada alumno de Primaria/Secundaria en cada materia de
+  // su curso que no tenga nota en GRADES (1er y 2do trimestre).
+  const conNota = new Set(GRADES.map((g) => `${g.estudiante}|${g.materia}`));
+  const notasGeneradas: GradeSeed[] = [];
+  for (const u of SEED_USERS) {
+    if (u.role !== Role.ESTUDIANTE || !u.curso || u.curso.startsWith('Inicial')) continue;
+    for (const [clave, docente] of docentePorMateriaCurso) {
+      const [materia, cursoLabel] = clave.split('|');
+      if (cursoLabel !== u.curso || conNota.has(`${u.usuario}|${materia}`)) continue;
+      const h = hashTexto(`${u.usuario}|${materia}`);
+      notasGeneradas.push(
+        { estudiante: u.usuario, docente, materia, instancia: '1er Trimestre', nota: NOTAS[h % NOTAS.length], daysAgo: 40 + (h % 25) },
+        { estudiante: u.usuario, docente, materia, instancia: '2do Trimestre', nota: NOTAS[(h >>> 4) % NOTAS.length], daysAgo: 3 + ((h >>> 8) % 15) },
+      );
+    }
+  }
+  const todasLasNotas = [...GRADES, ...notasGeneradas];
+
   await prisma.grade.deleteMany({});
   await prisma.grade.createMany({
-    data: GRADES.map((g) => ({
+    data: todasLasNotas.map((g) => ({
       estudianteId: uid(g.estudiante),
       docenteId: uid(g.docente),
       materia: g.materia,
@@ -413,15 +637,50 @@ async function main() {
     await prisma.attendance.createMany({ data: asistenciasData });
   }
 
-  // ---- Notificaciones
+  // ---- Notificaciones: la última nota de cada alumno (y a su padre/tutor)
+  // y la confirmación de cada inscripción a deporte.
+  const nombreDe = new Map(SEED_USERS.map((u) => [u.usuario, u.nombre]));
+  const ultimaNota = new Map<string, GradeSeed>();
+  for (const g of todasLasNotas) {
+    const previa = ultimaNota.get(g.estudiante);
+    if (!previa || g.daysAgo < previa.daysAgo) ultimaNota.set(g.estudiante, g);
+  }
+  const notificaciones: { userId: number; titulo: string; contenido: string; isRead?: boolean }[] = [
+    { userId: uid('fbarrabino'), titulo: 'Nueva calificación cargada', contenido: 'María López cargó tu nota de Álgebra (2do Trim).' },
+    { userId: uid('jperez'),     titulo: 'Nueva calificación cargada', contenido: 'María López cargó tu nota de Álgebra (2do Trim).' },
+    { userId: uid('pbarrabino'), titulo: 'Nueva calificación de tu hijo', contenido: 'Franco tiene una nueva nota cargada en Álgebra.' },
+  ];
+  for (const [estudiante, g] of ultimaNota) {
+    if (estudiante === 'fbarrabino' || estudiante === 'jperez') continue;
+    notificaciones.push({
+      userId: uid(estudiante),
+      titulo: 'Nueva calificación cargada',
+      contenido: `${nombreDe.get(g.docente)} cargó tu nota de ${g.materia} (${g.instancia}).`,
+      isRead: hashTexto(estudiante) % 3 === 0,
+    });
+  }
+  for (const link of LINKS) {
+    if (link.padre === 'pbarrabino') continue;
+    for (const hijo of link.hijos) {
+      const g = ultimaNota.get(hijo);
+      if (!g) continue;
+      notificaciones.push({
+        userId: uid(link.padre),
+        titulo: 'Nueva calificación de tu hijo',
+        contenido: `${nombreDe.get(hijo)!.split(' ')[0]} tiene una nueva nota cargada en ${g.materia}.`,
+      });
+    }
+  }
+  for (const i of INSCRIPCIONES_DEPORTE) {
+    notificaciones.push({
+      userId: uid(i.estudiante),
+      titulo: 'Inscripción a deporte confirmada',
+      contenido: `Quedaste inscripto/a en ${i.deporte} (${i.nivel}), ${i.diaSemana.toLowerCase()} de ${i.horaInicio} a ${i.horaFin}.`,
+      isRead: true,
+    });
+  }
   await prisma.notification.deleteMany({});
-  await prisma.notification.createMany({
-    data: [
-      { userId: uid('fbarrabino'), titulo: 'Nueva calificación cargada', contenido: 'María López cargó tu nota de Álgebra (2do Trim).' },
-      { userId: uid('jperez'),     titulo: 'Nueva calificación cargada', contenido: 'María López cargó tu nota de Álgebra (2do Trim).' },
-      { userId: uid('pbarrabino'), titulo: 'Nueva calificación de tu hijo', contenido: 'Franco tiene una nueva nota cargada en Álgebra.' },
-    ],
-  });
+  await prisma.notification.createMany({ data: notificaciones });
 
   // ---- Planes de estudio
   await prisma.studyPlan.deleteMany({});
@@ -450,12 +709,80 @@ async function main() {
       },
     ],
   });
+  // Un plan por cada par docente–materia restante.
+  const conPlan = new Set(['mlopez|Álgebra y Geometría', 'jgarcia|Literatura', 'csilva|Física']);
+  const planes: { docenteId: number; materia: string; titulo: string; objetivos: string; contenidos: string }[] = [];
+  for (const [clave, docente] of docentePorMateriaCurso) {
+    const [materia, cursoLabel] = clave.split('|');
+    if (conPlan.has(`${docente}|${materia}`)) continue;
+    conPlan.add(`${docente}|${materia}`);
+    const nivel = cursoLabel.split(' — ')[0];
+    planes.push({
+      docenteId: uid(docente),
+      materia,
+      titulo: `Plan de Estudios — ${materia} (${nivel})`,
+      objetivos: `Que los alumnos de ${nivel} se apropien de los saberes centrales de ${materia}, articulando teoría y práctica, trabajando en equipo y comunicando lo aprendido con claridad.`,
+      contenidos: `Unidad 1: Introducción a ${materia}. Unidad 2: Contenidos centrales del año. Unidad 3: Proyecto integrador. Unidad 4: Repaso y evaluación integradora.`,
+    });
+  }
+  await prisma.studyPlan.createMany({ data: planes });
 
+  // ---- Opiniones, solicitudes de inscripción y postulaciones de empleo.
+  // Simulan lo que llega por los formularios públicos; se crean solo si
+  // faltan, para no tocar lo que ya hayan cargado usuarios reales.
+  const opiniones = [
+    { nombre: 'Laura Paz', identificacion: 'laura.paz@example.com', rol: 'Padre/Madre', texto: 'Excelente acompañamiento de las maestras. Mi hija va contenta todos los días.', rating: 5, status: ModerationStatus.APROBADO },
+    { nombre: 'Martín Sosa', identificacion: 'martin.sosa@example.com', rol: 'Padre/Madre', texto: 'Muy buena comunicación con las familias a través del campus. Las notas se ven al instante.', rating: 5, status: ModerationStatus.APROBADO },
+    { nombre: null, identificacion: '38111222', rol: 'Estudiante', texto: 'Los talleres de ajedrez y de informática están buenísimos.', rating: 4, status: ModerationStatus.APROBADO },
+    { nombre: 'Carla Benítez', identificacion: 'carla.benitez@example.com', rol: 'Docente', texto: 'Un equipo de trabajo muy humano y con recursos para enseñar.', rating: 5, status: ModerationStatus.APROBADO },
+    { nombre: 'Jorge Ledesma', identificacion: 'jorge.ledesma@example.com', rol: 'Padre/Madre', texto: 'El servicio de transporte es puntual y el comedor tiene menús variados.', rating: 4, status: ModerationStatus.APROBADO },
+    { nombre: 'Sol Arias', identificacion: '40999111', rol: 'Estudiante', texto: 'Me gustan las actividades deportivas de los jueves.', rating: 4, status: ModerationStatus.APROBADO },
+    { nombre: 'Rosa Quintana', identificacion: 'rosa.quintana@example.com', rol: 'Otro', texto: 'Visité la escuela en la jornada de puertas abiertas: instalaciones impecables.', rating: 5, status: ModerationStatus.APROBADO },
+    { nombre: 'Ernesto Villalba', identificacion: 'ernesto.villalba@example.com', rol: 'Padre/Madre', texto: 'Estaría bueno sumar más horarios de natación.', rating: 3, status: ModerationStatus.PENDIENTE },
+    { nombre: null, identificacion: '41222333', rol: 'Estudiante', texto: 'Quisiera que haya más torneos entre cursos.', rating: 4, status: ModerationStatus.PENDIENTE },
+    { nombre: 'Anónimo', identificacion: 'spam@example.com', rol: 'Otro', texto: 'Comprá seguidores baratos en mi página.', rating: 1, status: ModerationStatus.RECHAZADO },
+  ];
+  for (const o of opiniones) {
+    if (await prisma.opinion.findFirst({ where: { identificacion: o.identificacion, texto: o.texto } })) continue;
+    await prisma.opinion.create({ data: { ...o, resolvedAt: o.status === ModerationStatus.PENDIENTE ? null : new Date() } });
+  }
+
+  const solicitudes = [
+    { nombreTutor: 'Andrea Gauna', emailTutor: 'andrea.gauna@example.com', telefonoTutor: '3624551001', nombreEstudiante: 'Tiziano Gauna', nivel: 'Inicial', curso: 'Sala de 4', mensaje: 'Nos mudamos a Resistencia en diciembre.', status: ModerationStatus.PENDIENTE },
+    { nombreTutor: 'Pedro Insaurralde', emailTutor: 'pedro.insaurralde@example.com', telefonoTutor: '3624551002', nombreEstudiante: 'Lola Insaurralde', nivel: 'Primaria', curso: '1° grado', mensaje: null, status: ModerationStatus.PENDIENTE },
+    { nombreTutor: 'Mónica Zalazar', emailTutor: 'monica.zalazar@example.com', telefonoTutor: '3624551003', nombreEstudiante: 'Benjamín Zalazar', nivel: 'Primaria', curso: '4° grado', mensaje: 'Viene de otra escuela con pase.', status: ModerationStatus.APROBADO },
+    { nombreTutor: 'Hugo Maidana', emailTutor: 'hugo.maidana@example.com', telefonoTutor: '3624551004', nombreEstudiante: 'Abril Maidana', nivel: 'Secundaria', curso: '1° año', mensaje: 'Consulta por beca de comedor.', status: ModerationStatus.PENDIENTE },
+    { nombreTutor: 'Cecilia Romero', emailTutor: 'cecilia.romero@example.com', telefonoTutor: '3624551005', nombreEstudiante: 'Thiago Romero', nivel: 'Secundaria', curso: '3° año', mensaje: null, status: ModerationStatus.APROBADO },
+    { nombreTutor: 'Fabián Godoy', emailTutor: 'fabian.godoy@example.com', telefonoTutor: '3624551006', nombreEstudiante: 'Martina Godoy', nivel: 'Primaria', curso: '2° grado', mensaje: 'Hermana de un alumno actual.', status: ModerationStatus.APROBADO },
+    { nombreTutor: 'Liliana Ojeda', emailTutor: 'liliana.ojeda@example.com', telefonoTutor: '3624551007', nombreEstudiante: 'Bautista Ojeda', nivel: 'Secundaria', curso: '5° año', mensaje: 'Pidió la vacante fuera de término.', status: ModerationStatus.RECHAZADO },
+    { nombreTutor: 'Ramón Cardozo', emailTutor: 'ramon.cardozo@example.com', telefonoTutor: '3624551008', nombreEstudiante: 'Jazmín Cardozo', nivel: 'Inicial', curso: 'Sala de 5', mensaje: null, status: ModerationStatus.PENDIENTE },
+  ];
+  for (const s of solicitudes) {
+    if (await prisma.inscription.findFirst({ where: { emailTutor: s.emailTutor, nombreEstudiante: s.nombreEstudiante } })) continue;
+    await prisma.inscription.create({ data: { ...s, resolvedAt: s.status === ModerationStatus.PENDIENTE ? null : new Date() } });
+  }
+
+  const postulaciones = [
+    { nombre: 'Valeria Núñez', email: 'valeria.nunez@example.com', puesto: 'Docente', status: ModerationStatus.PENDIENTE },
+    { nombre: 'Lucas Galarza', email: 'lucas.galarza@example.com', puesto: 'Docente', status: ModerationStatus.APROBADO },
+    { nombre: 'Gisela Ayala', email: 'gisela.ayala@example.com', puesto: 'Administrativo', status: ModerationStatus.PENDIENTE },
+    { nombre: 'Oscar Ramírez', email: 'oscar.ramirez@example.com', puesto: 'Mantenimiento', status: ModerationStatus.PENDIENTE },
+    { nombre: 'Daiana Sotelo', email: 'daiana.sotelo@example.com', puesto: 'Administrativo', status: ModerationStatus.RECHAZADO },
+    { nombre: 'Federico Escobar', email: 'federico.escobar@example.com', puesto: 'Docente', status: ModerationStatus.PENDIENTE },
+  ];
+  for (const p of postulaciones) {
+    if (await prisma.employmentApplication.findFirst({ where: { email: p.email } })) continue;
+    await prisma.employmentApplication.create({ data: { ...p, resolvedAt: p.status === ModerationStatus.PENDIENTE ? null : new Date() } });
+  }
+
+  const porRol = (r: Role) => SEED_USERS.filter((u) => u.role === r).length;
   console.log('✅ Seed completo. Password de todos los usuarios: 123456');
   console.log(
-    `   ${SEED_USERS.length} usuarios · ${nivelIdByNombre.size} niveles · ${cursoIdByLabel.size} cursos · ` +
+    `   ${SEED_USERS.length} usuarios (${porRol(Role.DOCENTE)} docentes, ${porRol(Role.ESTUDIANTE)} alumnos, ${porRol(Role.PADRE)} padres) · ` +
+    `${nivelIdByNombre.size} niveles · ${cursoIdByLabel.size} cursos · ` +
     `${materiaIdByNombre.size} materias · ${seenAsignaciones.size} asignaciones materia-curso-docente · ` +
-    `${GRADES.length} notas · ${asistenciasData.length} asistencias · 3 planes de estudio · ` +
+    `${todasLasNotas.length} notas · ${asistenciasData.length} asistencias · ${planes.length + 3} planes de estudio · ` +
+    `${notificaciones.length} notificaciones · ${opiniones.length} opiniones · ${solicitudes.length} solicitudes · ${postulaciones.length} postulaciones · ` +
     `${deporteIdByNombre.size} deportes · ${GRUPOS_DEPORTE.length} grupos de deporte · ` +
     `${RECORRIDOS_TRANSPORTE.length} recorridos de transporte · ${TURNOS_COMEDOR.length} turnos de comedor · ` +
     `${INSCRIPCIONES_DEPORTE.length} inscripciones a deporte · ${INSCRIPCIONES_TRANSPORTE.length} a transporte · ` +
