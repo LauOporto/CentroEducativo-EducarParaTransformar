@@ -8,6 +8,8 @@ import {
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
+import { generarLegajo } from '../src/utils/legajo';
+
 const prisma = new PrismaClient();
 
 // ---- Estructura académica: Niveles y Cursos ----
@@ -372,10 +374,18 @@ async function main() {
   const passwordHash = await bcrypt.hash('123456', 10);
   for (const u of SEED_USERS) {
     const cursoId = u.curso ? cursoIdByLabel.get(u.curso) ?? null : null;
+    // La app genera legajos correlativos: en una base con usuarios cargados
+    // desde la plataforma, el legajo fijo del seed puede estar ocupado. En
+    // ese caso se usa el próximo libre, y un usuario existente conserva el suyo.
+    const existente = await prisma.user.findUnique({ where: { usuario: u.usuario }, select: { legajo: true } });
+    let legajo = existente?.legajo ?? u.legajo ?? null;
+    if (legajo && !existente?.legajo && (await prisma.user.findUnique({ where: { legajo } }))) {
+      legajo = await generarLegajo(u.role);
+    }
     const ficha = {
       cursoId,
       estado: u.role === Role.ESTUDIANTE ? ('ACTIVO' as const) : null,
-      legajo: u.legajo ?? null,
+      legajo,
       apellido: u.apellido ?? null,
       fechaNacimiento: u.fechaNacimiento ?? null,
       domicilio: u.domicilio ?? null,
