@@ -314,10 +314,11 @@ test('transferencia: caso feliz → EN_REVISION con datos y archivo, y aviso a c
     base.db.notificaciones.map((n) => [n.userId, n.titulo, n.link]),
     [[ADMIN, 'Nuevo comprobante para revisar', '/admin/pagos']],
   );
-  assert.match(
-    base.db.notificaciones[0].contenido,
-    new RegExp(`${r.comprobante.numero} — Franco Alumno — \\$\\s290\\.000,00`),
-  );
+  // Comparación de texto (no RegExp armada con datos): formatearPesos usa un
+  // espacio duro entre "$" y el número, por eso se normalizan los espacios.
+  const contenido = base.db.notificaciones[0].contenido.replace(/\s/g, ' ');
+  const esperado = `${r.comprobante.numero} — Franco Alumno — $ 290.000,00`;
+  assert.ok(contenido.includes(esperado), contenido);
   const audit = base.db.auditoria.at(-1);
   assert.equal(audit.accion, 'MODIFICACION');
   assert.match(audit.detalle, /transferencia cargada/);

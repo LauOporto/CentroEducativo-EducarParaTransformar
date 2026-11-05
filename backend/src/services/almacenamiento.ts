@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { HttpError } from '../utils/httpError';
 import { logger } from '../utils/logger';
+import { sinBarrasFinales } from '../utils/texto';
 
 // D6 (RNF-47, Ley 25.326): los comprobantes de transferencia son datos
 // personales y bancarios. Nunca se guardan con URL pública: se guarda un id
@@ -223,7 +224,7 @@ export const driverLocal: Almacenamiento = {
     validarArchivoIdLocal(archivoId);
     const token = firmarTokenArchivo(archivoId, archivoTipo);
     const expiraEn = new Date(Date.now() + URL_TTL_SEGUNDOS * 1000).toISOString();
-    return { url: `${baseUrl.replace(/\/+$/, '')}/api/pagos/archivos/${token}`, expiraEn };
+    return { url: `${sinBarrasFinales(baseUrl)}/api/pagos/archivos/${token}`, expiraEn };
   },
 
   async eliminar(archivoId) {
@@ -251,7 +252,7 @@ export const driverMemoria: Almacenamiento = {
   },
   async urlTemporal(archivoId, _archivoTipo, baseUrl) {
     const expiraEn = new Date(Date.now() + URL_TTL_SEGUNDOS * 1000).toISOString();
-    return { url: `${baseUrl.replace(/\/+$/, '')}/memoria/${encodeURIComponent(archivoId)}`, expiraEn };
+    return { url: `${sinBarrasFinales(baseUrl)}/memoria/${encodeURIComponent(archivoId)}`, expiraEn };
   },
   async eliminar(archivoId) {
     archivosEnMemoria.delete(archivoId);

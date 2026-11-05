@@ -10,6 +10,7 @@ import { logger } from '../utils/logger';
 import { decimal, formatearPesos, sumar, toMonto } from '../utils/montos';
 import { diaSiguiente, esFechaValida, fechaISO, fechaUTC, hoyArgentina, inicioDiaArgentina } from '../utils/fechas';
 import { assertPuedeVerPagos } from '../utils/pagosAccess';
+import { sinPuntoFinal } from '../utils/texto';
 import { registrarAuditoria } from './auditoria.service';
 import { recalcularEstadoFactura } from './facturacion.service';
 import { almacenamiento, type UrlTemporal } from './almacenamiento';
@@ -637,7 +638,7 @@ export async function rechazarComprobante(admin: Actor, id: number, body: unknow
     c,
     'Comprobante rechazado',
     `La administración rechazó el comprobante ${c.numero} (${formatearPesos(c.total)}) de la factura ${c.factura.numero}. ` +
-      `Motivo: ${motivo.replace(/[.\s]+$/, '')}. Los ítems volvieron a estar pendientes: generá un comprobante nuevo para pagarlos.`,
+      `Motivo: ${sinPuntoFinal(motivo)}. Los ítems volvieron a estar pendientes: generá un comprobante nuevo para pagarlos.`,
   );
 
   return { comprobante: vistaComprobante(await buscarComprobante(id)) };
