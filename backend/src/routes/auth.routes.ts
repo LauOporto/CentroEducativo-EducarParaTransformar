@@ -1,4 +1,5 @@
 import { Router, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { Role, type User } from '@prisma/client';
@@ -11,6 +12,12 @@ import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLa
 import { dniSchema } from '../utils/validators';
 import { esClienteMovil } from '../utils/clienteMovil';
 import { SESSION_MAX_MS, cerrarSesion, iniciarSesion, refrescarSesion } from '../services/sesion.service';
+import {
+  MSG_OLVIDE,
+  MSG_PASSWORD_RESTABLECIDA,
+  restablecerPassword,
+  solicitarRecuperacion,
+} from '../services/password.service';
 
 // Capa HTTP de la autenticación: la lógica de sesión (credenciales, tabla
 // Session, reglas de 24hs / 30min) vive en services/sesion.service.ts.
@@ -161,6 +168,57 @@ router.post('/logout', async (req, res) => {
   await cerrarSesion(token);
   res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
   res.json({ exito: true });
+});
+
+// D2 / A2: 5 pedidos cada 15 min por IP, solo en olvide y restablecer (cada
+// endpoint cuenta por separado). La IP real llega por trust proxy (app.ts).
+// En los tests se desactiva para no depender del orden de las pruebas.
+function limitePassword() {
+  return rateLimit({
+    windowMs: 1000 * 60 * 15,
+    limit: 5,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: () => env.NODE_ENV === 'test',
+    message: {
+      error: 'TOO_MANY_REQUESTS',
+      message: 'Hiciste demasiados intentos. Esperá 15 minutos y volvé a probar.',
+    },
+  });
+}
+
+// Misma regla de contraseña que el registro.
+const nuevaPasswordSchema = z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.');
+
+const olvideSchema = z.object({ identificador: z.string().trim().min(1).max(120) });
+
+router.post('/password/olvide', limitePassword(), async (req, res, next) => {
+  try {
+    const { identificador } = olvideSchema.parse(req.body);
+    await solicitarRecuperacion(identificador);
+    res.json({ exito: true, mensaje: MSG_OLVIDE });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const restablecerSchema = z.object({
+  identificador: z.string().trim().min(1).max(120),
+  // Sin regex de formato: un código mal escrito es un intento fallido más
+  // y responde el mismo 400 que uno incorrecto.
+  codigo: z.string().trim().min(1).max(12),
+  nuevaPassword: nuevaPasswordSchema,
+});
+
+router.post('/password/restablecer', limitePassword(), async (req, res, next) => {
+  try {
+    const data = restablecerSchema.parse(req.body);
+    await restablecerPassword(data);
+    res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+    res.json({ exito: true, mensaje: MSG_PASSWORD_RESTABLECIDA });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/me', requireAuth, async (req, res, next) => {
