@@ -1,5 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { AccionAuditoria, ConceptoCuota, EstadoAlumno, Prisma, Role } from '@prisma/client';
+import {
+  AccionAuditoria,
+  ConceptoCuota,
+  EstadoAlumno,
+  EstadoComprobante,
+  EstadoCuota,
+  EstadoFactura,
+  Prisma,
+  Role,
+} from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { sumar } from '../utils/montos';
@@ -188,4 +197,63 @@ export async function generarFacturasPeriodo(
   }
 
   return resultado;
+}
+
+// ---- Estado de ítems y facturas (lo reutiliza F3 al aprobar/rechazar) ----
+
+// Comprobantes que "ocupan" un ítem: un ítem nunca puede estar en dos de
+// estos a la vez. RECHAZADO y ANULADO lo liberan.
+export const COMPROBANTES_ACTIVOS: EstadoComprobante[] = [
+  EstadoComprobante.GENERADO,
+  EstadoComprobante.EN_REVISION,
+  EstadoComprobante.APROBADO,
+];
+
+export function estadoFacturaSegunPagos(total: Prisma.Decimal, pagado: Prisma.Decimal): EstadoFactura {
+  if (pagado.greaterThanOrEqualTo(total)) return EstadoFactura.PAGADA;
+  if (pagado.greaterThan(0)) return EstadoFactura.PARCIAL;
+  return EstadoFactura.PENDIENTE;
+}
+
+// Recalcula, dentro de la transacción recibida:
+// - cada ítem, según el comprobante activo que lo contiene: APROBADO → PAGADA;
+//   GENERADO o EN_REVISION → EN_REVISION; ninguno → PENDIENTE;
+// - la factura, según la suma de sus Pagos: PAGADA si cubre el total, PARCIAL
+//   si es mayor a 0, PENDIENTE si es 0.
+export async function recalcularEstadoFactura(facturaId: number, tx: Prisma.TransactionClient = prisma) {
+  const factura = await tx.factura.findUnique({
+    where: { id: facturaId },
+    select: {
+      total: true,
+      estado: true,
+      cuotas: { select: { id: true, estado: true } },
+      comprobantes: {
+        where: { estado: { in: COMPROBANTES_ACTIVOS } },
+        select: { estado: true, items: { select: { cuotaId: true } } },
+      },
+      pagos: { select: { monto: true } },
+    },
+  });
+  if (!factura) throw new Error(`Factura ${facturaId} inexistente.`);
+
+  const estadoPorCuota = new Map<number, EstadoCuota>();
+  for (const cp of factura.comprobantes) {
+    const estado = cp.estado === EstadoComprobante.APROBADO ? EstadoCuota.PAGADA : EstadoCuota.EN_REVISION;
+    for (const item of cp.items) {
+      if (estadoPorCuota.get(item.cuotaId) !== EstadoCuota.PAGADA) estadoPorCuota.set(item.cuotaId, estado);
+    }
+  }
+  const cambios = new Map<EstadoCuota, number[]>();
+  for (const c of factura.cuotas) {
+    const nuevo = estadoPorCuota.get(c.id) ?? EstadoCuota.PENDIENTE;
+    if (nuevo !== c.estado) cambios.set(nuevo, [...(cambios.get(nuevo) ?? []), c.id]);
+  }
+  for (const [estado, ids] of cambios) {
+    await tx.cuota.updateMany({ where: { id: { in: ids } }, data: { estado } });
+  }
+
+  const pagado = sumar(factura.pagos.map((p) => p.monto));
+  const estado = estadoFacturaSegunPagos(new Prisma.Decimal(factura.total), pagado);
+  if (estado !== factura.estado) await tx.factura.update({ where: { id: facturaId }, data: { estado } });
+  return { estado, pagado };
 }
