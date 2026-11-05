@@ -52,7 +52,7 @@ export const periodoSiguiente = (periodo: string) => sumarMesesPeriodo(periodo, 
 
 export const periodoDeFecha = (fecha: string) => fecha.slice(0, 7);
 
-function esFechaValida(fecha: string): boolean {
+export function esFechaValida(fecha: string): boolean {
   if (!FECHA_RE.test(fecha)) return false;
   const d = new Date(`${fecha}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === fecha;

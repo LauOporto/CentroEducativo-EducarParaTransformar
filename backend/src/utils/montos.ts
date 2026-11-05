@@ -16,3 +16,8 @@ export function sumar(valores: MontoEntrada[]): Prisma.Decimal {
 export function toMonto(valor: MontoEntrada): number {
   return Number(decimal(valor).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP).toFixed(2));
 }
+
+// "$ 1.234,56" (es-AR), para mensajes al usuario y PDFs.
+export function formatearPesos(valor: MontoEntrada): string {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(toMonto(valor));
+}

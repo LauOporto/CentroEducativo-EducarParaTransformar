@@ -430,9 +430,23 @@ resto del archivo.
           precios.service, pagosAccess, fechas y montos.
           Falta: la pantalla de la app (F5).
 
-[FALTA]   RF-50 Selección de ítems a pagar, comprobante de pago generado
+[PARCIAL] RF-50 Selección de ítems a pagar, comprobante de pago generado
           por el sistema y carga del comprobante de transferencia asociado
           a la factura (una factura admite varios comprobantes).
+          Evidencia (backend, F3): services/comprobantes.service.ts —
+          POST /api/pagos/comprobantes (ítems PENDIENTES de una factura →
+          comprobante GENERADO CP-AAAAMM-000000 con datos bancarios e
+          instrucciones; compare-and-set contra la doble selección),
+          GET /api/pagos/comprobantes/:id, PDF del comprobante
+          (services/comprobantePdf.service.ts), anulación, carga de la
+          transferencia en multipart (solo TRANSFERENCIA → 400 al resto;
+          monto exacto → 422; JPG/PNG/PDF ≤ 5 MB verificado por magic
+          bytes), URL temporal del archivo (services/almacenamiento.ts:
+          Cloudinary privado, local en desarrollo). Revisión del ADMIN en
+          /api/admin/pagos (listar, aprobar → Pago y factura PARCIAL/
+          PAGADA; rechazar con motivo) con notificaciones por la Factory.
+          Tests: comprobantes.service.test.ts y almacenamiento.test.ts.
+          Falta: la pantalla de la app (F5) y el panel web del ADMIN (F7).
 
 [FALTA]   RF-52 (web) Reportes de ingresos y de pagos completos e
           incompletos por período, discriminados por año y por alumno.
