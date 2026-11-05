@@ -13,6 +13,11 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 export function createApp() {
   const app = express();
 
+  // Render atiende detrás de un proxy: sin esto req.ip sería la IP del
+  // proxy para todos y el rate limit de /auth/password/* los vería como un
+  // único usuario.
+  app.set('trust proxy', 1);
+
   app.use(
     helmet({
       contentSecurityPolicy: false,
@@ -22,7 +27,7 @@ export function createApp() {
   );
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: env.CORS_ORIGIN, // lista de orígenes (D3)
       credentials: true,
     }),
   );

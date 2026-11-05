@@ -1,4 +1,5 @@
 import type { RequestHandler } from 'express';
+import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { Role } from '@prisma/client';
 
@@ -21,9 +22,12 @@ export function signAccessToken(payload: AccessTokenPayload): string {
   });
 }
 
+// jwtid aleatorio: dos refresh de la misma sesión emitidos en el mismo
+// segundo no salen idénticos (al refrescar, el token devuelto es nuevo).
 export function signRefreshToken(payload: RefreshTokenPayload): string {
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    jwtid: randomUUID(),
   });
 }
 

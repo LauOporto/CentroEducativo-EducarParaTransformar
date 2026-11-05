@@ -392,5 +392,74 @@ BLOQUES DE TRABAJO PENDIENTE MÁS GRANDES (por impacto)
    desde el panel Admin (hoy son datos hardcodeados en el frontend).
 
 ================================================================================
+PARTE 3 — APLICACIÓN MÓVIL
+================================================================================
+
+Plan y decisiones de diseño: PLAN_PARTE3_APP_MOVIL.txt. Misma leyenda que el
+resto del archivo.
+
+--- Requerimientos funcionales ---
+
+[PARCIAL] RF-48 Inicio y cierre de sesión del Padre/Tutor en la app, con el
+          mismo usuario, contraseña y JWT del web; recuperación y cambio
+          de contraseña.
+          Evidencia (backend, F1): POST /api/auth/login con el header
+          X-Client-Type: mobile (solo PADRE; refresh en el body), refresh
+          y logout por cookie o por body, sobre la misma tabla Session
+          (services/sesion.service.ts); /api/auth/password/{olvide,
+          restablecer,cambiar} con código de 6 dígitos por email, tabla
+          PasswordReset y rate limit (services/password.service.ts).
+          Tests: sesion.service.test.ts y password.service.test.ts.
+          Falta: las pantallas de la app (F4).
+
+[FALTA]   RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
+          historial de deuda por ítem (cuota, deporte, transporte,
+          comedor), historial de pagos y facturas y comprobantes, con
+          filtro por rango de fechas.
+
+[FALTA]   RF-50 Selección de ítems a pagar, comprobante de pago generado
+          por el sistema y carga del comprobante de transferencia asociado
+          a la factura (una factura admite varios comprobantes).
+
+[FALTA]   RF-52 (web) Reportes de ingresos y de pagos completos e
+          incompletos por período, discriminados por año y por alumno.
+
+[FALTA]   RF-53 (web) Reporte de pagos por alumno filtrado por deporte,
+          nivel, horario, profesor y recorrido (filtros de RF-30).
+
+[FALTA]   RF-54 Inscripción a deportes, transporte y comedor por hijo desde
+          la app, con las mismas reglas del web.
+
+--- Requerimientos no funcionales ---
+
+[FALTA]   RNF-55 Android 10+ e iOS 15+.
+
+[FALTA]   RNF-56 Misma API REST, misma base y mismo esquema JWT, sin
+          entidades duplicadas ni mecanismo de sesión adicional.
+
+[FALTA]   RNF-57 Cambios de estado de cuotas y pagos reflejados de
+          inmediato en la app y en el web.
+
+--- Mails automáticos (enunciado, HU9) ---
+
+[FALTA]   Mail el último día hábil del mes con el total a abonar, la
+          composición del monto y la factura adjunta.
+
+[FALTA]   Mail el día 20 con la deuda, solo si el pago no fue completo.
+
+--- Listados web (enunciado) ---
+
+[FALTA]   Listado 1: ingresos por período (por año y por alumno).
+
+[FALTA]   Listado 2: pagos completos por período (por año y por alumno).
+
+[FALTA]   Listado 3: pagos incompletos por período (por año y por alumno,
+          con total, pagado y saldo).
+
+[FALTA]   Listado 4: pagos por deporte (filtros de RF-32 + profesor).
+
+[FALTA]   Listado 5: pagos por recorrido de transporte (filtro de RF-33).
+
+================================================================================
 Fin del documento.
 ================================================================================

@@ -51,7 +51,7 @@ Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo la
 | `JWT_ACCESS_SECRET` | Generalo con `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` — 32+ caracteres, obligatorio. |
 | `JWT_REFRESH_SECRET` | Mismo comando, otra corrida (tiene que ser distinto al anterior). |
 | `DATABASE_URL` ⚠️ siempre manual | El connection string de Neon (paso 1). |
-| `CORS_ORIGIN` ⚠️ siempre manual | El dominio que Render te asigna — lo ves arriba del dashboard del servicio una vez creado (`https://algo.onrender.com`, sin `/` al final). |
+| `CORS_ORIGIN` ⚠️ siempre manual | El dominio que Render te asigna — lo ves arriba del dashboard del servicio una vez creado (`https://algo.onrender.com`, sin `/` al final). Admite varios orígenes separados por coma (ej. `https://algo.onrender.com,http://localhost:8081` para probar la app en Expo web); la app nativa no necesita figurar. |
 | `CLOUDINARY_CLOUD_NAME` ⚠️ siempre manual | De tu cuenta de Cloudinary (paso 2). |
 | `CLOUDINARY_API_KEY` ⚠️ siempre manual | Ídem. |
 | `CLOUDINARY_API_SECRET` ⚠️ siempre manual | Ídem. |

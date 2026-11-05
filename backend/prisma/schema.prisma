@@ -139,6 +139,7 @@ model User {
   estadoProfesor EstadoProfesor?
 
   sesiones       Session[]
+  passwordResets PasswordReset[]
   notasRecibidas Grade[]             @relation("EstudianteGrades")
   notasDadas     Grade[]             @relation("DocenteGrades")
   hijos          ParentStudentLink[] @relation("PadreLinks")
@@ -425,6 +426,23 @@ model Session {
   createdAt       DateTime @default(now())
   expiraEn        DateTime // createdAt + 24hs, fijo: nunca se extiende
   ultimaActividad DateTime @default(now())
+
+  @@index([usuarioId])
+}
+
+// RF-48 (recuperación de contraseña): código de 6 dígitos enviado por email.
+// Se guarda solo su hash bcrypt; vence a los 15 min y admite hasta 5
+// intentos. usadoEn marca tanto el código ya usado como el invalidado (por
+// pedir uno nuevo o por agotar los intentos).
+model PasswordReset {
+  id         Int       @id @default(autoincrement())
+  usuarioId  Int
+  usuario    User      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  codigoHash String
+  expiraEn   DateTime
+  intentos   Int       @default(0)
+  usadoEn    DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([usuarioId])
 }
