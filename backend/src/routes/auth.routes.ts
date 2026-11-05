@@ -1,29 +1,23 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
-import { Role } from '@prisma/client';
+import { Role, type User } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
-import { requireAuth, signAccessToken, signRefreshToken, verifyRefreshToken } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 import { env } from '../config/env';
 import { CURSO_SELECT, formatCursoLabel, resolveCursoId } from '../utils/cursoLabel';
 import { dniSchema } from '../utils/validators';
+import { esClienteMovil } from '../utils/clienteMovil';
+import { SESSION_MAX_MS, cerrarSesion, iniciarSesion, refrescarSesion } from '../services/sesion.service';
 
+// Capa HTTP de la autenticación: la lógica de sesión (credenciales, tabla
+// Session, reglas de 24hs / 30min) vive en services/sesion.service.ts.
+// Web y app móvil usan los mismos endpoints (RNF-56); la única diferencia
+// es por dónde viaja el refresh token (D1): el web lo recibe en la cookie
+// httpOnly et_refresh, la app (header X-Client-Type: mobile) en el body.
 const REFRESH_COOKIE = 'et_refresh';
-
-const MSG_CREDENCIALES_INVALIDAS = 'Usuario o contraseña incorrectos.';
-// Hash bcrypt (costo 10) de un valor aleatorio descartado: nunca coincide.
-const HASH_FICTICIO = '$2b$10$elHuMuHLPpNqWb8Om.oJ2uV735vLuEgsFISwCfVYrHV2ybP8GsJIG';
-
-// RNF-38/39: tope absoluto de 24hs desde el login, e invalidación tras
-// 30min de inactividad. El access token (15min, stateless) no se vuelve
-// a chequear contra la sesión en cada request — eso violaría el
-// principio de "capa de aplicación sin estado" del diseño — así que
-// estos dos límites se verifican acá, en el único punto con estado real:
-// cuando el cliente pide refrescar el access token vencido.
-const SESSION_MAX_MS = 1000 * 60 * 60 * 24; // 24hs
-const SESSION_INACTIVITY_MS = 1000 * 60 * 30; // 30min
 
 const refreshCookieOpts = {
   httpOnly: true,
@@ -109,46 +103,36 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const refreshBodySchema = z.object({ refreshToken: z.string().min(1).optional() }).passthrough();
+
+// El refresh por body (app móvil) tiene prioridad; si no viene, la cookie (web).
+function leerRefresh(req: { body?: unknown; cookies?: Record<string, string> }) {
+  const body = refreshBodySchema.safeParse(req.body ?? {});
+  const enBody = body.success ? body.data.refreshToken : undefined;
+  return { token: enBody ?? req.cookies?.[REFRESH_COOKIE], porBody: enBody !== undefined };
+}
+
+function usuarioSesion(user: User, token: string) {
+  return { id: user.id, nombre: user.nombre, tipo: roleToTipo[user.role], token };
+}
+
+function setRefreshCookie(res: Response, refreshToken: string) {
+  res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOpts);
+}
+
 router.post('/login', async (req, res, next) => {
   try {
     const { usuario, password } = loginSchema.parse(req.body);
+    const movil = esClienteMovil(req);
+    const sesion = await iniciarSesion({ usuario, password, movil });
 
-    // A2: usuario inexistente y contraseña errónea responden lo mismo, y el
-    // bcrypt se ejecuta igual contra un hash ficticio para que el tiempo de
-    // respuesta tampoco delate si la cuenta existe.
-    const user = await prisma.user.findUnique({ where: { usuario } });
-    const ok = await bcrypt.compare(password, user?.password ?? HASH_FICTICIO);
-    if (!user || !ok) {
-      throw HttpError.unauthorized(MSG_CREDENCIALES_INVALIDAS);
-    }
-    // Recién con la contraseña correcta se informa el estado de la cuenta.
-    if (!user.isActive) {
-      if (user.role === Role.DOCENTE) {
-        throw HttpError.unauthorized('Tu cuenta de docente está pendiente de aprobación por un administrador.');
-      }
-      throw HttpError.unauthorized('La cuenta está deshabilitada.');
-    }
-
-    const token = signAccessToken({
-      id: user.id,
-      usuario: user.usuario,
-      role: user.role,
-    });
-    const session = await prisma.session.create({
-      data: { usuarioId: user.id, expiraEn: new Date(Date.now() + SESSION_MAX_MS) },
-    });
-    const refresh = signRefreshToken({ sessionId: session.id });
-    res.cookie(REFRESH_COOKIE, refresh, refreshCookieOpts);
-
+    // Web: refresh en cookie httpOnly (sin cambios). Móvil: en el body.
+    if (!movil) setRefreshCookie(res, sesion.refreshToken);
     res.json({
       exito: true,
       mensaje: 'Bienvenido',
-      usuario: {
-        id: user.id,
-        nombre: user.nombre,
-        tipo: roleToTipo[user.role],
-        token,
-      },
+      usuario: usuarioSesion(sesion.user, sesion.accessToken),
+      ...(movil ? { refreshToken: sesion.refreshToken } : {}),
     });
   } catch (err) {
     next(err);
@@ -157,56 +141,15 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/refresh', async (req, res, next) => {
   try {
-    const token = req.cookies?.[REFRESH_COOKIE];
-    if (!token) throw HttpError.unauthorized('No hay refresh token.');
-    let payload;
-    try {
-      payload = verifyRefreshToken(token);
-    } catch {
-      throw HttpError.unauthorized('Refresh token inválido o expirado.');
-    }
-    // Cookies de refresh emitidas antes de la tabla Session (formato viejo
-    // {id, v}) verifican la firma OK pero no traen sessionId — tratarlas
-    // como sesión inválida en vez de dejar que Prisma explote con un 500.
-    if (typeof payload.sessionId !== 'number') {
-      throw HttpError.unauthorized('Sesión inválida. Iniciá sesión de nuevo.');
-    }
+    const { token, porBody } = leerRefresh(req);
+    const sesion = await refrescarSesion(token, { movil: esClienteMovil(req) });
 
-    const session = await prisma.session.findUnique({ where: { id: payload.sessionId } });
-    if (!session) throw HttpError.unauthorized('Sesión inválida. Iniciá sesión de nuevo.');
-
-    const ahora = Date.now();
-    const vencida = ahora > session.expiraEn.getTime();
-    const inactiva = ahora - session.ultimaActividad.getTime() > SESSION_INACTIVITY_MS;
-    if (vencida || inactiva) {
-      await prisma.session.delete({ where: { id: session.id } });
-      throw HttpError.unauthorized(
-        vencida
-          ? 'La sesión expiró (máximo 24hs desde el login). Iniciá sesión de nuevo.'
-          : 'Sesión cerrada por 30min de inactividad. Iniciá sesión de nuevo.',
-      );
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: session.usuarioId } });
-    if (!user || !user.isActive) {
-      await prisma.session.delete({ where: { id: session.id } });
-      throw HttpError.unauthorized('Cuenta deshabilitada.');
-    }
-
-    await prisma.session.update({ where: { id: session.id }, data: { ultimaActividad: new Date() } });
-
-    const access = signAccessToken({ id: user.id, usuario: user.usuario, role: user.role });
-    const newRefresh = signRefreshToken({ sessionId: session.id });
-    res.cookie(REFRESH_COOKIE, newRefresh, refreshCookieOpts);
-
+    // Se responde por el mismo canal por el que llegó el refresh.
+    if (!porBody) setRefreshCookie(res, sesion.refreshToken);
     res.json({
       exito: true,
-      usuario: {
-        id: user.id,
-        nombre: user.nombre,
-        tipo: roleToTipo[user.role],
-        token: access,
-      },
+      usuario: usuarioSesion(sesion.user, sesion.accessToken),
+      ...(porBody ? { refreshToken: sesion.refreshToken } : {}),
     });
   } catch (err) {
     next(err);
@@ -214,15 +157,8 @@ router.post('/refresh', async (req, res, next) => {
 });
 
 router.post('/logout', async (req, res) => {
-  const token = req.cookies?.[REFRESH_COOKIE];
-  if (token) {
-    try {
-      const { sessionId } = verifyRefreshToken(token);
-      await prisma.session.delete({ where: { id: sessionId } });
-    } catch {
-      // Token inválido, ya vencido, o sesión ya borrada: nada que hacer.
-    }
-  }
+  const { token } = leerRefresh(req);
+  await cerrarSesion(token);
   res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
   res.json({ exito: true });
 });
