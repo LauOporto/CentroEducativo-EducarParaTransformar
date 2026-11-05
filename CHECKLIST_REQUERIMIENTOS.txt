@@ -400,9 +400,17 @@ resto del archivo.
 
 --- Requerimientos funcionales ---
 
-[FALTA]   RF-48 Inicio y cierre de sesión del Padre/Tutor en la app, con el
+[PARCIAL] RF-48 Inicio y cierre de sesión del Padre/Tutor en la app, con el
           mismo usuario, contraseña y JWT del web; recuperación y cambio
           de contraseña.
+          Evidencia (backend, F1): POST /api/auth/login con el header
+          X-Client-Type: mobile (solo PADRE; refresh en el body), refresh
+          y logout por cookie o por body, sobre la misma tabla Session
+          (services/sesion.service.ts); /api/auth/password/{olvide,
+          restablecer,cambiar} con código de 6 dígitos por email, tabla
+          PasswordReset y rate limit (services/password.service.ts).
+          Tests: sesion.service.test.ts y password.service.test.ts.
+          Falta: las pantallas de la app (F4).
 
 [FALTA]   RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
           historial de deuda por ítem (cuota, deporte, transporte,

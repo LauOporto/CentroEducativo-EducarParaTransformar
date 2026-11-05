@@ -308,7 +308,7 @@ documenta en backend/.env.example y DEPLOY.md.
 | Fase | Rama                                  | Contenido                                     | Estado    |
 |------|---------------------------------------|-----------------------------------------------|-----------|
 | F0   | —                                     | Setup local                                   | completada|
-| F1   | feature/rf48-auth-movil               | D1, D2, D3 + este plan + checklist            | en curso  |
+| F1   | feature/rf48-auth-movil               | D1, D2, D3 + este plan + checklist            | completada|
 | F2   | feature/rf49-estado-cuenta            | D4 (migración), D8, D9, seed con precios y    | pendiente |
 |      |                                       | 3 períodos de facturas                        |           |
 | F3   | feature/rf50-comprobantes-pago        | D5, D6, D7 + aprobar/rechazar por API         | pendiente |
@@ -332,7 +332,86 @@ Se completa en cada fase con los endpoints que consume la app. Base:
 EXPO_PUBLIC_API_URL + /api. Errores con el formato común del backend:
 { error, message } (y details en los errores de validación).
 
-(pendiente: F1 en curso)
+Header común de la app: X-Client-Type: mobile (sin importar mayúsculas).
+Endpoints con sesión: Authorization: Bearer <accessToken> (15 min).
+El accessToken vive solo en memoria; el refreshToken, en expo-secure-store.
+Ante un 401 en un endpoint con sesión, la app llama a /auth/refresh una vez
+y reintenta; si el refresh falla, borra el refresh guardado y vuelve al login.
+
+---- F1 — Autenticación (RF-48) ----
+
+POST /api/auth/login
+  Body:      { usuario, password }
+  200:       { exito: true, mensaje: "Bienvenido",
+               usuario: { id, nombre, tipo: "padre", token },
+               refreshToken }
+             Con el header móvil NO se setea la cookie et_refresh. Sin el
+             header (web) la respuesta es la de siempre: cookie y sin
+             refreshToken en el body.
+  400:       VALIDATION_ERROR (falta usuario o password).
+  401:       "Usuario o contraseña incorrectos." (usuario inexistente o
+             contraseña errónea, mismo texto).
+  401:       "La cuenta está deshabilitada." / "Tu cuenta de docente está
+             pendiente de aprobación por un administrador." (solo con la
+             contraseña correcta).
+  403:       "La app móvil es exclusiva para Padres/Tutores. Ingresá desde
+             el campus web." (rol distinto de PADRE; no se crea sesión).
+
+POST /api/auth/refresh
+  Body:      { refreshToken }   (el web manda la cookie y body vacío)
+  200:       { exito: true, usuario: { id, nombre, tipo, token },
+               refreshToken }   (refreshToken nuevo: reemplazar el
+               guardado; si el refresh vino por cookie, se devuelve en la
+               cookie y no en el body)
+  401:       "No hay refresh token." | "Refresh token inválido o
+             expirado." | "Sesión inválida. Iniciá sesión de nuevo." |
+             "La sesión expiró (máximo 24hs desde el login). Iniciá sesión
+             de nuevo." | "Sesión cerrada por 30min de inactividad. Iniciá
+             sesión de nuevo." | "Cuenta deshabilitada."
+  403:       mensaje de solo Padres/Tutores (la sesión se borra).
+  Reglas de la sesión (las mismas del web): tope de 24 h desde el login,
+  que no se extiende, y cierre por 30 min sin refrescar.
+
+POST /api/auth/logout
+  Body:      { refreshToken }   (o cookie en el web)
+  200:       { exito: true }    siempre, aunque el token no sirva.
+
+POST /api/auth/password/olvide          (sin sesión; 5 pedidos / 15 min por IP)
+  Body:      { identificador }  (nombre de usuario o email)
+  200:       { exito: true, mensaje: "Si los datos corresponden a una
+             cuenta activa, te enviamos un código por email." }
+             Siempre la misma respuesta. Si la cuenta existe y está activa
+             se envía por email un código de 6 dígitos que vence en 15
+             minutos; pedir otro invalida el anterior.
+  400:       VALIDATION_ERROR (identificador vacío).
+  429:       { error: "TOO_MANY_REQUESTS", message: "Hiciste demasiados
+             intentos. Esperá 15 minutos y volvé a probar." }
+
+POST /api/auth/password/restablecer     (sin sesión; 5 pedidos / 15 min por IP)
+  Body:      { identificador, codigo, nuevaPassword }  (nuevaPassword ≥ 6)
+  200:       { exito: true, mensaje: "Contraseña restablecida. Iniciá
+             sesión con la nueva contraseña." }
+             Se cierran TODAS las sesiones del usuario (web y app).
+  400:       "Código inválido o vencido." (cualquier fallo: cuenta,
+             código incorrecto, vencido o ya usado). Al 5.º código
+             incorrecto el código queda invalidado y hay que pedir otro.
+  400:       VALIDATION_ERROR (nuevaPassword de menos de 6 caracteres).
+  429:       igual que en olvide.
+
+POST /api/auth/password/cambiar         (con sesión; cualquier rol)
+  Headers:   Authorization: Bearer <accessToken>
+  Body:      { passwordActual, passwordNueva }  (passwordNueva ≥ 6)
+  200:       { exito: true, mensaje: "Contraseña actualizada. Iniciá
+             sesión de nuevo." }  Se cierran TODAS las sesiones: la app
+             borra el refresh guardado y vuelve al login.
+  400:       "La contraseña actual no es correcta." | "La nueva contraseña
+             debe ser distinta de la actual." | VALIDATION_ERROR.
+  401:       "Falta el token de acceso." | "Token inválido o expirado."
+
+GET /api/auth/me                        (sin cambios; con sesión)
+  200:       { exito: true, usuario: { id, usuario, email, dni, nombre,
+             role, curso, tipo } }
+
 
 ================================================================================
 Fin del documento.
