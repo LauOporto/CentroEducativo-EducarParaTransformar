@@ -9,6 +9,7 @@ import { prisma } from '../db/prisma';
 import { obtenerEstadoCuenta } from '../services/pagos.facade';
 import { generarPdfFactura, nombreArchivoFactura } from '../services/facturaPdf.service';
 import { almacenamiento, leerArchivoLocal } from '../services/almacenamiento';
+import { generarComprobante, obtenerComprobante } from '../services/comprobantes.service';
 
 // /api/pagos (RF-49): lo mismo para la app móvil y el web. Permisos de D7:
 // ADMIN o PADRE vinculado; DOCENTE y ESTUDIANTE → 403.
@@ -68,6 +69,26 @@ router.get('/facturas/:id/pdf', async (req, res, next) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivoFactura(factura.numero)}"`);
     res.send(pdf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---- RF-50: comprobantes de pago (D5) ----
+
+router.post('/comprobantes', async (req, res, next) => {
+  try {
+    const resultado = await generarComprobante(req.authUser!, req.body);
+    res.status(201).json({ exito: true, ...resultado });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/comprobantes/:id', async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id, 'id del comprobante');
+    res.json({ exito: true, ...(await obtenerComprobante(req.authUser!, id)) });
   } catch (err) {
     next(err);
   }
