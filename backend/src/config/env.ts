@@ -40,6 +40,14 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME es obligatorio'),
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY es obligatorio'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET es obligatorio'),
+
+  // Parte 3: datos bancarios del colegio que se muestran en la factura y en
+  // el comprobante de pago (solo se aceptan transferencias). Opcionales: los
+  // defaults son ficticios, para desarrollo y demo.
+  BANCO_TITULAR: z.string().trim().min(1).default('Educar para Transformar S.A.'),
+  BANCO_CUIT: z.string().trim().min(1).default('30-71234567-8'),
+  BANCO_CBU: z.string().trim().min(1).default('0000003100012345678901'),
+  BANCO_ALIAS: z.string().trim().min(1).default('EDUCAR.TRANSFORMAR.CUOTAS'),
 });
 
 const parsed = envSchema.safeParse(process.env);
