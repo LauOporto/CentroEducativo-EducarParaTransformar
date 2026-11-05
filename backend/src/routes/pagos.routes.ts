@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
+import multer from 'multer';
 import { z } from 'zod';
 
 import { requireAuth } from '../middleware/auth';
@@ -11,9 +12,11 @@ import { generarPdfFactura, nombreArchivoFactura } from '../services/facturaPdf.
 import { almacenamiento, leerArchivoLocal } from '../services/almacenamiento';
 import {
   anularComprobante,
+  cargarTransferencia,
   comprobanteVisible,
   generarComprobante,
   obtenerComprobante,
+  urlArchivoComprobante,
 } from '../services/comprobantes.service';
 import { generarPdfComprobante, nombreArchivoComprobante } from '../services/comprobantePdf.service';
 
@@ -117,6 +120,47 @@ router.post('/comprobantes/:id/anular', async (req, res, next) => {
   try {
     const id = parseId(req.params.id, 'id del comprobante');
     res.json({ exito: true, ...(await anularComprobante(req.authUser!, id)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Multer propio de esta ruta (D5 paso 3): en memoria, un solo archivo de
+// hasta 5 MB. El tipo real se valida en el servicio por magic bytes.
+export const MAX_TRANSFERENCIA_MB = 5;
+const parsearTransferencia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_TRANSFERENCIA_MB * 1024 * 1024, files: 1 },
+}).single('archivo');
+
+const recibirTransferencia: RequestHandler = (req, res, next) => {
+  parsearTransferencia(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return next(new HttpError(413, `El archivo supera el máximo de ${MAX_TRANSFERENCIA_MB} MB.`));
+      }
+      return next(HttpError.badRequest('Adjuntá un único archivo en el campo "archivo".'));
+    }
+    next(err);
+  });
+};
+
+router.post('/comprobantes/:id/transferencia', recibirTransferencia, async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id, 'id del comprobante');
+    const resultado = await cargarTransferencia(req.authUser!, id, req.body ?? {}, req.file);
+    res.json({ exito: true, mensaje: 'Recibimos tu transferencia. La revisará la administración.', ...resultado });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/comprobantes/:id/archivo', async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id, 'id del comprobante');
+    // trust proxy está activo (app.ts): en Render req.protocol es https.
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.json({ exito: true, ...(await urlArchivoComprobante(req.authUser!, id, baseUrl)) });
   } catch (err) {
     next(err);
   }

@@ -1,17 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { z } from 'zod';
-import { AccionAuditoria, EstadoComprobante, EstadoCuota, Prisma, Role } from '@prisma/client';
+import { AccionAuditoria, CanalNotificacion, EstadoComprobante, EstadoCuota, Prisma, Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
 import { HttpError } from '../utils/httpError';
-import { formatearPesos, sumar, toMonto } from '../utils/montos';
-import { fechaISO } from '../utils/fechas';
+import { logger } from '../utils/logger';
+import { decimal, formatearPesos, sumar, toMonto } from '../utils/montos';
+import { esFechaValida, fechaISO, fechaUTC, hoyArgentina } from '../utils/fechas';
 import { assertPuedeVerPagos } from '../utils/pagosAccess';
 import { registrarAuditoria } from './auditoria.service';
 import { recalcularEstadoFactura } from './facturacion.service';
-import { datosBancarios } from './facturaPdf.service';
+import { almacenamiento, type UrlTemporal } from './almacenamiento';
+import { crearNotificacion } from './notificaciones/notificacionFactory';
+import { datosBancarios, LEYENDA_TRANSFERENCIA } from './facturaPdf.service';
 
 // RF-50 (D5): comprobantes de pago. El padre elige ítems PENDIENTES de UNA
 // factura, el sistema emite el comprobante con los datos para transferir, el
@@ -26,6 +29,12 @@ export const MSG_SOLO_PADRE_GENERA = 'Solo el Padre/Tutor puede generar comproba
 export const MSG_ITEMS_OCUPADOS = 'Alguno de los ítems ya está incluido en otro comprobante o ya fue pagado.';
 export const MSG_COMPROBANTE_INEXISTENTE = 'El comprobante indicado no existe.';
 export const MSG_SOLO_PADRE_ANULA = 'Solo el Padre/Tutor puede anular comprobantes de pago.';
+export const MSG_SOLO_PADRE_TRANSFERENCIA = 'Solo el Padre/Tutor puede cargar la transferencia.';
+export const MSG_TRANSFERENCIA_NO_ADMITIDA = 'Este comprobante ya tiene una transferencia cargada o no admite cambios.';
+export const MSG_SOLO_TRANSFERENCIA = LEYENDA_TRANSFERENCIA;
+export const MSG_ARCHIVO_INVALIDO = 'El archivo debe ser una imagen JPG/PNG o un PDF.';
+export const MSG_SIN_ARCHIVO = 'Este comprobante no tiene archivo de transferencia.';
+export const DIAS_MAX_ANTIGUEDAD_TRANSFERENCIA = 60;
 export const MSG_NO_ANULABLE = 'Solo se puede anular un comprobante que todavía no tiene la transferencia cargada.';
 
 const conRequest = (actor: Actor) => ({ authUser: actor });
@@ -241,4 +250,163 @@ export async function anularComprobante(actor: Actor, id: number) {
     detalle: `${c.numero} — anulado`,
   });
   return { comprobante: vistaComprobante(await buscarComprobante(id)) };
+}
+
+// ---- D5 paso 3: cargar la transferencia ----
+
+// Firma real del contenido (magic bytes): el mime que manda el cliente no
+// alcanza, un .txt renombrado a .png llega como image/png.
+export function detectarTipoArchivo(buffer: Buffer): string | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+  if (buffer.length >= 4 && buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))) return 'image/png';
+  if (buffer.length >= 4 && buffer.subarray(0, 4).toString('latin1') === '%PDF') return 'application/pdf';
+  return null;
+}
+
+const MIME_NORMALIZADO: Record<string, string> = {
+  'image/jpeg': 'image/jpeg',
+  'image/jpg': 'image/jpeg',
+  'image/pjpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'application/pdf': 'application/pdf',
+};
+
+export interface ArchivoRecibido {
+  buffer: Buffer;
+  mimetype: string;
+}
+
+const MONTO_RE = /^\d{1,10}([.,]\d{1,2})?$/;
+const NRO_OPERACION_RE = /^[A-Za-z0-9-]{4,40}$/;
+
+const texto = (v: unknown) =>
+  typeof v === 'string' ? v.trim() : v === undefined || v === null ? '' : String(v).trim();
+
+function restarDias(fecha: string, dias: number): string {
+  const d = fechaUTC(fecha);
+  d.setUTCDate(d.getUTCDate() - dias);
+  return fechaISO(d);
+}
+
+// Orden de validación (D5): rol y vínculo → estado → medio → monto → resto de
+// los campos → archivo. Recién con todo válido se sube el archivo.
+export async function cargarTransferencia(
+  actor: Actor,
+  id: number,
+  campos: Record<string, unknown>,
+  archivo: ArchivoRecibido | undefined,
+  opts: { hoy?: string } = {},
+) {
+  const c = await comprobanteDelPadre(actor, id, MSG_SOLO_PADRE_TRANSFERENCIA);
+  if (c.estado !== EstadoComprobante.GENERADO) throw HttpError.conflict(MSG_TRANSFERENCIA_NO_ADMITIDA);
+
+  const medio = texto(campos.medio);
+  if (medio !== '' && medio.toUpperCase() !== 'TRANSFERENCIA') throw HttpError.badRequest(MSG_SOLO_TRANSFERENCIA);
+
+  const montoTexto = texto(campos.montoTransferido);
+  if (!MONTO_RE.test(montoTexto)) {
+    throw HttpError.badRequest(
+      'El monto transferido es inválido. Usá un número con hasta 2 decimales (ej. 290000.50).',
+    );
+  }
+  const montoTransferido = decimal(montoTexto.replace(',', '.'));
+  if (!montoTransferido.equals(c.total)) {
+    throw new HttpError(422, `El monto transferido debe ser exactamente ${formatearPesos(c.total)}.`, {
+      totalEsperado: toMonto(c.total),
+    });
+  }
+
+  const nroOperacion = texto(campos.nroOperacion);
+  if (!NRO_OPERACION_RE.test(nroOperacion)) {
+    throw HttpError.badRequest(
+      'El N.º de operación debe tener entre 4 y 40 caracteres: solo letras, números y guiones.',
+    );
+  }
+
+  const fecha = texto(campos.fechaTransferencia);
+  const hoy = opts.hoy ?? hoyArgentina();
+  if (!esFechaValida(fecha)) {
+    throw HttpError.badRequest('La fecha de la transferencia es inválida. Usá el formato AAAA-MM-DD.');
+  }
+  if (fecha > hoy) throw HttpError.badRequest('La fecha de la transferencia no puede ser futura.');
+  if (fecha < restarDias(hoy, DIAS_MAX_ANTIGUEDAD_TRANSFERENCIA)) {
+    throw HttpError.badRequest(
+      `La fecha de la transferencia no puede tener más de ${DIAS_MAX_ANTIGUEDAD_TRANSFERENCIA} días.`,
+    );
+  }
+
+  if (!archivo || archivo.buffer.length === 0) {
+    throw HttpError.badRequest('Adjuntá el comprobante de la transferencia (JPG, PNG o PDF).');
+  }
+  const declarado = MIME_NORMALIZADO[archivo.mimetype.toLowerCase()];
+  if (!declarado || detectarTipoArchivo(archivo.buffer) !== declarado) {
+    throw HttpError.badRequest(MSG_ARCHIVO_INVALIDO);
+  }
+
+  // Fuera de la transacción: no se tiene una transacción abierta mientras se
+  // sube a Cloudinary. Si después falla el cambio de estado, se borra.
+  const subido = await almacenamiento.subirComprobante(archivo.buffer, declarado);
+  try {
+    await prisma.$transaction(async (tx) => {
+      const r = await tx.comprobantePago.updateMany({
+        where: { id, estado: EstadoComprobante.GENERADO },
+        data: {
+          estado: EstadoComprobante.EN_REVISION,
+          archivoId: subido.archivoId,
+          archivoTipo: subido.archivoTipo,
+          nroOperacion,
+          fechaTransferencia: fechaUTC(fecha),
+          montoTransferido,
+          cargadoEn: new Date(),
+        },
+      });
+      if (r.count !== 1) throw HttpError.conflict(MSG_TRANSFERENCIA_NO_ADMITIDA);
+    });
+  } catch (err) {
+    await almacenamiento.eliminar(subido.archivoId, subido.archivoTipo);
+    throw err;
+  }
+
+  await registrarAuditoria({
+    usuarioId: actor.id,
+    accion: AccionAuditoria.MODIFICACION,
+    entidad: 'ComprobantePago',
+    entidadId: id,
+    detalle: `${c.numero} — transferencia cargada (op. ${nroOperacion}, ${formatearPesos(montoTransferido)})`,
+  });
+
+  await notificarAdmins(c);
+  return { comprobante: vistaComprobante(await buscarComprobante(id)) };
+}
+
+// Aviso en la campanita de cada ADMIN activo (canal INTERNA fijo: es una
+// tarea del panel, no un mensaje para el mail personal). Un fallo acá no
+// deshace la carga: queda en el log.
+async function notificarAdmins(c: ComprobanteCompleto) {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: Role.ADMIN, isActive: true },
+      select: { id: true },
+    });
+    for (const a of admins) {
+      await crearNotificacion(CanalNotificacion.INTERNA, {
+        destinatarioId: a.id,
+        titulo: 'Nuevo comprobante para revisar',
+        contenido: `${c.numero} — ${c.factura.estudiante.nombre} — ${formatearPesos(c.total)} (factura ${c.factura.numero}).`,
+        link: '/admin/pagos',
+      }).enviar();
+    }
+  } catch (err) {
+    logger.error('No se pudo notificar a los administradores', {
+      comprobanteId: c.id,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+// GET .../archivo: URL temporal (5 min) del comprobante de transferencia.
+export async function urlArchivoComprobante(actor: Actor, id: number, baseUrl: string): Promise<UrlTemporal> {
+  const c = await comprobanteVisible(actor, id);
+  if (!c.archivoId || !c.archivoTipo) throw HttpError.notFound(MSG_SIN_ARCHIVO);
+  return almacenamiento.urlTemporal(c.archivoId, c.archivoTipo, baseUrl);
 }
