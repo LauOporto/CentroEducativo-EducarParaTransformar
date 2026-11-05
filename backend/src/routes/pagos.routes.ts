@@ -1,4 +1,4 @@
-import { Router, type RequestHandler } from 'express';
+import { Router, type ErrorRequestHandler, type RequestHandler } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 
@@ -27,36 +27,38 @@ const router = Router();
 // D6, driver local (solo desarrollo): URL temporal de un comprobante de
 // transferencia. No usa requireAuth: el token firmado (5 min) es la
 // autorización, igual que la URL firmada de Cloudinary en producción.
-// El archivo se sirve con sendFile relativo a DIR_LOCAL (root + dotfiles
-// 'deny'): el nombre ya viene validado y send vuelve a impedir salir de esa
-// carpeta. El contenido nunca pasa por res.send.
-router.get('/archivos/:token', (req, res, next) => {
-  try {
-    if (almacenamiento.driver() !== 'local') throw HttpError.notFound('El archivo no existe.');
-    const { nombre, tipo } = resolverArchivoLocal(req.params.token);
-    res.sendFile(
-      nombre,
-      {
-        root: DIR_LOCAL,
-        dotfiles: 'deny',
-        cacheControl: false,
-        lastModified: false,
-        etag: false,
-        headers: {
-          'Content-Type': tipo,
-          'Content-Disposition': 'inline',
-          'Cache-Control': 'private, no-store',
-          'X-Content-Type-Options': 'nosniff',
-        },
-      },
-      (err) => {
-        if (err && !res.headersSent) next(HttpError.notFound('El archivo no existe.'));
-      },
-    );
-  } catch (err) {
-    next(err);
-  }
-});
+// El archivo se sirve con res.sendFile(nombre, { root: DIR_LOCAL, dotfiles:
+// 'deny' }): el nombre ya viene validado y send vuelve a impedir salir de
+// esa carpeta. El contenido nunca pasa por res.send. Sin callback: si el
+// archivo no existe, send llama a next(err) y el manejador de abajo lo
+// traduce a 404.
+const servirArchivoLocal: RequestHandler = (req, res) => {
+  if (almacenamiento.driver() !== 'local') throw HttpError.notFound('El archivo no existe.');
+  const { nombre, tipo } = resolverArchivoLocal(req.params.token);
+  res.sendFile(nombre, {
+    root: DIR_LOCAL,
+    dotfiles: 'deny',
+    cacheControl: false,
+    lastModified: false,
+    etag: false,
+    headers: {
+      'Content-Type': tipo,
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+};
+
+// Errores propios (403 del token) pasan tal cual; los de send (ENOENT,
+// dotfiles) se informan como 404 sin exponer la ruta. Va a nivel router y no
+// en la ruta porque sendFile, sin callback, llama al next del router.
+const errorArchivoLocal: ErrorRequestHandler = (err, _req, _res, next) => {
+  next(err instanceof HttpError ? err : HttpError.notFound('El archivo no existe.'));
+};
+
+router.get('/archivos/:token', servirArchivoLocal);
+router.use('/archivos', errorArchivoLocal);
 
 router.use(requireAuth);
 
