@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { z } from 'zod';
-import { AccionAuditoria, EstadoCuota, Prisma, Role } from '@prisma/client';
+import { AccionAuditoria, EstadoComprobante, EstadoCuota, Prisma, Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
@@ -25,6 +25,8 @@ export type Actor = NonNullable<Request['authUser']>;
 export const MSG_SOLO_PADRE_GENERA = 'Solo el Padre/Tutor puede generar comprobantes de pago.';
 export const MSG_ITEMS_OCUPADOS = 'Alguno de los ítems ya está incluido en otro comprobante o ya fue pagado.';
 export const MSG_COMPROBANTE_INEXISTENTE = 'El comprobante indicado no existe.';
+export const MSG_SOLO_PADRE_ANULA = 'Solo el Padre/Tutor puede anular comprobantes de pago.';
+export const MSG_NO_ANULABLE = 'Solo se puede anular un comprobante que todavía no tiene la transferencia cargada.';
 
 const conRequest = (actor: Actor) => ({ authUser: actor });
 
@@ -213,4 +215,30 @@ export async function obtenerComprobante(actor: Actor, id: number) {
     datosBancarios: datosBancarios(),
     instrucciones: instruccionesTransferencia(c.total, c.numero),
   };
+}
+
+// ---- D5 paso 4: anular (solo GENERADO) ----
+
+export async function anularComprobante(actor: Actor, id: number) {
+  const c = await comprobanteDelPadre(actor, id, MSG_SOLO_PADRE_ANULA);
+  if (c.estado !== EstadoComprobante.GENERADO) throw HttpError.conflict(MSG_NO_ANULABLE);
+
+  await prisma.$transaction(async (tx) => {
+    const r = await tx.comprobantePago.updateMany({
+      where: { id, estado: EstadoComprobante.GENERADO },
+      data: { estado: EstadoComprobante.ANULADO },
+    });
+    if (r.count !== 1) throw HttpError.conflict(MSG_NO_ANULABLE);
+    // El comprobante ANULADO deja de estar activo: sus ítems vuelven a PENDIENTE.
+    await recalcularEstadoFactura(c.factura.id, tx);
+  });
+
+  await registrarAuditoria({
+    usuarioId: actor.id,
+    accion: AccionAuditoria.MODIFICACION,
+    entidad: 'ComprobantePago',
+    entidadId: id,
+    detalle: `${c.numero} — anulado`,
+  });
+  return { comprobante: vistaComprobante(await buscarComprobante(id)) };
 }

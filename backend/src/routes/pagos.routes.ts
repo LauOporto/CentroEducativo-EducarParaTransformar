@@ -9,7 +9,13 @@ import { prisma } from '../db/prisma';
 import { obtenerEstadoCuenta } from '../services/pagos.facade';
 import { generarPdfFactura, nombreArchivoFactura } from '../services/facturaPdf.service';
 import { almacenamiento, leerArchivoLocal } from '../services/almacenamiento';
-import { generarComprobante, obtenerComprobante } from '../services/comprobantes.service';
+import {
+  anularComprobante,
+  comprobanteVisible,
+  generarComprobante,
+  obtenerComprobante,
+} from '../services/comprobantes.service';
+import { generarPdfComprobante, nombreArchivoComprobante } from '../services/comprobantePdf.service';
 
 // /api/pagos (RF-49): lo mismo para la app móvil y el web. Permisos de D7:
 // ADMIN o PADRE vinculado; DOCENTE y ESTUDIANTE → 403.
@@ -89,6 +95,28 @@ router.get('/comprobantes/:id', async (req, res, next) => {
   try {
     const id = parseId(req.params.id, 'id del comprobante');
     res.json({ exito: true, ...(await obtenerComprobante(req.authUser!, id)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/comprobantes/:id/pdf', async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id, 'id del comprobante');
+    const c = await comprobanteVisible(req.authUser!, id);
+    const pdf = await generarPdfComprobante(id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivoComprobante(c.numero)}"`);
+    res.send(pdf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/comprobantes/:id/anular', async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id, 'id del comprobante');
+    res.json({ exito: true, ...(await anularComprobante(req.authUser!, id)) });
   } catch (err) {
     next(err);
   }
