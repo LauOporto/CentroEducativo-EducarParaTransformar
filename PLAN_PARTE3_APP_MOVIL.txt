@@ -198,9 +198,10 @@ D6 — Archivos de transferencia (RNF-47, Ley 25.326)
     red: devuelve un id falso determinístico.
 
 D7 — Permisos de /api/pagos
-  Helper assertPuedeVerPagos: ADMIN, o PADRE vinculado al alumno. DOCENTE y
-  ESTUDIANTE → 403 (no se reutiliza assertCanViewStudent, que deja pasar a
-  DOCENTE).
+  Helper assertPuedeVerPagos (utils/pagosAccess.ts): ADMIN, o PADRE
+  vinculado al alumno. DOCENTE y ESTUDIANTE → 403 (no se reutiliza
+  assertCanViewStudent, que deja pasar a DOCENTE). El rol y el vínculo se
+  chequean antes que la existencia del alumno (404), para no revelar ids.
 
 D8 — Facturación
   services/facturacion.service.ts con generarFacturasPeriodo(periodo),
@@ -211,20 +212,35 @@ D8 — Facturación
     recorrido, COMEDOR si tiene turno.
   - Se omiten los ítems de importe 0. Si la factura del período ya existe,
     no se toca.
-  - Devuelve { creadas, omitidas }.
-  - Endpoint admin: POST /api/admin/facturacion/generar { periodo }.
+  - Si al alumno no le queda ningún ítem, no se crea factura.
+  - Una transacción por alumno; numero = F-AAAAMM-<id con 6 dígitos>,
+    asignado a partir del id dentro de la transacción (nunca contando filas).
+  - Devuelve { periodo, creadas, omitidas, detalleOmitidas[{ estudianteId,
+    motivo }] }.
+  - Endpoint admin: POST /api/admin/facturacion/generar { periodo } (hasta
+    el mes siguiente al actual; auditoría ALTA por factura).
+  - Precios: PUT /api/niveles/:id/cuota y PUT /api/{deportes,transporte,
+    comedor}/:id/precio, solo ADMIN, con auditoría del valor anterior → nuevo.
+    Las facturas emitidas no cambian: el importe queda congelado.
+  - recalcularEstadoFactura(facturaId, tx): estado de cada ítem según su
+    comprobante activo y de la factura según sus Pagos (lo reutiliza F3).
 
 D9 — Estado de cuenta (RF-49)
   - GET /api/pagos/hijos/:estudianteId/estado-cuenta?desde=AAAA-MM-DD
-    &hasta=AAAA-MM-DD. Default: últimos 6 meses. Rango máximo: 24 meses.
-    Filtra por vencimiento.
-  - Respuesta: resumen { totalAdeudado, totalVencido, totalPagado,
+    &hasta=AAAA-MM-DD. Default: desde hoy − 6 meses hasta hoy + 2 meses
+    (así entra la factura emitida que todavía no venció). Rango máximo: 24
+    meses. Filtra las facturas por vencimiento y los pagos por
+    fechaAcreditacion.
+  - Respuesta: resumen { totalAdeudado, totalVencido, totalEnRevision,
+    totalPagado,
     deudaPorConcepto { CUOTA, DEPORTE, TRANSPORTE, COMEDOR } }, facturas
     [ { id, numero, periodo, vencimiento, total, pagado, saldo, estado,
     items[], comprobantes[] } ] con el estado de cada ítem ya calculado, y
     pagos[] (historial: fechaAcreditacion, monto, número de comprobante,
     factura y período).
-  - GET /api/pagos/facturas/:id/pdf.
+  - GET /api/pagos/facturas/:id/pdf, con los datos para transferir (env
+    opcionales BANCO_TITULAR, BANCO_CUIT, BANCO_CBU y BANCO_ALIAS). El armado
+    vive en generarPdfFactura(facturaId), que F9 adjunta al mail.
   - Todo lo de pagos va en la fachada services/pagos.facade.ts (mismo
     criterio que panelFamilia.facade).
 
@@ -309,9 +325,10 @@ documenta en backend/.env.example y DEPLOY.md.
 |------|---------------------------------------|-----------------------------------------------|-----------|
 | F0   | —                                     | Setup local                                   | completada|
 | F1   | feature/rf48-auth-movil               | D1, D2, D3 + este plan + checklist            | completada|
-| F2   | feature/rf49-estado-cuenta            | D4 (migración), D8, D9, seed con precios y    | pendiente |
-|      |                                       | 3 períodos de facturas                        |           |
-| F3   | feature/rf50-comprobantes-pago        | D5, D6, D7 + aprobar/rechazar por API         | pendiente |
+| F2   | feature/rf49-estado-cuenta            | D4 (migración), D7, D8, D9, endpoints de      | completada|
+|      |                                       | precios, BANCO_*, seed con precios y 3        |           |
+|      |                                       | períodos de facturas                          |           |
+| F3   | feature/rf50-comprobantes-pago        | D5, D6 + aprobar/rechazar por API             | pendiente |
 | F4   | feature/app-movil-base                | D12 + login/logout/recupero + selector de     | pendiente |
 |      |                                       | hijo + job mobile en CI                       |           |
 | F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | pendiente |
@@ -411,6 +428,162 @@ POST /api/auth/password/cambiar         (con sesión; cualquier rol)
 GET /api/auth/me                        (sin cambios; con sesión)
   200:       { exito: true, usuario: { id, usuario, email, dni, nombre,
              role, curso, tipo } }
+
+---- F2 — Estado de cuenta y factura (RF-49) ----
+Permisos (D7): ADMIN o PADRE vinculado al alumno. Otro rol → 403 "Tu rol
+no tiene acceso a la información de pagos."; PADRE no vinculado → 403
+"Ese alumno no está vinculado a tu cuenta.". Montos: number con 2
+decimales. Fechas de vencimiento: "AAAA-MM-DD"; instantes: ISO 8601 (UTC).
+
+GET /api/pagos/hijos/:estudianteId/estado-cuenta?desde=AAAA-MM-DD&hasta=AAAA-MM-DD
+  Headers:   Authorization: Bearer <accessToken>
+  Query:     desde y hasta opcionales. Default: hoy − 6 meses a hoy + 2
+             meses (zona America/Argentina/Buenos_Aires). Máximo 24 meses.
+             Facturas filtradas por vencimiento; pagos por fechaAcreditacion.
+  200:       { exito, alumno, rango, resumen, facturas[], pagos[] }
+             - facturas: ordenadas por período descendente, cada una con
+               items[] (estado PENDIENTE | VENCIDA | EN_REVISION | PAGADA;
+               VENCIDA = PENDIENTE con vencimiento anterior a hoy) y
+               comprobantes[] (GENERADO | EN_REVISION | APROBADO | RECHAZADO
+               | ANULADO, con motivoRechazo y tieneArchivo).
+             - resumen.totalAdeudado: ítems no pagados; totalVencido: ítems
+               VENCIDA; totalEnRevision: ítems EN_REVISION; totalPagado:
+               Pagos de las facturas del rango; deudaPorConcepto: ítems no
+               pagados por concepto.
+             Ejemplo real (seed, pbarrabino → fbarrabino, recortado):
+    {
+      "exito": true,
+      "alumno": {
+        "id": 6,
+        "nombre": "Franco Barrabino",
+        "curso": "Secundaria — 1° año"
+      },
+      "rango": {
+        "desde": "2026-05-05",
+        "hasta": "2027-01-05"
+      },
+      "resumen": {
+        "totalAdeudado": 570000,
+        "totalVencido": 155000,
+        "totalEnRevision": 0,
+        "totalPagado": 675000,
+        "deudaPorConcepto": {
+          "CUOTA": 260000,
+          "DEPORTE": 120000,
+          "TRANSPORTE": 70000,
+          "COMEDOR": 120000
+        }
+      },
+      "facturas": [
+        {
+          "id": 19,
+          "numero": "F-202610-000019",
+          "periodo": "2026-10",
+          "emitidaEn": "2026-09-30T11:00:00.000Z",
+          "vencimiento": "2026-10-10",
+          "total": 415000,
+          "pagado": 260000,
+          "saldo": 155000,
+          "estado": "PARCIAL",
+          "items": [
+            {
+              "id": 79,
+              "concepto": "CUOTA",
+              "descripcion": "Cuota mensual — Secundaria",
+              "importe": 260000,
+              "vencimiento": "2026-10-10",
+              "estado": "PAGADA"
+            },
+            {
+              "id": 80,
+              "concepto": "DEPORTE",
+              "descripcion": "Fútbol — Secundaria — Martes 15:00 a 16:30 — Prof. Andrés Martínez",
+              "importe": 32000,
+              "vencimiento": "2026-10-10",
+              "estado": "VENCIDA"
+            },
+            "…"
+          ],
+          "comprobantes": [
+            {
+              "id": 11,
+              "numero": "CP-202610-900061",
+              "total": 260000,
+              "estado": "APROBADO",
+              "nroOperacion": "SEED-202610-900061",
+              "cargadoEn": "2026-10-06T18:00:00.000Z",
+              "motivoRechazo": null,
+              "tieneArchivo": false
+            }
+          ]
+        },
+        "… (2026-11 y 2026-09)"
+      ],
+      "pagos": [
+        {
+          "id": 11,
+          "fechaAcreditacion": "2026-10-07T14:00:00.000Z",
+          "monto": 260000,
+          "comprobanteNumero": "CP-202610-900061",
+          "facturaNumero": "F-202610-000019",
+          "periodo": "2026-10"
+        },
+        "…"
+      ]
+    }
+  400:       "El id del alumno es inválido." | "La fecha \"desde\" es
+             inválida…" | "La fecha \"desde\" no puede ser posterior a
+             \"hasta\"." | "El rango de fechas no puede superar los 24
+             meses."
+  403:       ver permisos.
+  404:       "El alumno indicado no existe." (solo ADMIN; al PADRE un id
+             ajeno o inexistente le da 403).
+
+GET /api/pagos/facturas/:id/pdf
+  Headers:   Authorization: Bearer <accessToken>
+  200:       application/pdf, Content-Disposition: attachment;
+             filename="factura-F-AAAAMM-000123.pdf". Incluye alumno, curso
+             y nivel, ítems con estado, total, pagado y saldo, y el
+             recuadro "Datos para transferencia" (titular, CUIT, CBU y
+             alias) con la leyenda "Solo se aceptan pagos por
+             transferencia bancaria."
+  403:       ver permisos.  404: "La factura indicada no existe."
+
+--------------------------------------------------------------------------------
+5. ENDPOINTS ADMIN (web; los consume el panel de F7)
+--------------------------------------------------------------------------------
+
+Todos exigen Authorization: Bearer <accessToken> de un ADMIN. Otro rol →
+403 "Tu rol no tiene permiso para esta acción.".
+
+POST /api/admin/facturacion/generar
+  Body:      { periodo: "AAAA-MM" } (hasta el mes siguiente al actual)
+  200:       { exito: true, periodo, creadas, omitidas,
+               detalleOmitidas: [{ estudianteId, motivo }] }
+             Idempotente: una factura existente no se modifica (motivo "Ya
+             tiene factura del período."). Un alumno sin ítems con importe
+             > 0 no se factura ("No tiene ítems con importe mayor a 0.").
+             Auditoría: ALTA, entidad "Factura", una por factura creada.
+  400:       "El período \"2026-13\" es inválido. Usá el formato AAAA-MM
+             (ej. 2026-11)." | "Solo se pueden generar facturas hasta el
+             período AAAA-MM."
+
+PUT /api/niveles/:id/cuota
+PUT /api/deportes/:id/precio
+PUT /api/transporte/:id/precio
+PUT /api/comedor/:id/precio
+  Body:      { precio } (number o string; ≥ 0 y ≤ 10.000.000, hasta 2
+             decimales)
+  200:       { exito: true, nivel | deporte | recorrido | turno: { id,
+               nombre, cuotaMensual | precioMensual } }
+             Auditoría: MODIFICACION con "campo: anterior → nuevo". Las
+             facturas ya emitidas conservan su importe.
+  400:       "El precio debe ser un número entre 0 y 10.000.000, con hasta
+             2 decimales."
+  404:       "El nivel educativo | deporte | recorrido de transporte |
+             turno de comedor indicado no existe."
+  Los GET de esos catálogos (/api/niveles, /api/deportes, /api/transporte,
+  /api/comedor) devuelven cuotaMensual / precioMensual como number.
 
 
 ================================================================================
