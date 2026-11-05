@@ -8,10 +8,27 @@ import { assertPuedeVerPagos } from '../utils/pagosAccess';
 import { prisma } from '../db/prisma';
 import { obtenerEstadoCuenta } from '../services/pagos.facade';
 import { generarPdfFactura, nombreArchivoFactura } from '../services/facturaPdf.service';
+import { almacenamiento, leerArchivoLocal } from '../services/almacenamiento';
 
 // /api/pagos (RF-49): lo mismo para la app móvil y el web. Permisos de D7:
 // ADMIN o PADRE vinculado; DOCENTE y ESTUDIANTE → 403.
 const router = Router();
+
+// D6, driver local (solo desarrollo): URL temporal de un comprobante de
+// transferencia. No usa requireAuth: el token firmado (5 min) es la
+// autorización, igual que la URL firmada de Cloudinary en producción.
+router.get('/archivos/:token', async (req, res, next) => {
+  try {
+    if (almacenamiento.driver() !== 'local') throw HttpError.notFound('El archivo no existe.');
+    const { buffer, tipo } = await leerArchivoLocal(req.params.token);
+    res.setHeader('Content-Type', tipo);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.use(requireAuth);
 

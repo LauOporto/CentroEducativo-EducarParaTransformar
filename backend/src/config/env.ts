@@ -41,6 +41,12 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY es obligatorio'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET es obligatorio'),
 
+  // D6: dónde se guardan los comprobantes de transferencia ('cloudinary' o
+  // 'local'). Opcional: sin cargar se elige solo según NODE_ENV (ver
+  // services/almacenamiento.ts). Se guarda como texto libre para que un valor
+  // mal escrito no tire el arranque: el servicio lo ignora con un warning.
+  STORAGE_DRIVER: z.string().trim().toLowerCase().optional(),
+
   // Parte 3: datos bancarios del colegio que se muestran en la factura y en
   // el comprobante de pago (solo se aceptan transferencias). Opcionales: los
   // defaults son ficticios, para desarrollo y demo.

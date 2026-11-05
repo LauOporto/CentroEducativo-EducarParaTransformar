@@ -59,6 +59,7 @@ Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo la
 | `BANCO_CUIT` (opcional) | CUIT del titular. Default ficticio: `30-71234567-8`. |
 | `BANCO_CBU` (opcional) | CBU de 22 dígitos para la transferencia. Default ficticio: `0000003100012345678901`. |
 | `BANCO_ALIAS` (opcional) | Alias de la cuenta. Default ficticio: `EDUCAR.TRANSFORMAR.CUOTAS`. |
+| `STORAGE_DRIVER` (opcional, **no cargar en producción**) | Dónde se guardan los comprobantes de transferencia: `cloudinary` o `local`. Sin cargar, en producción se usa siempre `cloudinary` (privado, carpeta `educar-para-transformar/comprobantes`, URL firmada de 5 min) con las mismas 3 credenciales de arriba. `local` está prohibido en producción: si se carga, se ignora con un warning. |
 
 ## 5. Deploy
 

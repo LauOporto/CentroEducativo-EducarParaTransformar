@@ -48,3 +48,6 @@ coverage/
 # Cypress
 client/cypress/screenshots/
 client/cypress/videos/
+
+# Comprobantes de transferencia del driver local de almacenamiento (solo desarrollo)
+backend/storage-privado/
