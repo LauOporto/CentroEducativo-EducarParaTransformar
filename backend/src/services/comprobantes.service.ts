@@ -8,13 +8,14 @@ import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
 import { HttpError } from '../utils/httpError';
 import { logger } from '../utils/logger';
 import { decimal, formatearPesos, sumar, toMonto } from '../utils/montos';
-import { esFechaValida, fechaISO, fechaUTC, hoyArgentina } from '../utils/fechas';
+import { diaSiguiente, esFechaValida, fechaISO, fechaUTC, hoyArgentina, inicioDiaArgentina } from '../utils/fechas';
 import { assertPuedeVerPagos } from '../utils/pagosAccess';
 import { registrarAuditoria } from './auditoria.service';
 import { recalcularEstadoFactura } from './facturacion.service';
 import { almacenamiento, type UrlTemporal } from './almacenamiento';
 import { crearNotificacion } from './notificaciones/notificacionFactory';
-import { datosBancarios, LEYENDA_TRANSFERENCIA } from './facturaPdf.service';
+import { datosBancarios, LEYENDA_TRANSFERENCIA, periodoLabel } from './facturaPdf.service';
+import { enviarNotificacion } from './notificaciones/enviarNotificacion';
 
 // RF-50 (D5): comprobantes de pago. El padre elige ítems PENDIENTES de UNA
 // factura, el sistema emite el comprobante con los datos para transferir, el
@@ -35,6 +36,9 @@ export const MSG_SOLO_TRANSFERENCIA = LEYENDA_TRANSFERENCIA;
 export const MSG_ARCHIVO_INVALIDO = 'El archivo debe ser una imagen JPG/PNG o un PDF.';
 export const MSG_SIN_ARCHIVO = 'Este comprobante no tiene archivo de transferencia.';
 export const DIAS_MAX_ANTIGUEDAD_TRANSFERENCIA = 60;
+export const MSG_NO_REVISABLE =
+  'Solo se puede revisar un comprobante en revisión: este ya fue revisado o todavía no tiene la transferencia cargada.';
+export const MSG_MOTIVO_RECHAZO = 'El motivo del rechazo debe tener entre 5 y 300 caracteres.';
 export const MSG_NO_ANULABLE = 'Solo se puede anular un comprobante que todavía no tiene la transferencia cargada.';
 
 const conRequest = (actor: Actor) => ({ authUser: actor });
@@ -59,6 +63,7 @@ export const COMPROBANTE_INCLUDE = {
       periodo: true,
       vencimiento: true,
       estado: true,
+      total: true,
       estudianteId: true,
       estudiante: { select: { id: true, nombre: true, legajo: true, curso: { select: CURSO_SELECT } } },
     },
@@ -409,4 +414,231 @@ export async function urlArchivoComprobante(actor: Actor, id: number, baseUrl: s
   const c = await comprobanteVisible(actor, id);
   if (!c.archivoId || !c.archivoTipo) throw HttpError.notFound(MSG_SIN_ARCHIVO);
   return almacenamiento.urlTemporal(c.archivoId, c.archivoTipo, baseUrl);
+}
+
+// ---- D5 pasos 5 y 6: revisión del Administrador ----
+
+const ESTADOS_COMPROBANTE = Object.values(EstadoComprobante);
+const fechaOpcional = (nombre: string) =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || esFechaValida(v), `La fecha "${nombre}" es inválida. Usá el formato AAAA-MM-DD.`);
+
+const listarSchema = z.object({
+  estado: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .optional()
+    .refine((v) => !v || (ESTADOS_COMPROBANTE as string[]).includes(v), {
+      message: `El estado debe ser uno de: ${ESTADOS_COMPROBANTE.join(', ')}.`,
+    })
+    .transform((v) => (v || EstadoComprobante.EN_REVISION) as EstadoComprobante),
+  estudianteId: z.coerce.number().int().positive().optional(),
+  desde: fechaOpcional('desde'),
+  hasta: fechaOpcional('hasta'),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(50)
+    .transform((v) => Math.min(v, 100)),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+function vistaAdmin(c: ComprobanteCompleto) {
+  const v = vistaComprobante(c);
+  return {
+    id: v.id,
+    numero: v.numero,
+    estado: v.estado,
+    total: v.total,
+    montoTransferido: v.transferencia?.montoTransferido ?? null,
+    nroOperacion: v.transferencia?.nroOperacion ?? null,
+    fechaTransferencia: v.transferencia?.fechaTransferencia ?? null,
+    cargadoEn: v.transferencia?.cargadoEn ?? null,
+    alumno: v.alumno,
+    padre: v.padre,
+    factura: { id: v.factura.id, numero: v.factura.numero, periodo: v.factura.periodo },
+    items: v.items,
+    tieneArchivo: v.tieneArchivo,
+    motivoRechazo: v.motivoRechazo,
+    revisadoEn: v.revisadoEn,
+  };
+}
+
+// Bandeja del Administrador. desde/hasta filtran por la fecha de carga de la
+// transferencia (o la de generación, si todavía no se cargó). El más viejo
+// primero: es el que lleva más tiempo esperando.
+export async function listarComprobantesAdmin(query: unknown) {
+  const f = listarSchema.parse(query);
+  if (f.desde && f.hasta && f.desde > f.hasta) {
+    throw HttpError.badRequest('La fecha "desde" no puede ser posterior a "hasta".');
+  }
+  const rango: Prisma.DateTimeFilter = {
+    ...(f.desde ? { gte: inicioDiaArgentina(f.desde) } : {}),
+    ...(f.hasta ? { lt: inicioDiaArgentina(diaSiguiente(f.hasta)) } : {}),
+  };
+  const where: Prisma.ComprobantePagoWhereInput = {
+    estado: f.estado,
+    ...(f.estudianteId ? { factura: { estudianteId: f.estudianteId } } : {}),
+    ...(f.desde || f.hasta ? { OR: [{ cargadoEn: rango }, { cargadoEn: null, createdAt: rango }] } : {}),
+  };
+  const [total, comprobantes] = await Promise.all([
+    prisma.comprobantePago.count({ where }),
+    prisma.comprobantePago.findMany({
+      where,
+      include: COMPROBANTE_INCLUDE,
+      orderBy: [{ cargadoEn: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
+      take: f.limit,
+      skip: f.offset,
+    }),
+  ]);
+  return { total, limit: f.limit, offset: f.offset, comprobantes: comprobantes.map(vistaAdmin) };
+}
+
+async function comprobanteEnRevision(id: number) {
+  const c = await buscarComprobante(id);
+  if (c.estado !== EstadoComprobante.EN_REVISION) throw HttpError.conflict(MSG_NO_REVISABLE);
+  return c;
+}
+
+const esUnicoDuplicado = (err: unknown) => (err as { code?: string } | null)?.code === 'P2002';
+
+// Avisa a TODOS los padres vinculados al alumno, cada uno por su canal
+// (enviarNotificacion consulta canalNotificacion y usa la Factory).
+async function notificarPadres(c: ComprobanteCompleto, titulo: string, contenido: string) {
+  try {
+    const vinculos = await prisma.parentStudentLink.findMany({
+      where: { estudianteId: c.factura.estudianteId },
+      select: { padreId: true },
+    });
+    for (const v of vinculos) await enviarNotificacion(v.padreId, titulo, contenido, '/padre');
+  } catch (err) {
+    logger.error('No se pudo notificar a los padres', {
+      comprobanteId: c.id,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+const aprobarSchema = z.object({ fechaAcreditacion: fechaOpcional('fechaAcreditacion') });
+
+export async function aprobarComprobante(admin: Actor, id: number, body: unknown, opts: { hoy?: string } = {}) {
+  const { fechaAcreditacion: fechaPedida } = aprobarSchema.parse(body ?? {});
+  const c = await comprobanteEnRevision(id);
+
+  const hoy = opts.hoy ?? hoyArgentina();
+  const fecha = fechaPedida || hoy;
+  if (fecha > hoy) throw HttpError.badRequest('La fecha de acreditación no puede ser futura.');
+  if (c.fechaTransferencia && fecha < fechaISO(c.fechaTransferencia)) {
+    throw HttpError.badRequest('La fecha de acreditación no puede ser anterior a la de la transferencia.');
+  }
+  // Hoy: el momento exacto. Otro día: mediodía de Argentina de ese día.
+  const fechaAcreditacion = fecha === hoy ? new Date() : new Date(`${fecha}T12:00:00.000-03:00`);
+
+  let resultado: { pagoId: number; estado: string; pagado: Prisma.Decimal };
+  try {
+    resultado = await prisma.$transaction(async (tx) => {
+      const r = await tx.comprobantePago.updateMany({
+        where: { id, estado: EstadoComprobante.EN_REVISION },
+        data: { estado: EstadoComprobante.APROBADO, revisadoPorId: admin.id, revisadoEn: new Date() },
+      });
+      if (r.count !== 1) throw HttpError.conflict(MSG_NO_REVISABLE);
+      // comprobanteId es @unique en Pago: segunda barrera contra la doble
+      // aprobación (P2002 → 409).
+      const pago = await tx.pago.create({
+        data: {
+          comprobanteId: id,
+          facturaId: c.factura.id,
+          estudianteId: c.factura.estudianteId,
+          monto: c.total,
+          fechaAcreditacion,
+          registradoPorId: admin.id,
+        },
+        select: { id: true },
+      });
+      const { estado, pagado } = await recalcularEstadoFactura(c.factura.id, tx);
+      return { pagoId: pago.id, estado, pagado };
+    });
+  } catch (err) {
+    if (esUnicoDuplicado(err)) throw HttpError.conflict(MSG_NO_REVISABLE);
+    throw err;
+  }
+
+  const saldo = decimal(c.factura.total).minus(resultado.pagado);
+  await registrarAuditoria({
+    usuarioId: admin.id,
+    accion: AccionAuditoria.ALTA,
+    entidad: 'Pago',
+    entidadId: resultado.pagoId,
+    detalle: `${c.numero} aprobado — ${formatearPesos(c.total)} — factura ${c.factura.numero} → ${resultado.estado}`,
+  });
+
+  const estadoFactura =
+    resultado.estado === 'PAGADA'
+      ? 'La factura quedó pagada.'
+      : `La factura tiene un pago parcial: saldo pendiente ${formatearPesos(saldo)}.`;
+  await notificarPadres(
+    c,
+    'Pago acreditado',
+    `Se acreditó el pago del comprobante ${c.numero} por ${formatearPesos(c.total)} — factura ${c.factura.numero}, ` +
+      `período ${periodoLabel(c.factura.periodo)}. ${estadoFactura}`,
+  );
+
+  return {
+    comprobante: vistaComprobante(await buscarComprobante(id)),
+    factura: {
+      id: c.factura.id,
+      numero: c.factura.numero,
+      estado: resultado.estado,
+      total: toMonto(c.factura.total),
+      pagado: toMonto(resultado.pagado),
+      saldo: toMonto(saldo),
+    },
+  };
+}
+
+const rechazarSchema = z.object({ motivo: z.unknown() });
+
+export async function rechazarComprobante(admin: Actor, id: number, body: unknown) {
+  const { motivo: crudo } = rechazarSchema.parse(body ?? {});
+  const motivo = texto(crudo);
+  if (motivo.length < 5 || motivo.length > 300) throw HttpError.badRequest(MSG_MOTIVO_RECHAZO);
+  const c = await comprobanteEnRevision(id);
+
+  await prisma.$transaction(async (tx) => {
+    const r = await tx.comprobantePago.updateMany({
+      where: { id, estado: EstadoComprobante.EN_REVISION },
+      data: {
+        estado: EstadoComprobante.RECHAZADO,
+        revisadoPorId: admin.id,
+        revisadoEn: new Date(),
+        motivoRechazo: motivo,
+      },
+    });
+    if (r.count !== 1) throw HttpError.conflict(MSG_NO_REVISABLE);
+    // RECHAZADO libera los ítems (vuelven a PENDIENTE); la factura no cambia
+    // porque no se crea ningún Pago.
+    await recalcularEstadoFactura(c.factura.id, tx);
+  });
+
+  await registrarAuditoria({
+    usuarioId: admin.id,
+    accion: AccionAuditoria.MODIFICACION,
+    entidad: 'ComprobantePago',
+    entidadId: id,
+    detalle: `${c.numero} — rechazado: ${motivo}`,
+  });
+
+  await notificarPadres(
+    c,
+    'Comprobante rechazado',
+    `La administración rechazó el comprobante ${c.numero} (${formatearPesos(c.total)}) de la factura ${c.factura.numero}. ` +
+      `Motivo: ${motivo.replace(/[.\s]+$/, '')}. Los ítems volvieron a estar pendientes: generá un comprobante nuevo para pagarlos.`,
+  );
+
+  return { comprobante: vistaComprobante(await buscarComprobante(id)) };
 }

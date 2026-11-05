@@ -21,6 +21,7 @@ import { profesoresRouter } from './profesores.routes';
 import { galeriaPublicRouter, galeriaAdminRouter } from './galeria.routes';
 import { facturacionAdminRouter } from './facturacion.routes';
 import { pagosRouter } from './pagos.routes';
+import { pagosAdminRouter } from './pagosAdmin.routes';
 
 const router = Router();
 
@@ -53,6 +54,7 @@ router.use('/profesores', profesoresRouter);
 router.use('/public', galeriaPublicRouter);
 router.use('/admin', ...requireAdmin(), galeriaAdminRouter);
 router.use('/admin/facturacion', ...requireAdmin(), facturacionAdminRouter);
+router.use('/admin/pagos', ...requireAdmin(), pagosAdminRouter);
 router.use('/pagos', pagosRouter);
 
 export { router as apiRouter };
