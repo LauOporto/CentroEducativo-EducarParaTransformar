@@ -19,6 +19,9 @@ const BCRYPT_COSTO = 10;
 
 export const MSG_OLVIDE = 'Si los datos corresponden a una cuenta activa, te enviamos un código por email.';
 export const MSG_CODIGO_INVALIDO = 'Código inválido o vencido.';
+export const MSG_PASSWORD_ACTUAL_INCORRECTA = 'La contraseña actual no es correcta.';
+export const MSG_PASSWORD_REPETIDA = 'La nueva contraseña debe ser distinta de la actual.';
+export const MSG_PASSWORD_CAMBIADA = 'Contraseña actualizada. Iniciá sesión de nuevo.';
 export const MSG_PASSWORD_RESTABLECIDA = 'Contraseña restablecida. Iniciá sesión con la nueva contraseña.';
 
 // identificador = nombre de usuario (exacto) o email (sin distinguir
@@ -133,5 +136,33 @@ export async function restablecerPassword(params: {
     entidad: 'User',
     entidadId: user.id,
     detalle: 'restablecimiento de contraseña',
+  });
+}
+
+// POST /auth/password/cambiar (con sesión iniciada, cualquier rol).
+export async function cambiarPassword(params: {
+  usuarioId: number;
+  passwordActual: string;
+  passwordNueva: string;
+}): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: params.usuarioId } });
+  if (!user || !user.isActive) throw HttpError.unauthorized('Sesión inválida.');
+
+  const ok = await bcrypt.compare(params.passwordActual, user.password);
+  if (!ok) throw HttpError.badRequest(MSG_PASSWORD_ACTUAL_INCORRECTA);
+  if (params.passwordNueva === params.passwordActual) throw HttpError.badRequest(MSG_PASSWORD_REPETIDA);
+
+  const hash = await bcrypt.hash(params.passwordNueva, BCRYPT_COSTO);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { password: hash } }),
+    prisma.session.deleteMany({ where: { usuarioId: user.id } }),
+  ]);
+
+  await registrarAuditoria({
+    usuarioId: user.id,
+    accion: AccionAuditoria.MODIFICACION,
+    entidad: 'User',
+    entidadId: user.id,
+    detalle: 'cambio de contraseña',
   });
 }

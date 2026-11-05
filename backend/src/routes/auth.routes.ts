@@ -14,7 +14,9 @@ import { esClienteMovil } from '../utils/clienteMovil';
 import { SESSION_MAX_MS, cerrarSesion, iniciarSesion, refrescarSesion } from '../services/sesion.service';
 import {
   MSG_OLVIDE,
+  MSG_PASSWORD_CAMBIADA,
   MSG_PASSWORD_RESTABLECIDA,
+  cambiarPassword,
   restablecerPassword,
   solicitarRecuperacion,
 } from '../services/password.service';
@@ -216,6 +218,25 @@ router.post('/password/restablecer', limitePassword(), async (req, res, next) =>
     await restablecerPassword(data);
     res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
     res.json({ exito: true, mensaje: MSG_PASSWORD_RESTABLECIDA });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const cambiarSchema = z.object({
+  passwordActual: z.string().min(1),
+  passwordNueva: nuevaPasswordSchema,
+});
+
+// A2: cambio de contraseña con la sesión iniciada (cualquier rol). Borra
+// todas las sesiones del usuario, incluida la actual: hay que volver a
+// iniciar sesión en el web y en la app.
+router.post('/password/cambiar', requireAuth, async (req, res, next) => {
+  try {
+    const data = cambiarSchema.parse(req.body);
+    await cambiarPassword({ usuarioId: req.authUser!.id, ...data });
+    res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+    res.json({ exito: true, mensaje: MSG_PASSWORD_CAMBIADA });
   } catch (err) {
     next(err);
   }
