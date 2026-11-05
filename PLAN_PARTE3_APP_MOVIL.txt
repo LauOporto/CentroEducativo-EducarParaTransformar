@@ -1,0 +1,339 @@
+================================================================================
+PLAN DE TRABAJO — PARTE 3: APLICACIÓN MÓVIL (Padre/Tutor)
+Proyecto: Centro Educativo "Educar para Transformar" (Equipo FLCODE)
+Base: Plan de Trabajo FLCODE_3 + enunciado oficial (TP-Metodologia-3)
+      + estado real del código (backend/ + client/) en main (2a9c855)
+Fecha: 04/11/2026
+================================================================================
+
+Objetivo: una aplicación móvil para que el Padre/Tutor gestione el pago de
+cuotas, comedor, deportes y transporte de sus hijos, integrada con el campus
+web y con la MISMA base de datos y la MISMA API, sin duplicar entidades.
+
+Cuando el enunciado oficial y el Plan de Trabajo difieren, prevalece el
+enunciado. Este documento ya tiene esos ajustes aplicados.
+
+--------------------------------------------------------------------------------
+1. ESPECIFICACIÓN
+--------------------------------------------------------------------------------
+
+Requerimientos funcionales:
+
+  RF-48: El Padre/Tutor inicia y cierra sesión en la app y accede solo a las
+         funciones de su rol, con el mismo usuario, contraseña y JWT del
+         web. Incluye recuperar la contraseña olvidada y cambiarla con la
+         sesión iniciada.
+  RF-49: Por cada hijo asociado: cuotas (concepto, importe, vencimiento,
+         estado), historial de deuda discriminado por ítem (cuota, deporte,
+         transporte, comedor), historial de pagos y facturas y comprobantes
+         asociados, con filtro por rango de fechas. Gestión de cuotas:
+         pendientes, pagadas, vencimientos, importe, estado e historial.
+  RF-50: Seleccionar ítems a pagar, generar automáticamente el comprobante
+         de pago y cargar el comprobante de la transferencia, asociado a la
+         factura (una factura admite más de un comprobante).
+  RF-52 (web): Reportes de ingresos y de pagos completos e incompletos,
+         filtrados por período y discriminados por año y por alumno.
+  RF-53 (web): Reporte de pagos por alumno filtrado por deporte, nivel
+         educativo, horario, profesor a cargo y recorrido de transporte,
+         reutilizando los filtros de los reportes de RF-30.
+  RF-54: El Padre/Tutor consulta y gestiona desde la app, por hijo, la
+         inscripción a deportes, transporte y comedor, con las mismas reglas
+         del web (máximo 2 deportes, 1 recorrido, sin duplicados, sin
+         superposición horaria).
+
+  Pedidos por el enunciado sin número propio en el Plan:
+  - Mail el último día hábil del mes a cada padre con el total a abonar, la
+    composición del monto y la factura adjunta.
+  - Mail el día 20 con la deuda, solo si el pago no fue completo.
+  - Web: 5 listados (ver D10).
+
+Requerimientos no funcionales:
+
+  RNF-55: Android 10+ e iOS 15+ (con Expo SDK 55: iOS 15.1+ y Android 7+).
+  RNF-56: Misma API REST, misma base y mismo esquema JWT; sin entidades
+          duplicadas ni mecanismo de sesión adicional.
+  RNF-57: Todo cambio de estado de una cuota o un pago se refleja de
+          inmediato en la app y en el web, sin datos duplicados ni
+          desactualizados.
+
+Historia de usuario de sistema:
+
+  HU9: Recordatorio automático el último día hábil del mes con la
+       composición del monto y la factura adjunta; aviso el día 20 solo si
+       hay deuda pendiente; ambos envíos quedan registrados.
+
+Reglas de negocio:
+  - Solo el Administrador fija el valor de la cuota, de cada deporte, de
+    cada recorrido y del comedor. Cada recorrido y cada deporte tienen valor
+    propio.
+  - El padre selecciona los ítems a pagar; el sistema emite el comprobante.
+  - Solo transferencia bancaria. Nunca efectivo: el backend rechaza
+    cualquier otro medio.
+  - El padre carga el comprobante de transferencia asociado a la factura;
+    una factura admite varios comprobantes.
+  - Transporte opcional; puede variar mes a mes.
+  - Siguen vigentes: máximo 2 deportes simultáneos, 1 recorrido, comedor,
+    sin duplicados.
+  - El padre accede solo a inscripción, pagos y deuda de sus propios hijos.
+
+Criterios de aceptación:
+  HU7:  Solo cuotas de hijos del padre autenticado; el historial discrimina
+        cuota, deporte, transporte y comedor; el estado (pendiente/pagada)
+        es coherente con los comprobantes.
+  HU8:  Se genera el comprobante con el detalle de ítems; una factura admite
+        más de un comprobante; no se admite pago en efectivo.
+  HU10: Reportes filtrados por rango de fechas; pagos completos e
+        incompletos discriminados por año y alumno; los reportes por deporte
+        y transporte reutilizan los filtros de RF-30.
+
+--------------------------------------------------------------------------------
+2. DECISIONES DE DISEÑO
+--------------------------------------------------------------------------------
+
+D1 — Autenticación móvil (RF-48, RNF-56)
+  Mismo POST /api/auth/login, mismos secretos JWT y misma tabla Session, con
+  sus reglas de 24 h de tope y 30 min de inactividad. Si la request trae el
+  header "X-Client-Type: mobile":
+    a) si el rol no es PADRE → 403 "La app móvil es exclusiva para
+       Padres/Tutores. Ingresá desde el campus web." y NO se crea sesión
+       (el chequeo va después de validar la contraseña);
+    b) el refresh token se devuelve en el body (refreshToken), no en cookie.
+  /auth/refresh y /auth/logout aceptan el refresh por cookie (web) o por
+  body { refreshToken } (móvil). La app guarda el refresh en
+  expo-secure-store y el access solo en memoria. El web no cambia.
+  Login: el mismo 401 "Usuario o contraseña incorrectos." para usuario
+  inexistente y para contraseña errónea (con un bcrypt ficticio para que el
+  tiempo de respuesta no delate si la cuenta existe). Recién con la
+  contraseña correcta se informa "cuenta deshabilitada" o "docente
+  pendiente de aprobación".
+
+D2 — Recuperación y cambio de contraseña
+  Tabla PasswordReset (usuarioId, codigoHash, expiraEn, intentos, usadoEn).
+  - POST /api/auth/password/olvide { identificador } (usuario o email):
+    responde siempre 200 con un mensaje genérico. Si la cuenta existe y está
+    activa, invalida los códigos previos, genera un código de 6 dígitos
+    (guardado con bcrypt, vence a los 15 min, máximo 5 intentos) y lo envía
+    con la Factory de notificaciones por canal EMAIL.
+  - POST /api/auth/password/restablecer { identificador, codigo,
+    nuevaPassword }: valida, cambia la contraseña (bcrypt), marca el código
+    como usado y borra TODAS las sesiones del usuario.
+  - POST /api/auth/password/cambiar { passwordActual, passwordNueva }, con
+    sesión iniciada (cualquier rol): verifica la actual, guarda la nueva,
+    borra TODAS las sesiones y pide volver a iniciar sesión.
+  - Rate limit (express-rate-limit) solo en olvide y restablecer: 5 pedidos
+    cada 15 min por IP. Desactivado con NODE_ENV=test.
+  - Auditoría (RNF-46) de cada cambio de contraseña.
+
+D3 — CORS
+  CORS_ORIGIN acepta una lista separada por comas (cada origen validado como
+  URL). Default igual al actual. Las apps nativas no mandan Origin; esto
+  sirve para Expo web en desarrollo. Con trust proxy (Render está detrás de
+  un proxy) para que el rate limit vea la IP real de cada usuario.
+
+D4 — Modelo de datos de pagos (se extiende el modelo, no se duplica)
+  - Precios: NivelEducativo.cuotaMensual, Deporte.precioMensual,
+    RecorridoTransporte.precioMensual, TurnoComedor.precioMensual. Todos
+    Decimal(12,2) default 0.
+  - Enums: ConceptoCuota { CUOTA DEPORTE TRANSPORTE COMEDOR };
+    EstadoCuota { PENDIENTE EN_REVISION PAGADA } (VENCIDA no se guarda: se
+    calcula al leer si vencimiento < hoy y no está PAGADA);
+    EstadoFactura { PENDIENTE PARCIAL PAGADA };
+    EstadoComprobante { GENERADO EN_REVISION APROBADO RECHAZADO ANULADO };
+    MedioPago { TRANSFERENCIA }.
+  - Factura: numero único (F-AAAAMM-000001), estudianteId, periodo
+    "AAAA-MM", emitidaEn, vencimiento (día 10 del período), total, estado.
+    @@unique([estudianteId, periodo]).
+  - Cuota (ítem de la factura): facturaId, estudianteId, concepto,
+    descripcion, referenciaId Int NO nulo, importe congelado al emitir,
+    vencimiento, estado. @@unique([facturaId, concepto, referenciaId]).
+    referenciaId: grupoDeporteId para DEPORTE (congela deporte, nivel, día y
+    horario y profesor del mes facturado; la descripción guarda ese
+    snapshot en texto, ej. "Fútbol — Martes 15:00 a 16:30"), recorridoId
+    para TRANSPORTE, turnoId para COMEDOR y 0 para CUOTA (en Postgres los
+    NULL no chocan en un UNIQUE).
+  - ComprobantePago: numero único (CP-AAAAMM-000001), facturaId,
+    generadoPorId (padre), total, medio (TRANSFERENCIA), estado; datos de la
+    transferencia (archivoId, archivoTipo, nroOperacion, fechaTransferencia,
+    montoTransferido, cargadoEn); revisión (revisadoPorId, revisadoEn,
+    motivoRechazo). Una factura → N comprobantes.
+  - ComprobantePagoItem: comprobanteId, cuotaId, importe (snapshot).
+    @@unique([comprobanteId, cuotaId]).
+  - Pago: se crea solo cuando el Administrador aprueba un comprobante.
+    comprobanteId único, facturaId, estudianteId, monto, fechaAcreditacion,
+    registradoPorId. Es la fuente de los reportes de ingresos.
+  - Montos Decimal(12,2), sumados con Prisma.Decimal; en JSON, number con 2
+    decimales. Vencimientos @db.Date. Zona horaria del negocio:
+    America/Argentina/Buenos_Aires.
+
+D5 — Flujo de pago (RF-50). Toda transición va en una transacción.
+  1. El padre elige ítems PENDIENTES de UNA factura → se crea un
+     ComprobantePago GENERADO con ítems y total; los ítems pasan a
+     EN_REVISION. La respuesta incluye los datos bancarios del colegio (env
+     opcionales BANCO_TITULAR, BANCO_CUIT, BANCO_CBU, BANCO_ALIAS).
+  2. GET .../pdf devuelve el comprobante de pago en PDF (pdfHelpers).
+  3. El padre sube la transferencia (multipart: archivo jpg/png/pdf ≤ 5 MB,
+     nroOperacion, fechaTransferencia, montoTransferido, medio) →
+     EN_REVISION.
+     - medio distinto de TRANSFERENCIA → 400 "Solo se aceptan pagos por
+       transferencia bancaria."
+     - montoTransferido distinto del total → 422 con el total esperado.
+     - Solo se puede subir si el comprobante está GENERADO.
+  4. El padre puede anular un comprobante GENERADO → ANULADO; los ítems
+     vuelven a PENDIENTE.
+  5. El Admin aprueba → crea Pago (monto = total), ítems PAGADA, recalcula
+     la factura (PAGADA si pagado ≥ total, PARCIAL si > 0, PENDIENTE si 0).
+     El Admin rechaza con motivo → RECHAZADO; los ítems vuelven a PENDIENTE
+     y el padre genera uno nuevo.
+  6. Al aprobar o rechazar se notifica al padre con la Factory (respeta su
+     canalNotificacion).
+  - Un ítem nunca puede estar en dos comprobantes activos (GENERADO,
+    EN_REVISION o APROBADO).
+
+D6 — Archivos de transferencia (RNF-47, Ley 25.326)
+  - Cloudinary privado (type 'private'), carpeta
+    educar-para-transformar/comprobantes. Se guarda el public_id, no la URL.
+  - GET /api/pagos/comprobantes/:id/archivo → { url } firmada que vence en
+    5 min.
+  - Todo vive en services/almacenamiento.ts. Con NODE_ENV=test no llama a la
+    red: devuelve un id falso determinístico.
+
+D7 — Permisos de /api/pagos
+  Helper assertPuedeVerPagos: ADMIN, o PADRE vinculado al alumno. DOCENTE y
+  ESTUDIANTE → 403 (no se reutiliza assertCanViewStudent, que deja pasar a
+  DOCENTE).
+
+D8 — Facturación
+  services/facturacion.service.ts con generarFacturasPeriodo(periodo),
+  idempotente:
+  - Se factura cada alumno con role = ESTUDIANTE, isActive = true,
+    estado = ACTIVO y cursoId no nulo: ítem CUOTA (cuotaMensual del nivel
+    del curso), un ítem DEPORTE por inscripción, TRANSPORTE si tiene
+    recorrido, COMEDOR si tiene turno.
+  - Se omiten los ítems de importe 0. Si la factura del período ya existe,
+    no se toca.
+  - Devuelve { creadas, omitidas }.
+  - Endpoint admin: POST /api/admin/facturacion/generar { periodo }.
+
+D9 — Estado de cuenta (RF-49)
+  - GET /api/pagos/hijos/:estudianteId/estado-cuenta?desde=AAAA-MM-DD
+    &hasta=AAAA-MM-DD. Default: últimos 6 meses. Rango máximo: 24 meses.
+    Filtra por vencimiento.
+  - Respuesta: resumen { totalAdeudado, totalVencido, totalPagado,
+    deudaPorConcepto { CUOTA, DEPORTE, TRANSPORTE, COMEDOR } }, facturas
+    [ { id, numero, periodo, vencimiento, total, pagado, saldo, estado,
+    items[], comprobantes[] } ] con el estado de cada ítem ya calculado, y
+    pagos[] (historial: fechaAcreditacion, monto, número de comprobante,
+    factura y período).
+  - GET /api/pagos/facturas/:id/pdf.
+  - Todo lo de pagos va en la fachada services/pagos.facade.ts (mismo
+    criterio que panelFamilia.facade).
+
+D10 — Reportes web (RF-52, RF-53): 5 estrategias del motor existente
+  Solo ADMIN, con desde/hasta obligatorios (máximo 24 meses) y estudianteId
+  opcional. Cada una suma una tarjeta en client/src/pages/admin/
+  ReportesPage.jsx.
+  1. ingresos-por-periodo: Pagos por fechaAcreditacion, agrupados por año y
+     por alumno, con subtotales y total.
+  2. pagos-completos-por-periodo: facturas PAGADA con vencimiento en el
+     período, agrupadas por año y por alumno.
+  3. pagos-incompletos-por-periodo: facturas PENDIENTE o PARCIAL con
+     saldo > 0, agrupadas por año y por alumno, con total, pagado y saldo.
+  4. pagos-por-deporte: ítems DEPORTE del período. Mismos parámetros que la
+     estrategia de RF-32 (nivelId, deporteId) más docenteId opcional.
+     Columnas: deporte, nivel, día y horario, profesor, alumno, curso,
+     período, importe, estado y fecha de pago.
+  5. pagos-por-recorrido: ítems TRANSPORTE del período, con el mismo
+     parámetro de recorrido que la estrategia de RF-33.
+  "Reutilizar filtros" significa: mismos nombres de parámetro, misma
+  semántica y mismo helper de parseo que RF-32 y RF-33.
+
+D11 — Mails y recordatorios (HU9)
+  - services/mail.service.ts manda los mails por la API HTTPS de Resend con
+    fetch (sin SDK). Render free bloquea el SMTP saliente (puertos 25, 465 y
+    587), así que no se usa SMTP. Env opcionales: RESEND_API_KEY, MAIL_FROM
+    y MAIL_REDIRECT_TO (si está cargada, todo mail va a esa dirección y el
+    asunto lleva "[para: <destinatario original>]"). Sin RESEND_API_KEY usa
+    un transporte de log y no falla. Adjuntos en base64.
+  - NotificacionEmail usa este servicio: es un cambio interno de la clase,
+    la Factory no cambia.
+  - Emisión: el último día hábil (lunes a viernes) genera las facturas del
+    mes siguiente y envía el mail con la composición y el PDF adjunto.
+  - Deuda: el día 20, solo si el saldo es > 0.
+  - Registro: tabla EnvioRecordatorio { tipo EMISION|DEUDA, facturaId,
+    padreId, canal, ok, error?, enviadoEn } con
+    @@unique([tipo, facturaId, padreId]).
+  - Disparo: POST /api/jobs/diario protegido con el header X-Cron-Secret
+    (env opcional CRON_SECRET; sin ella, 503). Acepta ?fecha=AAAA-MM-DD para
+    simular un día y decide solo qué correr. Idempotente gracias a
+    EnvioRecordatorio. Lo llama el workflow .github/workflows/
+    jobs-diarios.yml todos los días a las 11:00 UTC (08:00 de Argentina),
+    con reintentos por el arranque en frío de Render (secrets APP_URL y
+    CRON_SECRET).
+  - Para la demo: POST /api/admin/facturacion/jobs/:tipo (ADMIN, fecha
+    opcional).
+  - node-cron (zona America/Argentina/Buenos_Aires) solo corre si
+    JOBS_ENABLED=true.
+
+D12 — Aplicación móvil
+  - Carpeta mobile/ FUERA del workspace pnpm, con npm y su propio
+    package-lock.json, para no tocar el build de Render ni el CI existente.
+  - Expo SDK 55, TypeScript estricto, expo-router (tabs).
+  - @tanstack/react-query: refetch al enfocar, pull-to-refresh e
+    invalidación después de cada mutación (RNF-57).
+  - Librerías: expo-secure-store, expo-image-picker, expo-document-picker,
+    expo-file-system + expo-sharing (PDFs), @expo-google-fonts/fraunces,
+    @expo-google-fonts/hanken-grotesk, @expo/vector-icons.
+  - API por EXPO_PUBLIC_API_URL (default:
+    https://educar-para-transformar-iffe.onrender.com).
+  - metro.config.js con watchFolders limitado a mobile/ y
+    disableHierarchicalLookup. mobile/** en los ignores de eslint.config.mjs.
+  - Primer request con timeout largo y mensaje "Despertando el servidor…"
+    (Render free tarda 30-50 s).
+  - Se prueba con `npx expo start` sobre emulador o dispositivo por adb, o
+    con un APK de EAS (eas.json, perfil preview → android.buildType apk).
+  - Se ve igual que el web: paleta (#F7F8FA, #16243F, #1D63B4, coral
+    #E85A32, teal #0F9E86), Fraunces y Hanken Grotesk, cards, botones,
+    badges y mensajes de error y éxito.
+  - Si sobra tiempo: build web de la app servida por el backend en /app,
+    para evaluadores con iPhone.
+
+Producción: https://educar-para-transformar-iffe.onrender.com (Render +
+Neon). Toda variable de entorno nueva es opcional, con default seguro, y se
+documenta en backend/.env.example y DEPLOY.md.
+
+--------------------------------------------------------------------------------
+3. FASES
+--------------------------------------------------------------------------------
+
+| Fase | Rama                                  | Contenido                                     | Estado    |
+|------|---------------------------------------|-----------------------------------------------|-----------|
+| F0   | —                                     | Setup local                                   | completada|
+| F1   | feature/rf48-auth-movil               | D1, D2, D3 + este plan + checklist            | en curso  |
+| F2   | feature/rf49-estado-cuenta            | D4 (migración), D8, D9, seed con precios y    | pendiente |
+|      |                                       | 3 períodos de facturas                        |           |
+| F3   | feature/rf50-comprobantes-pago        | D5, D6, D7 + aprobar/rechazar por API         | pendiente |
+| F4   | feature/app-movil-base                | D12 + login/logout/recupero + selector de     | pendiente |
+|      |                                       | hijo + job mobile en CI                       |           |
+| F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | pendiente |
+| F6   | feature/rf54-inscripciones-movil      | Pantalla RF-54 + validación de nivel del      | pendiente |
+|      |                                       | alumno al inscribir en un grupo de deporte    |           |
+| F7   | feature/admin-pagos-web               | Panel web: precios, facturación manual,       | pendiente |
+|      |                                       | revisión de comprobantes                      |           |
+| F8   | feature/rf52-53-reportes-financieros  | D10 (5 listados)                              | pendiente |
+| F9   | feature/hu9-recordatorios             | D11 (mails y recordatorios)                   | pendiente |
+| F10  | feature/qa-parte3                     | Smoke E2E del flujo móvil en CI, README/      | pendiente |
+|      |                                       | DEPLOY, eas.json (APK)                        |           |
+
+--------------------------------------------------------------------------------
+4. CONTRATO DE API MÓVIL
+--------------------------------------------------------------------------------
+
+Se completa en cada fase con los endpoints que consume la app. Base:
+EXPO_PUBLIC_API_URL + /api. Errores con el formato común del backend:
+{ error, message } (y details en los errores de validación).
+
+(pendiente: F1 en curso)
+
+================================================================================
+Fin del documento.
+================================================================================
