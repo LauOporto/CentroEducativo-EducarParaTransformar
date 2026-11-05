@@ -9,7 +9,7 @@ import { assertPuedeVerPagos } from '../utils/pagosAccess';
 import { prisma } from '../db/prisma';
 import { obtenerEstadoCuenta } from '../services/pagos.facade';
 import { generarPdfFactura, nombreArchivoFactura } from '../services/facturaPdf.service';
-import { almacenamiento, leerArchivoLocal } from '../services/almacenamiento';
+import { almacenamiento, DIR_LOCAL, resolverArchivoLocal } from '../services/almacenamiento';
 import {
   anularComprobante,
   cargarTransferencia,
@@ -27,14 +27,32 @@ const router = Router();
 // D6, driver local (solo desarrollo): URL temporal de un comprobante de
 // transferencia. No usa requireAuth: el token firmado (5 min) es la
 // autorización, igual que la URL firmada de Cloudinary en producción.
-router.get('/archivos/:token', async (req, res, next) => {
+// El archivo se sirve con sendFile relativo a DIR_LOCAL (root + dotfiles
+// 'deny'): el nombre ya viene validado y send vuelve a impedir salir de esa
+// carpeta. El contenido nunca pasa por res.send.
+router.get('/archivos/:token', (req, res, next) => {
   try {
     if (almacenamiento.driver() !== 'local') throw HttpError.notFound('El archivo no existe.');
-    const { buffer, tipo } = await leerArchivoLocal(req.params.token);
-    res.setHeader('Content-Type', tipo);
-    res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.send(buffer);
+    const { nombre, tipo } = resolverArchivoLocal(req.params.token);
+    res.sendFile(
+      nombre,
+      {
+        root: DIR_LOCAL,
+        dotfiles: 'deny',
+        cacheControl: false,
+        lastModified: false,
+        etag: false,
+        headers: {
+          'Content-Type': tipo,
+          'Content-Disposition': 'inline',
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      },
+      (err) => {
+        if (err && !res.headersSent) next(HttpError.notFound('El archivo no existe.'));
+      },
+    );
   } catch (err) {
     next(err);
   }

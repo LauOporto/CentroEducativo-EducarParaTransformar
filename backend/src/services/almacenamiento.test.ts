@@ -98,10 +98,50 @@ test('local: rechaza archivoId con separadores de ruta o fuera del formato <uuid
     `${UUID}.exe`,
     `${UUID}.png/..`,
     '',
+    // basename válido pero con directorio adelante: se rechaza, no se "limpia".
+    `/etc/${UUID}.png`,
+    `${alm.DIR_LOCAL}/${UUID}.png`,
+    `./${UUID}.png`,
+    // caracteres raros o variantes del formato
+    `${UUID}.png\0`,
+    `${UUID}.png%00.pdf`,
+    `%2e%2e%2f${UUID}.png`,
+    `${UUID.toUpperCase()}.png`,
+    `${UUID}.PNG`,
+    `${UUID}.png.exe`,
+    `.${UUID}.png`,
+    ` ${UUID}.png`,
+    `${UUID}.png\n`,
+    `${UUID.replace(/-/g, '')}.png`,
+    '..',
+    '.',
+    '.env',
   ]) {
-    assert.throws(() => alm.validarArchivoIdLocal(malo), es403, malo);
+    assert.throws(() => alm.validarArchivoIdLocal(malo), es403, JSON.stringify(malo));
   }
-  assert.equal(alm.validarArchivoIdLocal(`${UUID}.png`), `${UUID}.png`);
+  for (const ext of ['jpg', 'png', 'pdf']) {
+    assert.equal(alm.validarArchivoIdLocal(`${UUID}.${ext}`), `${UUID}.${ext}`);
+  }
+});
+
+test('local: resolverArchivoLocal devuelve solo el nombre validado (relativo a DIR_LOCAL) y el mime', () => {
+  const token = alm.firmarTokenArchivo(`${UUID}.pdf`, 'application/pdf');
+  assert.deepEqual(alm.resolverArchivoLocal(token), { nombre: `${UUID}.pdf`, tipo: 'application/pdf' });
+});
+
+test('local: resolverArchivoLocal con un token firmado que trae ruta o mime no admitido → 403', async () => {
+  const { env } = await import('../config/env');
+  const { createHmac } = await import('node:crypto');
+  const clave = createHmac('sha256', env.JWT_ACCESS_SECRET).update('archivos-comprobantes').digest('hex');
+  for (const payload of [
+    { archivoId: `../${UUID}.png`, tipo: 'image/png' },
+    { archivoId: `/tmp/${UUID}.png`, tipo: 'image/png' },
+    { archivoId: `${UUID}.png`, tipo: 'text/html' },
+    { archivoId: 42, tipo: 'image/png' },
+  ]) {
+    const token = jwt.sign(payload, clave, { expiresIn: 60 });
+    assert.throws(() => alm.resolverArchivoLocal(token), es403, JSON.stringify(payload));
+  }
 });
 
 test('local: token válido → archivoId y tipo', () => {

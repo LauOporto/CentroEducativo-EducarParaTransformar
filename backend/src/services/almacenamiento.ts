@@ -164,15 +164,22 @@ export const driverCloudinary: Almacenamiento = {
 
 export const DIR_LOCAL = path.resolve(__dirname, '..', '..', 'storage-privado', 'comprobantes');
 
-// <uuid>.<ext>: cualquier otra cosa (separadores de ruta, "..", etc.) se
-// rechaza antes de tocar el disco.
-const ARCHIVO_LOCAL_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|pdf)$/;
+// Nombre de archivo local: exactamente <uuid>.<ext>. Tres barreras contra
+// path traversal antes de tocar el disco:
+//   1. el nombre sale SOLO de path.basename (descarta cualquier directorio) y
+//      tiene que coincidir con lo recibido (si traía "../" o "sub/", se rechaza);
+//   2. regex estricta: uuid en minúsculas + extensión permitida, nada más;
+//   3. la ruta resuelta tiene que quedar dentro de DIR_LOCAL.
+const ARCHIVO_LOCAL_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:jpg|png|pdf)$/;
 
 export function validarArchivoIdLocal(archivoId: string): string {
-  if (!ARCHIVO_LOCAL_RE.test(archivoId) || /[\\/]/.test(archivoId) || archivoId.includes('..')) {
+  const nombre = path.basename(archivoId);
+  if (nombre !== archivoId || !ARCHIVO_LOCAL_RE.test(nombre)) {
     throw HttpError.forbidden(MSG_TOKEN_ARCHIVO_INVALIDO);
   }
-  return archivoId;
+  const ruta = path.resolve(DIR_LOCAL, nombre);
+  if (!ruta.startsWith(DIR_LOCAL + path.sep)) throw HttpError.forbidden(MSG_TOKEN_ARCHIVO_INVALIDO);
+  return nombre;
 }
 
 // El token se firma con una clave derivada de JWT_ACCESS_SECRET (HMAC con
@@ -202,21 +209,20 @@ export function verificarTokenArchivo(token: string): TokenArchivo {
   }
 }
 
-// GET /api/pagos/archivos/:token (solo con el driver local).
-export async function leerArchivoLocal(token: string): Promise<{ buffer: Buffer; tipo: string }> {
+// GET /api/pagos/archivos/:token (solo con el driver local). Devuelve el
+// nombre ya validado (relativo a DIR_LOCAL) y el mime; la ruta lo sirve con
+// res.sendFile(nombre, { root: DIR_LOCAL, dotfiles: 'deny' }), que además
+// vuelve a impedir salir de DIR_LOCAL. Nunca se lee el archivo acá.
+export function resolverArchivoLocal(token: string): { nombre: string; tipo: string } {
   const { archivoId, tipo } = verificarTokenArchivo(token);
-  try {
-    return { buffer: await fs.readFile(path.join(DIR_LOCAL, archivoId)), tipo };
-  } catch {
-    throw HttpError.notFound('El archivo no existe.');
-  }
+  return { nombre: validarArchivoIdLocal(archivoId), tipo };
 }
 
 export const driverLocal: Almacenamiento = {
   async subirComprobante(buffer, mime) {
     const archivoId = `${randomUUID()}.${extension(mime)}`;
     await fs.mkdir(DIR_LOCAL, { recursive: true });
-    await fs.writeFile(path.join(DIR_LOCAL, archivoId), buffer);
+    await fs.writeFile(path.resolve(DIR_LOCAL, validarArchivoIdLocal(archivoId)), buffer);
     return { archivoId, archivoTipo: mime };
   },
 
@@ -229,7 +235,7 @@ export const driverLocal: Almacenamiento = {
 
   async eliminar(archivoId) {
     try {
-      await fs.unlink(path.join(DIR_LOCAL, validarArchivoIdLocal(archivoId)));
+      await fs.unlink(path.resolve(DIR_LOCAL, validarArchivoIdLocal(archivoId)));
     } catch (err) {
       logger.warn('No se pudo borrar el comprobante local', {
         archivoId,
