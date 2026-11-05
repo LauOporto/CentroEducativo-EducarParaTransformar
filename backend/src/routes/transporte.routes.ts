@@ -5,17 +5,31 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { actualizarPrecio, conMonto } from '../services/precios.service';
 
 const router = Router();
 
 router.get('/', requireAuth, async (_req, res, next) => {
   try {
     const recorridos = await prisma.recorridoTransporte.findMany({ orderBy: { nombre: 'asc' } });
-    res.json({ exito: true, recorridos });
-  } catch (err) { next(err); }
+    res.json({ exito: true, recorridos: recorridos.map((x) => conMonto(x, 'precioMensual')) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.use(requireAuth, requireRole(Role.ADMIN));
+
+// Parte 3: valor mensual propio de cada recorrido. Solo ADMIN (el router ya lo exige).
+// Rige para las facturas que se emitan después; las emitidas no cambian.
+router.put('/:id/precio', async (req, res, next) => {
+  try {
+    const recorrido = await actualizarPrecio('recorrido', Number(req.params.id), req.body?.precio, req.authUser!.id);
+    res.json({ exito: true, recorrido });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Salida y regreso son dos eventos distintos del día (no un rango continuo
 // como GrupoDeporte), por eso los campos se llaman horaSalida/horaRegreso.
@@ -44,8 +58,10 @@ router.post('/', async (req, res, next) => {
     const recorrido = await prisma.recorridoTransporte.create({
       data: { nombre: data.nombre, horaSalida: toTime(data.horaSalida), horaRegreso: toTime(data.horaRegreso) },
     });
-    res.json({ exito: true, recorrido });
-  } catch (err) { next(err); }
+    res.json({ exito: true, recorrido: conMonto(recorrido, 'precioMensual') });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch('/:id', async (req, res, next) => {
@@ -58,8 +74,10 @@ router.patch('/:id', async (req, res, next) => {
       where: { id },
       data: { nombre: data.nombre, horaSalida: toTime(data.horaSalida), horaRegreso: toTime(data.horaRegreso) },
     });
-    res.json({ exito: true, recorrido });
-  } catch (err) { next(err); }
+    res.json({ exito: true, recorrido: conMonto(recorrido, 'precioMensual') });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.delete('/:id', async (req, res, next) => {
@@ -71,7 +89,9 @@ router.delete('/:id', async (req, res, next) => {
     }
     await prisma.recorridoTransporte.delete({ where: { id } });
     res.json({ exito: true });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 export { router as transporteRouter };

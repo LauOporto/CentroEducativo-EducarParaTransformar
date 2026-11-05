@@ -5,14 +5,17 @@ import { DiaSemana, Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { actualizarPrecio, conMonto } from '../services/precios.service';
 
 const router = Router();
 
 router.get('/', requireAuth, async (_req, res, next) => {
   try {
     const deportes = await prisma.deporte.findMany({ orderBy: { nombre: 'asc' } });
-    res.json({ exito: true, deportes });
-  } catch (err) { next(err); }
+    res.json({ exito: true, deportes: deportes.map((x) => conMonto(x, 'precioMensual')) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Grupos de deporte (RF-14): deporte + nivel + día + horario + profesor
@@ -57,10 +60,23 @@ router.get('/grupos', requireAuth, async (req, res, next) => {
         docente: g.docente.nombre,
       })),
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.use(requireAuth, requireRole(Role.ADMIN));
+
+// Parte 3: valor mensual propio de cada deporte. Solo ADMIN (el router ya lo exige).
+// Rige para las facturas que se emitan después; las emitidas no cambian.
+router.put('/:id/precio', async (req, res, next) => {
+  try {
+    const deporte = await actualizarPrecio('deporte', Number(req.params.id), req.body?.precio, req.authUser!.id);
+    res.json({ exito: true, deporte });
+  } catch (err) {
+    next(err);
+  }
+});
 
 const deporteSchema = z.object({ nombre: z.string().trim().min(2).max(40) });
 
@@ -70,8 +86,10 @@ router.post('/', async (req, res, next) => {
     const existe = await prisma.deporte.findUnique({ where: { nombre: data.nombre } });
     if (existe) throw HttpError.conflict('Ya existe un deporte con ese nombre.');
     const deporte = await prisma.deporte.create({ data });
-    res.json({ exito: true, deporte });
-  } catch (err) { next(err); }
+    res.json({ exito: true, deporte: conMonto(deporte, 'precioMensual') });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch('/:id', async (req, res, next) => {
@@ -81,8 +99,10 @@ router.patch('/:id', async (req, res, next) => {
     const conflicto = await prisma.deporte.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
     if (conflicto) throw HttpError.conflict('Ya existe un deporte con ese nombre.');
     const deporte = await prisma.deporte.update({ where: { id }, data });
-    res.json({ exito: true, deporte });
-  } catch (err) { next(err); }
+    res.json({ exito: true, deporte: conMonto(deporte, 'precioMensual') });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.delete('/:id', async (req, res, next) => {
@@ -94,7 +114,9 @@ router.delete('/:id', async (req, res, next) => {
     }
     await prisma.deporte.delete({ where: { id } });
     res.json({ exito: true });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 // HH:mm de 24hs. Se compara como string (zero-padded) para validar
@@ -165,7 +187,9 @@ router.post('/grupos', async (req, res, next) => {
       },
     });
     res.json({ exito: true, grupo });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.delete('/grupos/:id', async (req, res, next) => {
@@ -177,7 +201,9 @@ router.delete('/grupos/:id', async (req, res, next) => {
     }
     await prisma.grupoDeporte.delete({ where: { id } });
     res.json({ exito: true });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 export { router as deportesRouter };
