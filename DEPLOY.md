@@ -70,6 +70,8 @@ npm install -g pnpm@11.1.1 && pnpm install --frozen-lockfile && pnpm run build
 pnpm --filter backend run deploy:start   # prisma migrate deploy && node dist/index.js
 ```
 
+El `build` del backend es `prisma generate && tsc` (no solo `tsc`) a propósito: **Render cachea `node_modules` entre deploys**. Si un deploy no cambia `pnpm-lock.yaml`, `pnpm install --frozen-lockfile` no tiene nada que instalar y **no corre el `postinstall`** (`prisma generate`), así que el cliente de Prisma en la caché queda generado con el `schema.prisma` del deploy anterior. Si ese deploy trajo modelos o columnas nuevas, `tsc` falla con errores como `Module '"@prisma/client"' has no exported member 'ConceptoCuota'` o `Property 'factura' does not exist on type 'PrismaClient'`. El CI no lo detecta porque instala desde cero. Generar el cliente en el propio build lo hace independiente de la caché; el `postinstall` se mantiene para el desarrollo local.
+
 `prisma migrate deploy` aplica las migraciones contra la base de Neon — no corre el seed (tiene ~40 usuarios de prueba con contraseña `123456`, no es para producción).
 
 Con la URL ya generada, volvé a **Environment** y completá `CORS_ORIGIN` con esa URL exacta — eso dispara un redeploy automático.
@@ -105,5 +107,6 @@ Cambiá la contraseña y el email antes de correrlo.
 - **`Variables de entorno inválidas` / `JWT_ACCESS_SECRET debe tener al menos 32 caracteres`** (o `CLOUDINARY_...` / `DATABASE_URL`)**:** falta cargar esa variable en Environment — pasa si el servicio se creó como Web Service manual y no con Blueprint, ver paso 4.
 - **El build falla con `Error: Cannot find matching keyid` en `corepack`**: bug conocido de `corepack enable` (intenta resolver la última versión de pnpm contra el registro de npm y falla verificando la firma). Por eso `render.yaml` ya instala pnpm directo con `npm install -g pnpm@11.1.1` en vez de usar corepack — si lo ves igual, confirmá que el build command no haya vuelto a tener `corepack enable`.
 - **El build falla compilando `bcrypt`**: es un módulo nativo. Si el build falla justo ahí, la solución es migrar `bcrypt` → `bcryptjs` (API idéntica, sin compilación nativa) en `backend/package.json` y en los 2 imports (`auth.routes.ts`, `admin.routes.ts`).
+- **El build falla en `tsc` con `has no exported member` o `Property '...' does not exist on type 'PrismaClient'`**: cliente de Prisma viejo en la caché de `node_modules` (ver paso 5). Confirmá que el script `build` de `backend/package.json` siga siendo `prisma generate && tsc`; como último recurso, *Manual Deploy → Clear build cache & deploy*.
 - **Error de conexión a la base**: confirmá que el connection string de Neon tenga `?sslmode=require` al final y que no le falte ningún caracter al copiarlo.
 - **Error de CORS en el navegador**: no debería pasar en este esquema (mismo origen), pero si lo ves, confirmá que `CORS_ORIGIN` tenga el dominio público exacto que te dio Render, sin `/` al final.
