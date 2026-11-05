@@ -196,6 +196,25 @@ D6 — Archivos de transferencia (RNF-47, Ley 25.326)
     5 min.
   - Todo vive en services/almacenamiento.ts. Con NODE_ENV=test no llama a la
     red: devuelve un id falso determinístico.
+  - Implementado en F3 con 3 drivers detrás de una interfaz única
+    (subirComprobante, urlTemporal, eliminar):
+    · cloudinary: upload_stream con type 'private' y resource_type 'image'
+      también para PDF (Cloudinary trata el PDF como imagen); la URL sale de
+      cloudinary.utils.private_download_url(publicId, formato,
+      { resource_type, type: 'private', expires_at: ahora + 300 }).
+    · local (solo desarrollo): backend/storage-privado/comprobantes/
+      <uuid>.<ext> (gitignoreado). URL GET /api/pagos/archivos/:token, sin
+      requireAuth: el token es un JWT de 5 min con { archivoId, tipo },
+      firmado con una clave derivada de JWT_ACCESS_SECRET (HMAC con
+      contexto propio, para que no sirva como access token ni al revés).
+      Rechaza archivoId con separadores de ruta (path traversal) → 403.
+    · memoria: NODE_ENV=test; no toca red ni disco.
+  - Selección: env opcional STORAGE_DRIVER (cloudinary | local). Sin
+    cargar: test → memoria; producción → cloudinary; desarrollo →
+    cloudinary si CLOUDINARY_CLOUD_NAME está cargado (no "pendiente"), si
+    no → local. "local" en producción se ignora con un warning. Cloudinary
+    sin credenciales → 503 "El almacenamiento de archivos no está
+    configurado." al usarlo (nunca al arrancar).
 
 D7 — Permisos de /api/pagos
   Helper assertPuedeVerPagos (utils/pagosAccess.ts): ADMIN, o PADRE
@@ -328,7 +347,7 @@ documenta en backend/.env.example y DEPLOY.md.
 | F2   | feature/rf49-estado-cuenta            | D4 (migración), D7, D8, D9, endpoints de      | completada|
 |      |                                       | precios, BANCO_*, seed con precios y 3        |           |
 |      |                                       | períodos de facturas                          |           |
-| F3   | feature/rf50-comprobantes-pago        | D5, D6 + aprobar/rechazar por API             | pendiente |
+| F3   | feature/rf50-comprobantes-pago        | D5, D6 + aprobar/rechazar por API             | completada|
 | F4   | feature/app-movil-base                | D12 + login/logout/recupero + selector de     | pendiente |
 |      |                                       | hijo + job mobile en CI                       |           |
 | F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | pendiente |
@@ -549,6 +568,127 @@ GET /api/pagos/facturas/:id/pdf
              transferencia bancaria."
   403:       ver permisos.  404: "La factura indicada no existe."
 
+---- F3 — Comprobantes de pago (RF-50) ----
+Permisos: ver y descargar → ADMIN o PADRE vinculado al alumno de la factura
+(D7). Generar, anular y cargar la transferencia → SOLO el PADRE vinculado
+(el ADMIN recibe 403). Toda transición es un compare-and-set dentro de una
+transacción: si dos requests compiten, una gana y la otra recibe 409.
+
+POST /api/pagos/comprobantes
+  Headers:   Authorization: Bearer <accessToken>
+  Body:      { "facturaId": 37, "cuotaIds": [157, 158] }
+  201:       {
+               "exito": true,
+               "comprobante": {
+                 "id": 21, "numero": "CP-202611-000021",
+                 "estado": "GENERADO", "medio": "TRANSFERENCIA",
+                 "total": 290000, "generadoEn": "2026-11-05T15:07:46.423Z",
+                 "items": [ { "cuotaId": 157, "concepto": "CUOTA",
+                              "descripcion": "Cuota mensual — Secundaria",
+                              "importe": 260000 }, … ],
+                 "factura": { "id": 37, "numero": "F-202611-000037",
+                              "periodo": "2026-11",
+                              "vencimiento": "2026-11-10",
+                              "estado": "PENDIENTE" },
+                 "alumno": { "id": 6, "nombre": "Franco Barrabino",
+                             "curso": "Secundaria — 1° año" },
+                 "padre": { "id": 20, "nombre": "Patricia Barrabino" },
+                 "transferencia": null, "tieneArchivo": false,
+                 "motivoRechazo": null, "revisadoEn": null, "pago": null
+               },
+               "datosBancarios": { "titular": "…", "cuit": "…",
+                                   "cbu": "…", "alias": "…" },
+               "instrucciones": "Transferí exactamente $ 290.000,00 e
+                 indicá el N.º de comprobante CP-202611-000021 en el
+                 concepto de la transferencia."
+             }
+             Los ítems elegidos pasan a EN_REVISION (en el estado de
+             cuenta, totalEnRevision los suma). Auditoría: ALTA,
+             "ComprobantePago".
+  400:       "Elegí al menos un ítem para pagar." | "Hay ítems repetidos en
+             la selección." | "Alguno de los ítems no pertenece a la
+             factura F-…."
+  403:       "Solo el Padre/Tutor puede generar comprobantes de pago." |
+             "Ese alumno no está vinculado a tu cuenta."
+  404:       "La factura indicada no existe."
+  409:       "El ítem \"<descripción>\" ya está incluido en otro
+             comprobante." | "El ítem \"<descripción>\" ya está pagado." |
+             "Alguno de los ítems ya está incluido en otro comprobante o ya
+             fue pagado." (carrera entre dos pedidos)
+
+GET /api/pagos/comprobantes/:id
+  200:       { exito, comprobante (mismo formato), datosBancarios,
+               instrucciones }. Con la transferencia cargada:
+             "transferencia": { "nroOperacion": "OP-123456",
+               "fechaTransferencia": "2026-11-04", "montoTransferido":
+               290000, "cargadoEn": "…" }. Si está APROBADO, "pago": { id,
+               monto, fechaAcreditacion }. Nunca expone el id del archivo:
+               solo "tieneArchivo".
+  403 | 404:  "El comprobante indicado no existe."
+
+GET /api/pagos/comprobantes/:id/pdf
+  200:       application/pdf, attachment; filename="comprobante-CP-….pdf".
+             N.º, fecha, alumno y curso, factura y período, ítems, total,
+             estado, datos bancarios, instrucciones y la leyenda "Solo se
+             aceptan pagos por transferencia bancaria."
+
+POST /api/pagos/comprobantes/:id/anular
+  200:       { exito, comprobante: { …, "estado": "ANULADO" } }; los ítems
+             vuelven a PENDIENTE (o VENCIDA al leer, si ya venció).
+  403:       "Solo el Padre/Tutor puede anular comprobantes de pago."
+  409:       "Solo se puede anular un comprobante que todavía no tiene la
+             transferencia cargada."
+
+POST /api/pagos/comprobantes/:id/transferencia     (multipart/form-data)
+  Campos:    archivo            obligatorio; JPG, PNG o PDF de hasta 5 MB
+                                (se verifica la firma real del archivo)
+             nroOperacion       4 a 40 letras, números o guiones
+             fechaTransferencia AAAA-MM-DD; no futura, no más de 60 días
+             montoTransferido   exactamente el total (ej. 290000 o
+                                290000.00; también acepta coma decimal)
+             medio              opcional; default TRANSFERENCIA
+  Ejemplo:   curl -X POST "$API/pagos/comprobantes/21/transferencia" \
+               -H "Authorization: Bearer $TOKEN" \
+               -F archivo=@transferencia.png \
+               -F nroOperacion=OP-123456 \
+               -F fechaTransferencia=2026-11-04 \
+               -F montoTransferido=290000
+             En la app (React Native): FormData con
+             { uri, name, type } en "archivo" y el resto como texto.
+  Orden de validación: rol/vínculo → estado → medio → monto → resto de
+  los campos → archivo.
+  200:       { exito, mensaje: "Recibimos tu transferencia. La revisará la
+               administración.", comprobante: { …, "estado":
+               "EN_REVISION", "tieneArchivo": true, "transferencia": {…} } }
+             Notificación INTERNA "Nuevo comprobante para revisar" a cada
+             ADMIN activo (link /admin/pagos). Auditoría: MODIFICACION,
+             "transferencia cargada".
+  400:       "Solo se aceptan pagos por transferencia bancaria." (medio
+             EFECTIVO, CASH o cualquier otro) | "El monto transferido es
+             inválido…" | "El N.º de operación debe tener entre 4 y 40
+             caracteres…" | "La fecha de la transferencia es inválida…" |
+             "… no puede ser futura." | "… no puede tener más de 60 días." |
+             "Adjuntá el comprobante de la transferencia (JPG, PNG o PDF)."
+             | "El archivo debe ser una imagen JPG/PNG o un PDF."
+  403:       "Solo el Padre/Tutor puede cargar la transferencia." | vínculo
+  409:       "Este comprobante ya tiene una transferencia cargada o no
+             admite cambios."
+  413:       "El archivo supera el máximo de 5 MB."
+  422:       "El monto transferido debe ser exactamente $ 290.000,00."
+             con details: { "totalEsperado": 290000 }
+  503:       "El almacenamiento de archivos no está configurado."
+
+GET /api/pagos/comprobantes/:id/archivo
+  200:       { exito, url, expiraEn } — URL firmada que vence en 5 minutos
+             (Cloudinary privado en producción; /api/pagos/archivos/:token
+             en desarrollo). La app la abre directo, sin Authorization.
+  403:       padre no vinculado.  404: "Este comprobante no tiene archivo
+             de transferencia."
+
+GET /api/pagos/archivos/:token            (solo driver local, sin sesión)
+  200:       el archivo con su Content-Type.  403: "El enlace del archivo
+             es inválido o venció. Pedí uno nuevo."
+
 --------------------------------------------------------------------------------
 5. ENDPOINTS ADMIN (web; los consume el panel de F7)
 --------------------------------------------------------------------------------
@@ -584,6 +724,83 @@ PUT /api/comedor/:id/precio
              turno de comedor indicado no existe."
   Los GET de esos catálogos (/api/niveles, /api/deportes, /api/transporte,
   /api/comedor) devuelven cuotaMensual / precioMensual como number.
+
+GET /api/admin/pagos/comprobantes?estado=&estudianteId=&desde=&hasta=&limit=&offset=
+  Query:     estado (default EN_REVISION; GENERADO | EN_REVISION | APROBADO
+             | RECHAZADO | ANULADO), estudianteId, desde/hasta AAAA-MM-DD
+             (fecha de carga de la transferencia, o de generación si
+             todavía no se cargó), limit (default 50, máximo 100), offset.
+  200:       { exito, total, limit, offset, comprobantes: [ { id, numero,
+               estado, total, montoTransferido, nroOperacion,
+               fechaTransferencia, cargadoEn, alumno: { id, nombre, curso },
+               padre: { id, nombre }, factura: { id, numero, periodo },
+               items: [ { cuotaId, concepto, descripcion, importe } ],
+               tieneArchivo, motivoRechazo, revisadoEn } ] }
+             Orden: cargadoEn ascendente (el que más espera, primero).
+  400:       estado o fechas inválidas. El archivo se ve con GET
+             /api/pagos/comprobantes/:id/archivo (el ADMIN tiene acceso).
+
+POST /api/admin/pagos/comprobantes/:id/aprobar
+  Body:      { "fechaAcreditacion": "2026-11-05" } (opcional; default hoy)
+  200:       { exito, mensaje: "Pago acreditado.", comprobante: { …,
+               "estado": "APROBADO", "pago": { id, monto,
+               fechaAcreditacion } }, factura: { id, numero, estado
+               (PARCIAL | PAGADA), total, pagado, saldo } }
+             Crea el Pago (monto = total del comprobante), ítems PAGADA,
+             recalcula la factura. Notifica "Pago acreditado" a TODOS los
+             padres vinculados al alumno, cada uno por su
+             canalNotificacion (INTERNA → campanita; EMAIL → mail).
+             Auditoría: ALTA, entidad "Pago".
+  400:       "La fecha de acreditación no puede ser futura." | "… no puede
+             ser anterior a la de la transferencia."
+  409:       "Solo se puede revisar un comprobante en revisión: este ya fue
+             revisado o todavía no tiene la transferencia cargada." (también
+             si el @unique de Pago.comprobanteId detecta un doble pago)
+
+POST /api/admin/pagos/comprobantes/:id/rechazar
+  Body:      { "motivo": "El monto no figura acreditado en la cuenta." }
+  200:       { exito, mensaje: "Comprobante rechazado.", comprobante: { …,
+               "estado": "RECHAZADO", "motivoRechazo": "…" } }
+             Los ítems vuelven a PENDIENTE; la factura no cambia (no hay
+             Pago). Notifica "Comprobante rechazado" con el motivo a los
+             padres vinculados. Auditoría: MODIFICACION, "rechazado:
+             <motivo>".
+  400:       "El motivo del rechazo debe tener entre 5 y 300 caracteres."
+  409:       igual que aprobar.
+
+
+--------------------------------------------------------------------------------
+6. ESTADOS DEL FLUJO DE PAGO (RF-50)
+--------------------------------------------------------------------------------
+
+Ítem de factura (Cuota). VENCIDA no se guarda: es PENDIENTE con
+vencimiento < hoy, calculado al leer. EN_REVISION nunca vence.
+
+    PENDIENTE ──(padre genera comprobante)──▶ EN_REVISION
+        ▲                                        │   │
+        └──(padre anula / admin rechaza)─────────┘   │
+                                                     └──(admin aprueba)──▶ PAGADA
+
+Comprobante de pago (ComprobantePago):
+
+    GENERADO ──(padre carga transferencia)──▶ EN_REVISION ──(admin aprueba)──▶ APROBADO
+        │                                         │
+        └──(padre anula)──▶ ANULADO               └──(admin rechaza)──▶ RECHAZADO
+
+    Activos (ocupan sus ítems): GENERADO, EN_REVISION, APROBADO.
+    RECHAZADO y ANULADO liberan los ítems: el padre genera uno nuevo.
+    Un ítem nunca está en dos comprobantes activos (compare-and-set sobre
+    el estado del ítem al generar).
+
+Factura (según la suma de sus Pagos; un Pago por comprobante aprobado):
+
+    PENDIENTE ──(primer pago, < total)──▶ PARCIAL ──(pagos ≥ total)──▶ PAGADA
+        └────────────(un pago que cubre todo)─────────────────────────────▲
+
+    Una factura admite varios comprobantes (HU8): p. ej. uno por la cuota y
+    otro por el resto; al aprobarse ambos, la factura queda PAGADA.
+    Cada transición recalcula ítems y factura con recalcularEstadoFactura
+    dentro de la misma transacción (RNF-57: web y app leen la misma base).
 
 
 ================================================================================
