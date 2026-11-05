@@ -5,17 +5,31 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { actualizarPrecio, conMonto } from '../services/precios.service';
 
 const router = Router();
 
 router.get('/', requireAuth, async (_req, res, next) => {
   try {
     const turnos = await prisma.turnoComedor.findMany({ orderBy: { nombre: 'asc' } });
-    res.json({ exito: true, turnos });
-  } catch (err) { next(err); }
+    res.json({ exito: true, turnos: turnos.map((x) => conMonto(x, 'precioMensual')) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.use(requireAuth, requireRole(Role.ADMIN));
+
+// Parte 3: valor mensual del turno de comedor. Solo ADMIN (el router ya lo exige).
+// Rige para las facturas que se emitan después; las emitidas no cambian.
+router.put('/:id/precio', async (req, res, next) => {
+  try {
+    const turno = await actualizarPrecio('turno', Number(req.params.id), req.body?.precio, req.authUser!.id);
+    res.json({ exito: true, turno });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Un único bloque de tiempo, igual criterio que GrupoDeporte.
 const horaRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -43,8 +57,10 @@ router.post('/', async (req, res, next) => {
     const turno = await prisma.turnoComedor.create({
       data: { nombre: data.nombre, horaInicio: toTime(data.horaInicio), horaFin: toTime(data.horaFin) },
     });
-    res.json({ exito: true, turno });
-  } catch (err) { next(err); }
+    res.json({ exito: true, turno: conMonto(turno, 'precioMensual') });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch('/:id', async (req, res, next) => {
@@ -57,8 +73,10 @@ router.patch('/:id', async (req, res, next) => {
       where: { id },
       data: { nombre: data.nombre, horaInicio: toTime(data.horaInicio), horaFin: toTime(data.horaFin) },
     });
-    res.json({ exito: true, turno });
-  } catch (err) { next(err); }
+    res.json({ exito: true, turno: conMonto(turno, 'precioMensual') });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.delete('/:id', async (req, res, next) => {
@@ -70,7 +88,9 @@ router.delete('/:id', async (req, res, next) => {
     }
     await prisma.turnoComedor.delete({ where: { id } });
     res.json({ exito: true });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 export { router as comedorRouter };

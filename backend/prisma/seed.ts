@@ -9,6 +9,7 @@ import {
 import bcrypt from 'bcrypt';
 
 import { generarLegajo } from '../src/utils/legajo';
+import { seedFacturacion } from './seed-facturacion';
 
 const prisma = new PrismaClient();
 
@@ -774,6 +775,9 @@ async function main() {
     if (await prisma.employmentApplication.findFirst({ where: { email: p.email } })) continue;
     await prisma.employmentApplication.create({ data: { ...p, resolvedAt: p.status === ModerationStatus.PENDIENTE ? null : new Date() } });
   }
+
+  // ---- Parte 3: precios, facturas e historial de pagos ----
+  await seedFacturacion();
 
   const porRol = (r: Role) => SEED_USERS.filter((u) => u.role === r).length;
   console.log('✅ Seed completo. Password de todos los usuarios: 123456');

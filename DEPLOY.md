@@ -55,6 +55,10 @@ Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo la
 | `CLOUDINARY_CLOUD_NAME` ⚠️ siempre manual | De tu cuenta de Cloudinary (paso 2). |
 | `CLOUDINARY_API_KEY` ⚠️ siempre manual | Ídem. |
 | `CLOUDINARY_API_SECRET` ⚠️ siempre manual | Ídem. |
+| `BANCO_TITULAR` (opcional) | Titular de la cuenta del colegio que figura en la factura y el comprobante de pago. Default ficticio: `Educar para Transformar S.A.` |
+| `BANCO_CUIT` (opcional) | CUIT del titular. Default ficticio: `30-71234567-8`. |
+| `BANCO_CBU` (opcional) | CBU de 22 dígitos para la transferencia. Default ficticio: `0000003100012345678901`. |
+| `BANCO_ALIAS` (opcional) | Alias de la cuenta. Default ficticio: `EDUCAR.TRANSFORMAR.CUOTAS`. |
 
 ## 5. Deploy
 

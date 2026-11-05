@@ -412,10 +412,23 @@ resto del archivo.
           Tests: sesion.service.test.ts y password.service.test.ts.
           Falta: las pantallas de la app (F4).
 
-[FALTA]   RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
+[PARCIAL] RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
           historial de deuda por ítem (cuota, deporte, transporte,
           comedor), historial de pagos y facturas y comprobantes, con
           filtro por rango de fechas.
+          Evidencia (backend, F2): modelo Factura / Cuota /
+          ComprobantePago / ComprobantePagoItem / Pago y precios por nivel,
+          deporte, recorrido y turno (migración facturacion_y_pagos);
+          generación idempotente de facturas
+          (services/facturacion.service.ts, POST /api/admin/facturacion/
+          generar); GET /api/pagos/hijos/:id/estado-cuenta (fachada
+          services/pagos.facade.ts) con ítems por concepto, VENCIDA
+          calculada, comprobantes, pagos y filtro desde/hasta; factura en
+          PDF (GET /api/pagos/facturas/:id/pdf); permisos ADMIN o PADRE
+          vinculado (utils/pagosAccess.ts). Seed con 3 períodos e
+          historial de pagos. Tests: facturacion.service, pagos.facade,
+          precios.service, pagosAccess, fechas y montos.
+          Falta: la pantalla de la app (F5).
 
 [FALTA]   RF-50 Selección de ítems a pagar, comprobante de pago generado
           por el sistema y carga del comprobante de transferencia asociado
