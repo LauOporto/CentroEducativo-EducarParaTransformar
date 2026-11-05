@@ -66,6 +66,12 @@ export function sumarMeses(fecha: string, meses: number): string {
   return new Date(Date.UTC(anio, mes - 1 + meses, Math.min(dia, ultimoDia))).toISOString().slice(0, 10);
 }
 
+export function diaSiguiente(fecha: string): string {
+  const d = new Date(`${fecha}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 // "AAAA-MM-DD" → Date UTC a medianoche, para comparar con columnas @db.Date.
 export const fechaUTC = (fecha: string) => new Date(`${fecha}T00:00:00.000Z`);
 

@@ -20,6 +20,7 @@ import { reportesRouter } from './reportes.routes';
 import { profesoresRouter } from './profesores.routes';
 import { galeriaPublicRouter, galeriaAdminRouter } from './galeria.routes';
 import { facturacionAdminRouter } from './facturacion.routes';
+import { pagosRouter } from './pagos.routes';
 
 const router = Router();
 
@@ -52,5 +53,6 @@ router.use('/profesores', profesoresRouter);
 router.use('/public', galeriaPublicRouter);
 router.use('/admin', ...requireAdmin(), galeriaAdminRouter);
 router.use('/admin/facturacion', ...requireAdmin(), facturacionAdminRouter);
+router.use('/pagos', pagosRouter);
 
 export { router as apiRouter };
