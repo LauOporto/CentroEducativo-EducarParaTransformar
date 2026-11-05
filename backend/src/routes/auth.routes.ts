@@ -12,6 +12,10 @@ import { dniSchema } from '../utils/validators';
 
 const REFRESH_COOKIE = 'et_refresh';
 
+const MSG_CREDENCIALES_INVALIDAS = 'Usuario o contraseña incorrectos.';
+// Hash bcrypt (costo 10) de un valor aleatorio descartado: nunca coincide.
+const HASH_FICTICIO = '$2b$10$elHuMuHLPpNqWb8Om.oJ2uV735vLuEgsFISwCfVYrHV2ybP8GsJIG';
+
 // RNF-38/39: tope absoluto de 24hs desde el login, e invalidación tras
 // 30min de inactividad. El access token (15min, stateless) no se vuelve
 // a chequear contra la sesión en cada request — eso violaría el
@@ -61,11 +65,7 @@ router.post('/register', async (req, res, next) => {
 
     const exists = await prisma.user.findFirst({
       where: {
-        OR: [
-          { usuario: data.usuario },
-          { email: data.email },
-          { dni: data.dni },
-        ],
+        OR: [{ usuario: data.usuario }, { email: data.email }, { dni: data.dni }],
       },
       select: { id: true },
     });
@@ -113,20 +113,20 @@ router.post('/login', async (req, res, next) => {
   try {
     const { usuario, password } = loginSchema.parse(req.body);
 
+    // A2: usuario inexistente y contraseña errónea responden lo mismo, y el
+    // bcrypt se ejecuta igual contra un hash ficticio para que el tiempo de
+    // respuesta tampoco delate si la cuenta existe.
     const user = await prisma.user.findUnique({ where: { usuario } });
-    if (!user) {
-      throw HttpError.unauthorized('El usuario no existe.');
+    const ok = await bcrypt.compare(password, user?.password ?? HASH_FICTICIO);
+    if (!user || !ok) {
+      throw HttpError.unauthorized(MSG_CREDENCIALES_INVALIDAS);
     }
+    // Recién con la contraseña correcta se informa el estado de la cuenta.
     if (!user.isActive) {
       if (user.role === Role.DOCENTE) {
         throw HttpError.unauthorized('Tu cuenta de docente está pendiente de aprobación por un administrador.');
       }
       throw HttpError.unauthorized('La cuenta está deshabilitada.');
-    }
-
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) {
-      throw HttpError.unauthorized('Contraseña incorrecta.');
     }
 
     const token = signAccessToken({
