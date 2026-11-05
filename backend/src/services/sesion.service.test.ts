@@ -270,3 +270,11 @@ test('esClienteMovil: compara X-Client-Type sin importar mayúsculas', () => {
   assert.equal(esClienteMovil(req('web') as any), false);
   assert.equal(esClienteMovil(req(undefined) as any), false);
 });
+
+test('hashFicticio: se genera una sola vez, es bcrypt y no coincide con ninguna contraseña', async () => {
+  const h = svc.hashFicticio();
+  assert.equal(svc.hashFicticio(), h);
+  assert.match(h, /^\$2[aby]\$10\$/);
+  assert.equal(await bcrypt.compare(PASSWORD, h), false);
+  assert.equal(await bcrypt.compare('', h), false);
+});

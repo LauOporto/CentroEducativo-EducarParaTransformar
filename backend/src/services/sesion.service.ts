@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { Role, type User } from '@prisma/client';
 
@@ -24,8 +25,15 @@ export const MSG_SESION_VENCIDA = 'La sesión expiró (máximo 24hs desde el log
 export const MSG_SESION_INACTIVA = 'Sesión cerrada por 30min de inactividad. Iniciá sesión de nuevo.';
 export const MSG_CUENTA_DESHABILITADA = 'Cuenta deshabilitada.';
 
-// Hash bcrypt (costo 10) de un valor aleatorio descartado: nunca coincide.
-export const HASH_FICTICIO = '$2b$10$elHuMuHLPpNqWb8Om.oJ2uV735vLuEgsFISwCfVYrHV2ybP8GsJIG';
+// Hash bcrypt (costo 10, igual que las contraseñas reales) de 32 bytes
+// aleatorios que se descartan: nunca coincide con nada. Se genera en memoria
+// la primera vez que se usa (no queda ningún hash literal en el código) y se
+// reutiliza para todo el proceso.
+let hashFicticioCache: string | undefined;
+export function hashFicticio(): string {
+  hashFicticioCache ??= bcrypt.hashSync(randomBytes(32).toString('hex'), 10);
+  return hashFicticioCache;
+}
 
 export interface SesionEmitida {
   user: User;
@@ -47,7 +55,7 @@ function emitirTokens(user: User, sessionId: number): SesionEmitida {
 // correcta se informa el estado de la cuenta.
 export async function verificarCredenciales(usuario: string, password: string): Promise<User> {
   const user = await prisma.user.findUnique({ where: { usuario } });
-  const ok = await bcrypt.compare(password, user?.password ?? HASH_FICTICIO);
+  const ok = await bcrypt.compare(password, user?.password ?? hashFicticio());
   if (!user || !ok) {
     throw HttpError.unauthorized(MSG_CREDENCIALES_INVALIDAS);
   }

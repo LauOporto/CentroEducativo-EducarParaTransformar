@@ -7,7 +7,7 @@ import { HttpError } from '../utils/httpError';
 import { logger } from '../utils/logger';
 import { registrarAuditoria } from './auditoria.service';
 import { crearNotificacion } from './notificaciones/notificacionFactory';
-import { HASH_FICTICIO } from './sesion.service';
+import { hashFicticio } from './sesion.service';
 
 // RF-48 (D2 / A2): recuperar la contraseña con un código por email y
 // cambiarla con la sesión iniciada. Las dos operaciones terminan igual:
@@ -91,7 +91,7 @@ export async function restablecerPassword(params: {
 
   const user = await buscarPorIdentificador(params.identificador);
   if (!user || !user.isActive) {
-    await bcrypt.compare(params.codigo, HASH_FICTICIO);
+    await bcrypt.compare(params.codigo, hashFicticio());
     throw invalido();
   }
 
@@ -101,7 +101,7 @@ export async function restablecerPassword(params: {
     orderBy: { createdAt: 'desc' },
   });
   if (!reset || reset.intentos >= RESET_MAX_INTENTOS) {
-    await bcrypt.compare(params.codigo, HASH_FICTICIO);
+    await bcrypt.compare(params.codigo, hashFicticio());
     throw invalido();
   }
 
