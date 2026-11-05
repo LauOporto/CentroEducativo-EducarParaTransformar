@@ -64,8 +64,10 @@ enum CanalNotificacion {
 // ---- Estructura académica (Módulo Alumnos / Profesores / Administración) ----
 
 model NivelEducativo {
-  id     Int    @id @default(autoincrement())
-  nombre String @unique // Inicial | Primario | Secundario
+  id           Int     @id @default(autoincrement())
+  nombre       String  @unique // Inicial | Primario | Secundario
+  // Parte 3: valor de la cuota mensual del nivel. Solo lo fija el ADMIN.
+  cuotaMensual Decimal @default(0) @db.Decimal(12, 2)
 
   cursos        Curso[]
   gruposDeporte GrupoDeporte[]
@@ -154,6 +156,16 @@ model User {
   inscripcionesDeporte  InscripcionDeporte[]   @relation("InscripcionesDeporte")
   inscripcionTransporte InscripcionTransporte?
   inscripcionComedor    InscripcionComedor?
+
+  // Parte 3 — facturación y pagos. Todas las relaciones son Restrict: un
+  // registro financiero nunca se borra en cascada desde User (los usuarios
+  // además solo se desactivan, ver DELETE /admin/users/:id).
+  facturas              Factura[]         @relation("FacturasEstudiante")
+  cuotas                Cuota[]           @relation("CuotasEstudiante")
+  comprobantesGenerados ComprobantePago[] @relation("ComprobantesGeneradosPor")
+  comprobantesRevisados ComprobantePago[] @relation("ComprobantesRevisadosPor")
+  pagos                 Pago[]            @relation("PagosEstudiante")
+  pagosRegistrados      Pago[]            @relation("PagosRegistradosPor")
 
   @@index([role])
   @@index([cursoId])
@@ -279,8 +291,10 @@ model StudyPlan {
 // ---- Deportes / Transporte / Comedor (RF-14, RF-15) ----
 
 model Deporte {
-  id     Int    @id @default(autoincrement())
-  nombre String @unique
+  id            Int     @id @default(autoincrement())
+  nombre        String  @unique
+  // Parte 3: valor mensual propio de cada deporte. Solo lo fija el ADMIN.
+  precioMensual Decimal @default(0) @db.Decimal(12, 2)
 
   grupos        GrupoDeporte[]
   inscripciones InscripcionDeporte[]
@@ -317,11 +331,13 @@ model GrupoDeporte {
 // como GrupoDeporte), por eso los campos se llaman horaSalida/horaRegreso
 // y no horaInicio/horaFin.
 model RecorridoTransporte {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @unique
-  horaSalida  DateTime @db.Time
-  horaRegreso DateTime @db.Time
-  createdAt   DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  horaSalida    DateTime @db.Time
+  horaRegreso   DateTime @db.Time
+  createdAt     DateTime @default(now())
+  // Parte 3: valor mensual propio de cada recorrido. Solo lo fija el ADMIN.
+  precioMensual Decimal  @default(0) @db.Decimal(12, 2)
 
   inscripciones InscripcionTransporte[]
 }
@@ -329,11 +345,13 @@ model RecorridoTransporte {
 // Catálogo plano, mismo criterio que RecorridoTransporte. Acá sí es un
 // único bloque de tiempo (como GrupoDeporte), de ahí horaInicio/horaFin.
 model TurnoComedor {
-  id         Int      @id @default(autoincrement())
-  nombre     String   @unique
-  horaInicio DateTime @db.Time
-  horaFin    DateTime @db.Time
-  createdAt  DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  horaInicio    DateTime @db.Time
+  horaFin       DateTime @db.Time
+  createdAt     DateTime @default(now())
+  // Parte 3: valor mensual del turno. Solo lo fija el ADMIN.
+  precioMensual Decimal  @default(0) @db.Decimal(12, 2)
 
   inscripciones InscripcionComedor[]
 }
@@ -457,4 +475,159 @@ model GaleriaImagen {
   createdAt DateTime @default(now())
 
   @@index([orden])
+}
+
+// ---- Parte 3: facturación y pagos (RF-49, RF-50) ----
+
+// Ítem de una factura. VENCIDA no se guarda: se calcula al leer (vencimiento
+// anterior a hoy y estado PENDIENTE).
+enum ConceptoCuota {
+  CUOTA
+  DEPORTE
+  TRANSPORTE
+  COMEDOR
+}
+
+enum EstadoCuota {
+  PENDIENTE
+  EN_REVISION
+  PAGADA
+}
+
+enum EstadoFactura {
+  PENDIENTE
+  PARCIAL
+  PAGADA
+}
+
+enum EstadoComprobante {
+  GENERADO
+  EN_REVISION
+  APROBADO
+  RECHAZADO
+  ANULADO
+}
+
+// Solo transferencia bancaria: el efectivo no existe como opción.
+enum MedioPago {
+  TRANSFERENCIA
+}
+
+// Una factura por alumno y período ("AAAA-MM"). numero = F-AAAAMM-<id con 6
+// dígitos>, asignado a partir del id dentro de la misma transacción.
+model Factura {
+  id           Int           @id @default(autoincrement())
+  numero       String        @unique
+  estudianteId Int
+  estudiante   User          @relation("FacturasEstudiante", fields: [estudianteId], references: [id], onDelete: Restrict)
+  periodo      String // "AAAA-MM"
+  emitidaEn    DateTime      @default(now())
+  vencimiento  DateTime      @db.Date // día 10 del período
+  total        Decimal       @db.Decimal(12, 2)
+  estado       EstadoFactura @default(PENDIENTE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  cuotas       Cuota[]
+  comprobantes ComprobantePago[]
+  pagos        Pago[]
+
+  @@unique([estudianteId, periodo])
+  @@index([periodo])
+  @@index([estado])
+}
+
+// Ítem de la factura, con importe y descripción congelados al emitir.
+// referenciaId (sin FK, a propósito): 0 para CUOTA, grupoDeporteId para
+// DEPORTE (congela deporte, nivel, día y horario y profesor del mes),
+// recorridoId para TRANSPORTE y turnoId para COMEDOR. No es nulo porque en
+// Postgres dos NULL no chocan en un UNIQUE.
+model Cuota {
+  id           Int           @id @default(autoincrement())
+  facturaId    Int
+  factura      Factura       @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  estudianteId Int
+  estudiante   User          @relation("CuotasEstudiante", fields: [estudianteId], references: [id], onDelete: Restrict)
+  concepto     ConceptoCuota
+  referenciaId Int
+  descripcion  String
+  importe      Decimal       @db.Decimal(12, 2)
+  vencimiento  DateTime      @db.Date
+  estado       EstadoCuota   @default(PENDIENTE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  itemsComprobante ComprobantePagoItem[]
+
+  @@unique([facturaId, concepto, referenciaId])
+  @@index([estudianteId, estado])
+  @@index([concepto, referenciaId])
+}
+
+// Comprobante de pago que genera el padre al elegir ítems de UNA factura.
+// Una factura admite varios comprobantes. Los datos de la transferencia y
+// de la revisión se completan en F3.
+model ComprobantePago {
+  id                 Int               @id @default(autoincrement())
+  numero             String            @unique // CP-AAAAMM-000001
+  facturaId          Int
+  factura            Factura           @relation(fields: [facturaId], references: [id], onDelete: Restrict)
+  generadoPorId      Int
+  generadoPor        User              @relation("ComprobantesGeneradosPor", fields: [generadoPorId], references: [id], onDelete: Restrict)
+  total              Decimal           @db.Decimal(12, 2)
+  medio              MedioPago         @default(TRANSFERENCIA)
+  estado             EstadoComprobante @default(GENERADO)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  // Transferencia cargada por el padre.
+  archivoId          String? // public_id privado en Cloudinary, nunca la URL
+  archivoTipo        String?
+  nroOperacion       String?
+  fechaTransferencia DateTime?         @db.Date
+  montoTransferido   Decimal?          @db.Decimal(12, 2)
+  cargadoEn          DateTime?
+  // Revisión del Administrador.
+  revisadoPorId      Int?
+  revisadoPor        User?             @relation("ComprobantesRevisadosPor", fields: [revisadoPorId], references: [id], onDelete: Restrict)
+  revisadoEn         DateTime?
+  motivoRechazo      String?
+
+  items ComprobantePagoItem[]
+  pago  Pago?
+
+  @@index([facturaId])
+  @@index([estado])
+}
+
+model ComprobantePagoItem {
+  id            Int             @id @default(autoincrement())
+  comprobanteId Int
+  comprobante   ComprobantePago @relation(fields: [comprobanteId], references: [id], onDelete: Cascade)
+  cuotaId       Int
+  cuota         Cuota           @relation(fields: [cuotaId], references: [id], onDelete: Restrict)
+  importe       Decimal         @db.Decimal(12, 2) // snapshot del importe del ítem
+
+  @@unique([comprobanteId, cuotaId])
+  @@index([cuotaId])
+}
+
+// Se crea solo cuando el Administrador aprueba un comprobante. Es la fuente
+// de los ingresos de los reportes.
+model Pago {
+  id                Int             @id @default(autoincrement())
+  comprobanteId     Int             @unique
+  comprobante       ComprobantePago @relation(fields: [comprobanteId], references: [id], onDelete: Restrict)
+  facturaId         Int
+  factura           Factura         @relation(fields: [facturaId], references: [id], onDelete: Restrict)
+  estudianteId      Int
+  estudiante        User            @relation("PagosEstudiante", fields: [estudianteId], references: [id], onDelete: Restrict)
+  monto             Decimal         @db.Decimal(12, 2)
+  fechaAcreditacion DateTime
+  registradoPorId   Int
+  registradoPor     User            @relation("PagosRegistradosPor", fields: [registradoPorId], references: [id], onDelete: Restrict)
+  createdAt         DateTime        @default(now())
+
+  @@index([fechaAcreditacion])
+  @@index([estudianteId])
+  @@index([facturaId])
 }
