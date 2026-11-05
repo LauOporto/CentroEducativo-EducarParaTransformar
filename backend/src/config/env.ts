@@ -3,10 +3,25 @@ import { z } from 'zod';
 
 loadDotenv();
 
+// D3: CORS_ORIGIN admite varios orígenes separados por coma (ej. el dominio
+// de Render y Expo web en desarrollo). Cada uno se valida como URL y se le
+// quita la "/" final, porque el navegador manda el Origin sin ella. Las apps
+// nativas no mandan Origin, así que no necesitan figurar acá.
+export const corsOriginSchema = z
+  .string()
+  .default('http://localhost:5173')
+  .transform((valor) =>
+    valor
+      .split(',')
+      .map((origen) => origen.trim().replace(/\/+$/, ''))
+      .filter((origen) => origen.length > 0),
+  )
+  .pipe(z.array(z.string().url('Cada origen de CORS_ORIGIN debe ser una URL válida')).min(1));
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
-  CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
+  CORS_ORIGIN: corsOriginSchema,
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatorio'),
 
