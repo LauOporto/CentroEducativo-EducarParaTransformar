@@ -423,7 +423,7 @@ resto del archivo.
           selector con 2 hijos, cambio y recuperación de contraseña.
           Falta: prueba en un dispositivo físico con Expo Go o APK (F10).
 
-[PARCIAL] RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
+[OK]      RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
           historial de deuda por ítem (cuota, deporte, transporte,
           comedor), historial de pagos y facturas y comprobantes, con
           filtro por rango de fechas.
@@ -439,7 +439,16 @@ resto del archivo.
           vinculado (utils/pagosAccess.ts). Seed con 3 períodos e
           historial de pagos. Tests: facturacion.service, pagos.facade,
           precios.service, pagosAccess, fechas y montos.
-          Falta: la pantalla de la app (F5).
+          Evidencia (app, F5): pestaña Pagos (mobile/src/app/(tabs)/pagos/)
+          con selector de hijo, filtro por meses (últimos 6 meses, este
+          año, año anterior y personalizado, máximo 24 meses), resumen
+          (adeudado, vencido, en revisión y pagado), deuda por ítem
+          desplegable por concepto, facturas con estado, total, pagado y
+          saldo, e historial de pagos. Detalle de factura con
+          GET /api/pagos/facturas/:id (misma forma que el estado de
+          cuenta, vistaFactura en pagos.facade.ts) y descarga del PDF.
+          Tests: pagos.facade.test.ts (forma idéntica y permisos) y
+          mobile/src/pagos/__tests__ (formatos, rango y pantallas).
 
 [PARCIAL] RF-50 Selección de ítems a pagar, comprobante de pago generado
           por el sistema y carga del comprobante de transferencia asociado
@@ -457,7 +466,19 @@ resto del archivo.
           /api/admin/pagos (listar, aprobar → Pago y factura PARCIAL/
           PAGADA; rechazar con motivo) con notificaciones por la Factory.
           Tests: comprobantes.service.test.ts y almacenamiento.test.ts.
-          Falta: la pantalla de la app (F5) y el panel web del ADMIN (F7).
+          Evidencia (app, F5): detalle de factura con casillas (solo
+          PENDIENTE o VENCIDA; total en centavos), "Elegir todo lo
+          pendiente" y "Generar comprobante de pago"; pantalla del
+          comprobante con datos para transferir (copiar CBU y alias),
+          PDF, formulario de transferencia (N.º de operación, fecha,
+          monto exacto, medio fijo "Transferencia bancaria", foto, galería
+          o PDF de hasta 5 MB) y anulación; estados EN_REVISION, APROBADO,
+          RECHAZADO (con motivo) y ANULADO. Una factura lista todos sus
+          comprobantes (HU8). QA de punta a punta contra el backend local
+          (generar, transferir, aprobar, rechazar y anular).
+          Falta: la pantalla web del ADMIN para aprobar o rechazar (F7, a
+          cargo de Lautaro). Hoy se aprueba por API
+          (POST /api/admin/pagos/comprobantes/:id/aprobar | rechazar).
 
 [FALTA]   RF-52 (web) Reportes de ingresos y de pagos completos e
           incompletos por período, discriminados por año y por alumno.
@@ -490,8 +511,16 @@ resto del archivo.
           EXPO_PUBLIC_API_URL + /api con el mismo login, la misma tabla
           Session y los mismos JWT del web (mobile/src/lib/api.ts).
 
-[FALTA]   RNF-57 Cambios de estado de cuotas y pagos reflejados de
+[OK]      RNF-57 Cambios de estado de cuotas y pagos reflejados de
           inmediato en la app y en el web.
+          Evidencia: app y web leen la misma base por la misma API, sin
+          copias. En la app (react-query): invalidación del estado de
+          cuenta, la factura y el comprobante después de cada mutación
+          (generar, anular, cargar transferencia), refetch al volver a la
+          app (focusManager en el layout raíz) y pull-to-refresh, y
+          polling cada 20 s mientras un comprobante está EN_REVISION: un
+          comprobante aprobado desde el web aparece aprobado en la app sin
+          recargar (verificado en la QA de F5).
 
 --- Mails automáticos (enunciado, HU9) ---
 
