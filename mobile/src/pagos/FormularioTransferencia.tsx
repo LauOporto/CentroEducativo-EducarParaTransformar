@@ -72,6 +72,13 @@ export function FormularioTransferencia({
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  // Al corregir un campo, su error desaparece.
+  const limpiar = (campo: keyof Errores) => setErrores((e) => (e[campo] ? { ...e, [campo]: null } : e));
+  const cambiarFecha = (texto: string) => {
+    setFecha(mascaraFecha(texto));
+    limpiar('fecha');
+  };
+
   const elegir = (resultado: ArchivoElegido | string | null) => {
     if (resultado === null) return; // canceló
     if (typeof resultado === 'string') {
@@ -165,7 +172,10 @@ export function FormularioTransferencia({
           testID="campo-nro"
           etiqueta="N.º de operación"
           value={nro}
-          onChangeText={setNro}
+          onChangeText={(t) => {
+            setNro(t);
+            limpiar('nro');
+          }}
           error={errores.nro}
           ayuda="El que figura en el comprobante del banco. Letras, números y guiones."
           maxLength={40}
@@ -178,19 +188,19 @@ export function FormularioTransferencia({
             testID="campo-fecha"
             etiqueta="Fecha de la transferencia"
             value={fecha}
-            onChangeText={(t) => setFecha(mascaraFecha(t))}
+            onChangeText={cambiarFecha}
             error={errores.fecha}
             keyboardType="number-pad"
             maxLength={10}
             placeholder="DD/MM/AAAA"
           />
           <View style={estilos.chips}>
-            <Chip testID="fecha-hoy" texto="Hoy" activo={fecha === aDMA(hoy)} onPress={() => setFecha(aDMA(hoy))} />
+            <Chip testID="fecha-hoy" texto="Hoy" activo={fecha === aDMA(hoy)} onPress={() => cambiarFecha(aDMA(hoy))} />
             <Chip
               testID="fecha-ayer"
               texto="Ayer"
               activo={fecha === aDMA(sumarDias(hoy, -1))}
-              onPress={() => setFecha(aDMA(sumarDias(hoy, -1)))}
+              onPress={() => cambiarFecha(aDMA(sumarDias(hoy, -1)))}
             />
           </View>
         </View>
@@ -199,7 +209,10 @@ export function FormularioTransferencia({
           testID="campo-monto"
           etiqueta="Monto transferido"
           value={monto}
-          onChangeText={setMonto}
+          onChangeText={(t) => {
+            setMonto(t);
+            limpiar('monto');
+          }}
           error={errores.monto}
           ayuda={`Tiene que ser exactamente ${pesos(total)}.`}
           keyboardType="decimal-pad"

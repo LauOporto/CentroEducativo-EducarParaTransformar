@@ -143,9 +143,8 @@ function EstadoDeCuenta({ datos, actualizando }: { datos: EstadoCuenta; actualiz
             <View key={p.id} testID={`pago-${p.id}`} style={[estilos.pago, i > 0 && estilosPagos.separador]}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={estilosPagos.nombre}>{fechaDeInstante(p.fechaAcreditacion)}</Text>
-                <Text style={estilosPagos.detalle}>
-                  {p.comprobanteNumero} · {periodoLargo(p.periodo)}
-                </Text>
+                <Text style={estilosPagos.detalle}>{periodoLargo(p.periodo)}</Text>
+                <Text style={estilos.pagoComprobante}>{p.comprobanteNumero}</Text>
               </View>
               <Text style={[estilosPagos.monto, { color: '#0B6E5E' }]}>{pesos(p.monto)}</Text>
             </View>
@@ -251,8 +250,8 @@ function TarjetaFactura({ factura: f }: { factura: Factura }) {
       </Text>
       <View style={estilos.montos}>
         <Monto etiqueta="Total" valor={f.total} />
-        <Monto etiqueta="Pagado" valor={f.pagado} />
-        <Monto etiqueta="Saldo" valor={f.saldo} destacado={f.saldo > 0} />
+        <Monto etiqueta="Pagado" valor={f.pagado} color="#0B6E5E" />
+        <Monto etiqueta="Saldo" valor={f.saldo} color={f.saldo > 0 ? colors.blue700 : undefined} fuerte />
       </View>
       <View style={estilos.verDetalle}>
         <Text style={estilos.verDetalleTexto}>{f.saldo > 0 ? 'Ver detalle y pagar' : 'Ver detalle'}</Text>
@@ -262,17 +261,21 @@ function TarjetaFactura({ factura: f }: { factura: Factura }) {
   );
 }
 
-function Monto({ etiqueta, valor, destacado = false }: { etiqueta: string; valor: number; destacado?: boolean }) {
+function Monto({
+  etiqueta,
+  valor,
+  color,
+  fuerte = false,
+}: {
+  etiqueta: string;
+  valor: number;
+  color?: string;
+  fuerte?: boolean;
+}) {
   return (
-    <View style={{ flex: 1, gap: 2 }}>
-      <Text style={estilos.totalEtiqueta}>{etiqueta}</Text>
-      <Text
-        style={[estilosPagos.monto, { fontSize: 15 }, destacado && { color: colors.blue700 }]}
-        adjustsFontSizeToFit
-        numberOfLines={1}
-      >
-        {pesos(valor)}
-      </Text>
+    <View style={estilosPagos.fila}>
+      <Text style={estilos.montoEtiqueta}>{etiqueta}</Text>
+      <Text style={[estilosPagos.monto, { fontSize: fuerte ? 16 : 15 }, color ? { color } : null]}>{pesos(valor)}</Text>
     </View>
   );
 }
@@ -301,8 +304,10 @@ const estilos = StyleSheet.create({
     gap: spacing.sm,
   },
   facturaPeriodo: { fontFamily: fonts.displayMedium, fontSize: 20, color: colors.ink, flexShrink: 1 },
-  montos: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  montos: { gap: 6, marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line },
+  montoEtiqueta: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft },
   verDetalle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
   verDetalleTexto: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.blue500 },
   pago: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pagoComprobante: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.inkFaint },
 });

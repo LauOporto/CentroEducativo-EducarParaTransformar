@@ -55,6 +55,7 @@ export function PantallaComprobante({ comprobanteId }: { comprobanteId: number }
   useEffect(() => {
     if (!c) return;
     if (estadoAnterior.current && estadoAnterior.current !== c.estado) {
+      setAviso(null);
       void invalidarPagos(queryClient, { hijoId: c.alumno.id, facturaId: c.factura.id });
     }
     estadoAnterior.current = c.estado;
@@ -141,7 +142,7 @@ export function PantallaComprobante({ comprobanteId }: { comprobanteId: number }
             <Tarjeta>
               <View style={estilosPagos.fila}>
                 <View style={{ gap: 2, flexShrink: 1 }}>
-                  <Text style={estilosPagos.subtitulo}>Total a pagar</Text>
+                  <Text style={estilosPagos.subtitulo}>{c.estado === 'GENERADO' ? 'Total a pagar' : 'Total'}</Text>
                   <Text style={estilosPagos.montoGrande} testID="comprobante-total">
                     {pesos(c.total)}
                   </Text>
@@ -356,45 +357,44 @@ function DatoCopiable({
 }) {
   return (
     <View style={estilos.copiable}>
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={estilos.copiableCabecera}>
         <Text style={estilos.copiableEtiqueta}>{etiqueta}</Text>
-        <Text style={estilos.copiableValor} selectable>
-          {valor}
-        </Text>
+        <Pressable
+          testID={`copiar-${etiqueta.toLowerCase()}`}
+          onPress={onCopiar}
+          accessibilityRole="button"
+          accessibilityLabel={`Copiar ${etiqueta}`}
+          style={({ pressed }) => [estilos.copiar, copiado && estilos.copiarHecho, pressed && { opacity: 0.85 }]}
+        >
+          <Ionicons
+            name={copiado ? 'checkmark' : 'copy-outline'}
+            size={16}
+            color={copiado ? '#0B6E5E' : colors.blue500}
+          />
+          <Text accessibilityLiveRegion="polite" style={[estilos.copiarTexto, copiado && { color: '#0B6E5E' }]}>
+            {copiado ? 'Copiado' : 'Copiar'}
+          </Text>
+        </Pressable>
       </View>
-      <Pressable
-        testID={`copiar-${etiqueta.toLowerCase()}`}
-        onPress={onCopiar}
-        accessibilityRole="button"
-        accessibilityLabel={`Copiar ${etiqueta}`}
-        style={({ pressed }) => [estilos.copiar, copiado && estilos.copiarHecho, pressed && { opacity: 0.85 }]}
-      >
-        <Ionicons
-          name={copiado ? 'checkmark' : 'copy-outline'}
-          size={16}
-          color={copiado ? '#0B6E5E' : colors.blue500}
-        />
-        <Text accessibilityLiveRegion="polite" style={[estilos.copiarTexto, copiado && { color: '#0B6E5E' }]}>
-          {copiado ? 'Copiado' : 'Copiar'}
-        </Text>
-      </Pressable>
+      <Text style={estilos.copiableValor} selectable>
+        {valor}
+      </Text>
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   copiable: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.xs,
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.paper,
     borderWidth: 1,
     borderColor: colors.line,
   },
+  copiableCabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   copiableEtiqueta: { fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft },
-  copiableValor: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.ink },
+  copiableValor: { fontFamily: fonts.bodySemibold, fontSize: 16, color: colors.ink, letterSpacing: 0.3 },
   copiar: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, radius, spacing } from '@/theme';
 import { Chip } from './componentes';
@@ -25,12 +25,7 @@ export function FiltroPeriodo({
   return (
     <View style={estilos.bloque}>
       <Text style={estilos.etiqueta}>Período</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={estilos.fila}
-        accessibilityRole="radiogroup"
-      >
+      <View style={estilos.fila} accessibilityRole="radiogroup">
         {PRESETS.map((p) => (
           <Chip
             key={p.valor}
@@ -44,7 +39,7 @@ export function FiltroPeriodo({
             }}
           />
         ))}
-      </ScrollView>
+      </View>
 
       {filtro.preset === 'personalizado' ? (
         <View style={estilos.personalizado}>
@@ -114,7 +109,7 @@ function SelectorMes({
         <Text style={estilos.selectorTexto} numberOfLines={1}>
           {periodoLargo(valor)}
         </Text>
-        <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkSoft} />
+        <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.inkSoft} />
       </Pressable>
     </View>
   );
@@ -123,7 +118,7 @@ function SelectorMes({
 const estilos = StyleSheet.create({
   bloque: { gap: spacing.sm },
   etiqueta: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.inkSoft },
-  fila: { gap: spacing.sm },
+  fila: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   personalizado: { gap: spacing.md },
   campos: { flexDirection: 'row', gap: spacing.md },
   etiquetaCampo: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.ink },
@@ -132,7 +127,7 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: 4,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.white,
     borderWidth: 1,
@@ -140,7 +135,7 @@ const estilos = StyleSheet.create({
     borderRadius: radius.md,
   },
   selectorAbierto: { borderColor: colors.blue500 },
-  selectorTexto: { fontFamily: fonts.body, fontSize: 15, color: colors.ink, flexShrink: 1 },
+  selectorTexto: { fontFamily: fonts.body, fontSize: 14, color: colors.ink, flexShrink: 1 },
   lista: {
     flexDirection: 'row',
     flexWrap: 'wrap',
