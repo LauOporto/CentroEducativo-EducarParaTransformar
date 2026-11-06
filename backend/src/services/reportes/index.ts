@@ -8,6 +8,11 @@ import { listadoAlumnosPorDeporteStrategy } from './listadoAlumnosPorDeporte.str
 import { listadoAlumnosPorDeporteYNivelStrategy } from './listadoAlumnosPorDeporteYNivel.strategy';
 import { listadoAlumnosPorDeporteNivelHorarioStrategy } from './listadoAlumnosPorDeporteNivelHorario.strategy';
 import { listadoAlumnosPorRecorridoStrategy } from './listadoAlumnosPorRecorrido.strategy';
+import { ingresosPorPeriodoStrategy } from './ingresosPorPeriodo.strategy';
+import { pagosCompletosPorPeriodoStrategy } from './pagosCompletosPorPeriodo.strategy';
+import { pagosIncompletosPorPeriodoStrategy } from './pagosIncompletosPorPeriodo.strategy';
+import { pagosPorDeporteStrategy } from './pagosPorDeporte.strategy';
+import { pagosPorRecorridoStrategy } from './pagosPorRecorrido.strategy';
 
 registrarEstrategia(porAlumnoStrategy);
 registrarEstrategia(listadoAlumnosPorCursoStrategy);
@@ -18,5 +23,10 @@ registrarEstrategia(listadoAlumnosPorDeporteStrategy);
 registrarEstrategia(listadoAlumnosPorDeporteYNivelStrategy);
 registrarEstrategia(listadoAlumnosPorDeporteNivelHorarioStrategy);
 registrarEstrategia(listadoAlumnosPorRecorridoStrategy);
+registrarEstrategia(ingresosPorPeriodoStrategy);
+registrarEstrategia(pagosCompletosPorPeriodoStrategy);
+registrarEstrategia(pagosIncompletosPorPeriodoStrategy);
+registrarEstrategia(pagosPorDeporteStrategy);
+registrarEstrategia(pagosPorRecorridoStrategy);
 
 export { obtenerEstrategia, listarEstrategias } from './motor';
