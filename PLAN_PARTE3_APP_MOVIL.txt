@@ -306,8 +306,11 @@ D11 — Mails y recordatorios (HU9)
     CRON_SECRET).
   - Para la demo: POST /api/admin/facturacion/jobs/:tipo (ADMIN, fecha
     opcional).
-  - node-cron (zona America/Argentina/Buenos_Aires) solo corre si
-    JOBS_ENABLED=true.
+  - node-cron no se implementó: Render free apaga el servicio sin tráfico,
+    así que el workflow de GitHub Actions es el único disparo confiable y
+    un segundo mecanismo solo sumaba una forma más de correr el job.
+  - Sin dominio propio verificado, Resend solo entrega a la casilla de la
+    cuenta: en producción MAIL_REDIRECT_TO es obligatorio hasta tenerlo.
 
 D12 — Aplicación móvil
   - Carpeta mobile/ FUERA del workspace pnpm, con npm y su propio
@@ -358,7 +361,7 @@ documenta en backend/.env.example y DEPLOY.md.
 | F7   | feature/admin-pagos-web               | Panel web: precios, facturación manual,       | pendiente |
 |      |                                       | revisión de comprobantes                      |           |
 | F8   | feature/rf52-53-reportes-financieros  | D10 (5 listados)                              | pendiente |
-| F9   | feature/hu9-recordatorios             | D11 (mails y recordatorios)                   | pendiente |
+| F9   | lau-rama                              | D11 (mails y recordatorios)                   | completada|
 | F10  | feature/qa-parte3                     | Smoke E2E del flujo móvil en CI, README/      | pendiente |
 |      |                                       | DEPLOY, eas.json (APK)                        |           |
 

@@ -485,10 +485,26 @@ resto del archivo.
 
 --- Mails automáticos (enunciado, HU9) ---
 
-[FALTA]   Mail el último día hábil del mes con el total a abonar, la
+[OK]      Mail el último día hábil del mes con el total a abonar, la
           composición del monto y la factura adjunta.
+          Evidencia (F9): services/recordatorios.service.ts (enviarEmision:
+          genera las facturas del mes siguiente y manda a cada padre la de
+          su hijo con el detalle, los datos bancarios y el PDF);
+          services/mail.service.ts (API HTTPS de Resend, porque Render free
+          bloquea SMTP). Registro en EnvioRecordatorio (único por tipo,
+          factura y padre: no repite envíos y reintenta los fallidos).
+          Disparo: POST /api/jobs/diario con X-Cron-Secret, llamado por
+          .github/workflows/jobs-diarios.yml todos los días a las 08:00;
+          manual desde el Dashboard del Administrador. Día hábil = lunes a
+          viernes (sin feriados). Tests: recordatorios.service.test.ts,
+          mail.service.test.ts y fechas.test.ts.
 
-[FALTA]   Mail el día 20 con la deuda, solo si el pago no fue completo.
+[OK]      Mail el día 20 con la deuda, solo si el pago no fue completo.
+          Evidencia (F9): enviarAvisoDeuda en recordatorios.service.ts:
+          facturas del mes PENDIENTE o PARCIAL con saldo > 0; detalla los
+          ítems impagos y aclara los que tienen comprobante en revisión.
+          Nota: sin dominio propio verificado en Resend los mails se
+          redirigen a una casilla del equipo (MAIL_REDIRECT_TO).
 
 --- Listados web (enunciado) ---
 

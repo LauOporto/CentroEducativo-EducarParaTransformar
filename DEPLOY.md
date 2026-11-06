@@ -60,6 +60,10 @@ Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo la
 | `BANCO_CBU` (opcional) | CBU de 22 dígitos para la transferencia. Default ficticio: `0000003100012345678901`. |
 | `BANCO_ALIAS` (opcional) | Alias de la cuenta. Default ficticio: `EDUCAR.TRANSFORMAR.CUOTAS`. |
 | `STORAGE_DRIVER` (opcional, **no cargar en producción**) | Dónde se guardan los comprobantes de transferencia: `cloudinary` o `local`. Sin cargar, en producción se usa siempre `cloudinary` (privado, carpeta `educar-para-transformar/comprobantes`, URL firmada de 5 min) con las mismas 3 credenciales de arriba. `local` está prohibido en producción: si se carga, se ignora con un warning. |
+| `RESEND_API_KEY` (opcional) | API key de [Resend](https://resend.com) para mandar mails (paso 7). Sin cargar, los mails no se mandan: solo quedan en el log. |
+| `MAIL_REDIRECT_TO` (opcional) | Si se carga, **todos** los mails van a esa casilla y el asunto dice a quién iban (`[para: …]`). Hace falta mientras no haya un dominio propio verificado en Resend. |
+| `MAIL_FROM` (opcional) | Remitente. Default: `Educar para Transformar <onboarding@resend.dev>`. Con dominio propio: por ejemplo `Educar para Transformar <avisos@tudominio.com.ar>`. |
+| `CRON_SECRET` (opcional) | Clave de 24 caracteres o más que protege `POST /api/jobs/diario` (paso 7). Sin cargar, ese endpoint responde 503 y no corre ningún job automático. |
 
 ## 5. Deploy
 
@@ -97,6 +101,28 @@ const prisma = new PrismaClient();
 ```
 
 Cambiá la contraseña y el email antes de correrlo.
+
+## 7. Mails y jobs diarios (HU9)
+
+Render free **bloquea el SMTP saliente** (puertos 25, 465 y 587), así que los mails salen por la API HTTPS de Resend.
+
+1. [resend.com](https://resend.com) → crear cuenta (sin tarjeta) con la casilla del equipo → **API Keys → Create API Key** con permiso *Sending access*.
+2. En Render → **Environment**: `RESEND_API_KEY` con esa key y `MAIL_REDIRECT_TO` con **la misma casilla de la cuenta de Resend**. Sin un dominio propio verificado, Resend solo entrega mails a esa casilla (cualquier otro destinatario devuelve 403), así que la redirección es obligatoria hasta tener dominio.
+3. Generá una clave para el cron: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Cargala en Render como `CRON_SECRET`.
+4. En GitHub → **Settings → Secrets and variables → Actions → New repository secret**: `APP_URL` (la URL de Render, sin `/` al final) y `CRON_SECRET` (el mismo valor del paso 3).
+
+Con eso, el workflow `.github/workflows/jobs-diarios.yml` llama todos los días a las 08:00 (Argentina) a `POST /api/jobs/diario`, que decide qué corre:
+
+- **Último día hábil del mes** (lunes a viernes, sin feriados): genera las facturas del mes siguiente y manda a cada padre la de su hijo con el detalle y el PDF.
+- **Día 20**: aviso a los padres de las facturas del mes con saldo pendiente.
+
+Cada envío queda registrado (tabla `EnvioRecordatorio`): correrlo dos veces no repite mails, y lo que falló se reintenta al día siguiente.
+
+**Probarlo sin esperar:** en GitHub → **Actions → Jobs diarios → Run workflow** se puede cargar una fecha a simular (ej. `2026-11-20`). O desde el panel del Administrador → **Dashboard → Facturación y avisos por mail → Ejecutar ahora**.
+
+**Mandar a los destinatarios reales** requiere un dominio propio: verificarlo en Resend (**Domains**, agregando los registros DNS que indica), cambiar `MAIL_FROM` a una dirección de ese dominio y borrar `MAIL_REDIRECT_TO`.
+
+> GitHub desactiva los workflows programados de un repositorio público después de 60 días sin actividad. Si eso pasa, se reactivan desde la pestaña **Actions**.
 
 ## Limitaciones conocidas del plan free
 
