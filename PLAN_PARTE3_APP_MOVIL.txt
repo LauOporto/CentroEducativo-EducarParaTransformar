@@ -356,7 +356,7 @@ documenta en backend/.env.example y DEPLOY.md.
 | F4   | lau-rama                              | D12 + login/logout/recupero + selector de     | completada|
 |      |                                       | hijo + job mobile en CI                       |           |
 | F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | pendiente |
-| F6   | feature/rf54-inscripciones-movil      | Pantalla RF-54 + validación de nivel del      | pendiente |
+| F6   | lau-rama                              | Pantalla RF-54 + validación de nivel del      | completada|
 |      |                                       | alumno al inscribir en un grupo de deporte    |           |
 | F7   | feature/admin-pagos-web               | Panel web: precios, facturación manual,       | pendiente |
 |      |                                       | revisión de comprobantes                      |           |
@@ -693,6 +693,37 @@ GET /api/pagos/comprobantes/:id/archivo
 GET /api/pagos/archivos/:token            (solo driver local, sin sesión)
   200:       el archivo con su Content-Type.  403: "El enlace del archivo
              es inválido o venció. Pedí uno nuevo."
+
+---- F6 — Inscripciones (RF-54) ----
+
+La app usa los mismos endpoints que el web (rutas de inscripciones.routes.ts,
+reglas en services/panelFamilia.facade.ts). Pantalla: (tabs)/servicios.tsx.
+Acceso: ADMIN, el propio ESTUDIANTE o el PADRE vinculado (403 si no).
+
+GET /api/inscripciones/estudiantes/:id/resumen
+  200: { exito, deportes: { nivel, inscriptos[], disponibles[] },
+         transporte: { actual, disponibles[] }, comedor: { actual,
+         disponibles[] } }
+       nivel: nombre del nivel del curso del alumno, o null si no tiene
+       curso. disponibles de deportes: solo grupos de ese nivel y de
+       deportes en los que no está inscripto (vacío si no tiene curso).
+       Grupo: { id, deporte, precioMensual, nivel, diaSemana, horaInicio,
+       horaFin, docente, ... }. Recorrido: { id, nombre, horaSalida,
+       horaRegreso, precioMensual }. Turno: { id, nombre, horaInicio,
+       horaFin, precioMensual }. Horas "HH:mm"; precio 0 = sin valor fijado
+       (no se factura).
+
+POST   /api/inscripciones/estudiantes/:id/deportes { grupoDeporteId }
+DELETE /api/inscripciones/estudiantes/:id/deportes/:grupoDeporteId
+PUT    /api/inscripciones/estudiantes/:id/transporte { recorridoId }
+DELETE /api/inscripciones/estudiantes/:id/transporte
+PUT    /api/inscripciones/estudiantes/:id/comedor { turnoId }
+DELETE /api/inscripciones/estudiantes/:id/comedor
+  409 al inscribir a un deporte: grupo de otro nivel ("El grupo de X es
+       para Primaria y el alumno cursa Secundaria."), alumno sin curso,
+       deporte repetido, 2 deportes o superposición horaria.
+  Los cambios se facturan desde la próxima factura generada (D8): las ya
+  emitidas no cambian.
 
 --------------------------------------------------------------------------------
 5. ENDPOINTS ADMIN (web; los consume el panel de F7)
