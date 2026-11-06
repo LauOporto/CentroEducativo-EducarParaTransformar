@@ -76,6 +76,7 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test -- --ci
       - run: npx expo export --platform web --output-dir dist
 
   # Pruebas E2E con Cypress (QA): la app compilada contra un Postgres
