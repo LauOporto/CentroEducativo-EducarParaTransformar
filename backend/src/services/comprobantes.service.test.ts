@@ -428,11 +428,12 @@ test('aprobar: crea el Pago por el total, ítems PAGADA, factura PARCIAL y avisa
   );
   assert.match(base.db.notificaciones[0].contenido, /saldo pendiente \$\s133\.000,00/);
   assert.match(base.db.notificaciones[0].contenido, /período Noviembre 2026/);
-  const mail = info.mock.calls.find((c) => String(c.arguments[0]).startsWith('Notificación por email'));
+  // En los tests no hay proveedor de mails: el envío queda en el log de mail.service.
+  const mail = info.mock.calls.find((c) => String(c.arguments[0]).startsWith('Mail sin enviar'));
   assert.ok(mail, 'se esperaba un envío por EMAIL');
-  const meta = mail.arguments[1] as { to: string; titulo: string };
+  const meta = mail.arguments[1] as { to: string; asunto: string };
   assert.equal(meta.to, `${PADRE_EMAIL}@test.local`);
-  assert.equal(meta.titulo, 'Pago acreditado');
+  assert.equal(meta.asunto, 'Pago acreditado');
 });
 
 test('aprobar: dos comprobantes que cubren toda la factura → PAGADA (HU8: una factura, varios comprobantes)', async () => {

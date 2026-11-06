@@ -18,6 +18,11 @@ export const corsOriginSchema = z
   )
   .pipe(z.array(z.string().url('Cada origen de CORS_ORIGIN debe ser una URL válida')).min(1));
 
+// Variable opcional: si en el hosting quedó cargada pero vacía, cuenta como
+// no cargada (en vez de fallar la validación y tirar el arranque).
+const opcional = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((valor) => (typeof valor === 'string' && valor.trim() === '' ? undefined : valor), schema.optional());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -54,6 +59,19 @@ const envSchema = z.object({
   BANCO_CUIT: z.string().trim().min(1).default('30-71234567-8'),
   BANCO_CBU: z.string().trim().min(1).default('0000003100012345678901'),
   BANCO_ALIAS: z.string().trim().min(1).default('EDUCAR.TRANSFORMAR.CUOTAS'),
+
+  // D11: mails por la API HTTPS de Resend (el plan free de Render bloquea el
+  // SMTP saliente). Sin RESEND_API_KEY los mails solo se registran en el log.
+  // MAIL_REDIRECT_TO manda TODOS los mails a esa casilla (demo, o mientras no
+  // haya un dominio propio verificado: sin dominio, Resend solo entrega a la
+  // casilla de la cuenta).
+  RESEND_API_KEY: opcional(z.string().trim()),
+  MAIL_FROM: z.string().trim().min(1).default('Educar para Transformar <onboarding@resend.dev>'),
+  MAIL_REDIRECT_TO: opcional(z.string().trim().email('MAIL_REDIRECT_TO debe ser un email válido')),
+
+  // D11: clave que protege POST /api/jobs/diario (lo llama el workflow
+  // jobs-diarios.yml). Sin cargar, el endpoint responde 503.
+  CRON_SECRET: opcional(z.string().trim().min(24, 'CRON_SECRET debe tener al menos 24 caracteres')),
 });
 
 const parsed = envSchema.safeParse(process.env);
