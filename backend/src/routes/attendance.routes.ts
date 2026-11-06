@@ -87,9 +87,7 @@ router.post('/bulk', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (
     );
     await prisma.$transaction(ops);
 
-    for (const r of data.records) {
-      await verificarInasistenciasConsecutivas(r.estudiante_id, materiaKey);
-    }
+    await Promise.all(data.records.map((r) => verificarInasistenciasConsecutivas(r.estudiante_id, materiaKey)));
 
     res.json({ exito: true, total: data.records.length });
   } catch (err) {
