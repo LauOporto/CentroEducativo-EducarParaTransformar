@@ -160,12 +160,13 @@ model User {
   // Parte 3 — facturación y pagos. Todas las relaciones son Restrict: un
   // registro financiero nunca se borra en cascada desde User (los usuarios
   // además solo se desactivan, ver DELETE /admin/users/:id).
-  facturas              Factura[]         @relation("FacturasEstudiante")
-  cuotas                Cuota[]           @relation("CuotasEstudiante")
-  comprobantesGenerados ComprobantePago[] @relation("ComprobantesGeneradosPor")
-  comprobantesRevisados ComprobantePago[] @relation("ComprobantesRevisadosPor")
-  pagos                 Pago[]            @relation("PagosEstudiante")
-  pagosRegistrados      Pago[]            @relation("PagosRegistradosPor")
+  facturas               Factura[]           @relation("FacturasEstudiante")
+  cuotas                 Cuota[]             @relation("CuotasEstudiante")
+  comprobantesGenerados  ComprobantePago[]   @relation("ComprobantesGeneradosPor")
+  comprobantesRevisados  ComprobantePago[]   @relation("ComprobantesRevisadosPor")
+  pagos                  Pago[]              @relation("PagosEstudiante")
+  pagosRegistrados       Pago[]              @relation("PagosRegistradosPor")
+  recordatoriosRecibidos EnvioRecordatorio[] @relation("RecordatoriosPadre")
 
   @@index([role])
   @@index([cursoId])
@@ -528,9 +529,10 @@ model Factura {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  cuotas       Cuota[]
-  comprobantes ComprobantePago[]
-  pagos        Pago[]
+  cuotas        Cuota[]
+  comprobantes  ComprobantePago[]
+  pagos         Pago[]
+  recordatorios EnvioRecordatorio[]
 
   @@unique([estudianteId, periodo])
   @@index([periodo])
@@ -630,4 +632,29 @@ model Pago {
   @@index([fechaAcreditacion])
   @@index([estudianteId])
   @@index([facturaId])
+}
+
+// HU9 (D11): registro de los mails automáticos de facturación. Uno por tipo,
+// factura y padre: evita mandar dos veces el mismo aviso aunque el job corra
+// de nuevo, y deja constancia para verificar los envíos. Un envío fallido
+// (ok = false) se reintenta en la próxima corrida.
+enum TipoRecordatorio {
+  EMISION // último día hábil: factura del mes siguiente con su composición
+  DEUDA // día 20: aviso de saldo pendiente
+}
+
+model EnvioRecordatorio {
+  id        Int              @id @default(autoincrement())
+  tipo      TipoRecordatorio
+  facturaId Int
+  factura   Factura          @relation(fields: [facturaId], references: [id], onDelete: Restrict)
+  padreId   Int
+  padre     User             @relation("RecordatoriosPadre", fields: [padreId], references: [id], onDelete: Restrict)
+  canal     String           @default("EMAIL")
+  ok        Boolean          @default(false)
+  error     String?
+  enviadoEn DateTime         @default(now())
+
+  @@unique([tipo, facturaId, padreId])
+  @@index([enviadoEn])
 }

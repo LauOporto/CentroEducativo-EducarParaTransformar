@@ -22,6 +22,7 @@ import { galeriaPublicRouter, galeriaAdminRouter } from './galeria.routes';
 import { facturacionAdminRouter } from './facturacion.routes';
 import { pagosRouter } from './pagos.routes';
 import { pagosAdminRouter } from './pagosAdmin.routes';
+import { jobsRouter } from './jobs.routes';
 
 const router = Router();
 
@@ -56,5 +57,7 @@ router.use('/admin', ...requireAdmin(), galeriaAdminRouter);
 router.use('/admin/facturacion', ...requireAdmin(), facturacionAdminRouter);
 router.use('/admin/pagos', ...requireAdmin(), pagosAdminRouter);
 router.use('/pagos', pagosRouter);
+// Sin sesión: se protege con X-Cron-Secret (lo llama el workflow de jobs diarios).
+router.use('/jobs', jobsRouter);
 
 export { router as apiRouter };

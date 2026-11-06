@@ -66,6 +66,19 @@ export function sumarMeses(fecha: string, meses: number): string {
   return new Date(Date.UTC(anio, mes - 1 + meses, Math.min(dia, ultimoDia))).toISOString().slice(0, 10);
 }
 
+// HU9: día hábil = lunes a viernes. Los feriados no se consideran: no hay
+// un calendario de feriados cargado en el sistema.
+const esFinDeSemana = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
+
+export function ultimoDiaHabilDelMes(periodo: string): string {
+  const { anio, mes } = partesPeriodo(periodo);
+  const d = new Date(Date.UTC(anio, mes, 0)); // día 0 del mes siguiente = último de este
+  while (esFinDeSemana(d)) d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export const esUltimoDiaHabil = (fecha: string) => ultimoDiaHabilDelMes(periodoDeFecha(fecha)) === fecha;
+
 export function diaSiguiente(fecha: string): string {
   const d = new Date(`${fecha}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + 1);
