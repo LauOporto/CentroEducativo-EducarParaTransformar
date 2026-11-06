@@ -497,7 +497,9 @@ resto del archivo.
 
 [PARCIAL] RNF-55 Android 10+ e iOS 15+.
           Evidencia: Expo SDK 58 compila para Android 7+ (minSdk 24) e
-          iOS 15.1+. Falta: prueba en un dispositivo físico (F10).
+          iOS 15.1+, y mobile/eas.json define el perfil preview para
+          generar el APK instalable (npm run build:apk). Falta: prueba
+          en un dispositivo físico (F10).
 
 [OK]      RNF-56 Misma API REST, misma base y mismo esquema JWT, sin
           entidades duplicadas ni mecanismo de sesión adicional.
