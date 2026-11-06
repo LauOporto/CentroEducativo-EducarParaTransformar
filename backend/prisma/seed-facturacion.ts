@@ -172,10 +172,10 @@ export async function seedFacturacion() {
       });
     }
 
-    const usuarios = await prisma.user.findMany({ select: { id: true, usuario: true } });
+    const usuarios = await prisma.user.findMany({ select: { id: true, usuario: true, role: true } });
     const uid = new Map(usuarios.map((u) => [u.usuario, u.id]));
-    const adminId = uid.get('admin');
-    if (!adminId) throw new Error('El seed de facturación necesita el usuario admin.');
+    const adminId = uid.get('admin') ?? usuarios.find((u) => u.role === 'ADMIN')?.id;
+    if (!adminId) throw new Error('El seed de facturación necesita al menos un usuario ADMIN.');
     const padrePorHijo = new Map(
       (await prisma.parentStudentLink.findMany({ orderBy: { id: 'asc' } }))
         .reverse()
@@ -278,4 +278,11 @@ export async function seedFacturacion() {
   } finally {
     await prisma.$disconnect();
   }
+}
+
+if (process.argv[1]?.includes('seed-facturacion')) {
+  seedFacturacion().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
 }

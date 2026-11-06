@@ -8,6 +8,7 @@ Plataforma del campus virtual del colegio "Educar para Transformar". Monorepo co
 .
 ├── backend/    # API REST + servidor (Node + Express + Prisma + PostgreSQL)
 ├── client/     # SPA en React 18 + Tailwind (Vite) — lo que sirve el backend
+├── mobile/     # App móvil para Padres/Tutores (Expo SDK 58 + React Native + TypeScript)
 └── frontend/   # Sitio estático anterior (HTML + CSS + JS) — en desuso, reemplazado por client/
 ```
 
@@ -127,7 +128,8 @@ El proyecto aplica tres patrones, cada uno en un punto puntual del dominio donde
 
 **Dónde:** `backend/src/services/reportes/`
 - `types.ts` — interfaz `ReportStrategy` que toda estrategia cumple (clave, roles autorizados, `parseParams`, `obtenerDatos`, `renderPdf`, `nombreArchivo`).
-- Las 9 estrategias concretas (RF-25 a RF-33): `porAlumno`, `listadoAlumnosPorCurso`, `porDocente`, `listadoAlumnosPorMateria`, `listadoDocentesPorNivel`, `listadoAlumnosPorDeporte`, `listadoAlumnosPorDeporteYNivel`, `listadoAlumnosPorDeporteNivelHorario` y `listadoAlumnosPorRecorrido`.
+- Las 9 estrategias académicas y de servicios (RF-25 a RF-33): `porAlumno`, `listadoAlumnosPorCurso`, `porDocente`, `listadoAlumnosPorMateria`, `listadoDocentesPorNivel`, `listadoAlumnosPorDeporte`, `listadoAlumnosPorDeporteYNivel`, `listadoAlumnosPorDeporteNivelHorario` y `listadoAlumnosPorRecorrido`.
+- Las 5 estrategias financieras y de pagos (RF-52 y RF-53): `ingresosPorPeriodo`, `pagosCompletosPorPeriodo`, `pagosIncompletosPorPeriodo`, `pagosPorDeporte` y `pagosPorRecorrido`.
 - `pdfHelpers.ts` — layout compartido (encabezado, secciones, tablas con salto de página automático) usado por todas las estrategias.
 - `motor.ts` — el registro de estrategias por clave (`registrarEstrategia` / `obtenerEstrategia`); no conoce el detalle interno de ninguna.
 - `index.ts` — alta de estrategias; sumar un reporte nuevo es agregar un archivo `<clave>.strategy.ts` + una línea acá, sin tocar el motor ni el router.

@@ -360,7 +360,7 @@ documenta en backend/.env.example y DEPLOY.md.
 |      |                                       | alumno al inscribir en un grupo de deporte    |           |
 | F7   | feature/admin-pagos-web               | Panel web: precios, facturación manual,       | pendiente |
 |      |                                       | revisión de comprobantes                      |           |
-| F8   | feature/rf52-53-reportes-financieros  | D10 (5 listados)                              | pendiente |
+| F8   | facu-rama                             | D10 (5 listados)                              | completada|
 | F9   | lau-rama                              | D11 (mails y recordatorios)                   | completada|
 | F10  | feature/qa-parte3                     | Smoke E2E del flujo móvil en CI, README/      | pendiente |
 |      |                                       | DEPLOY, eas.json (APK)                        |           |

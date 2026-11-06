@@ -5,6 +5,7 @@ import { prisma } from '../../db/prisma';
 import { HttpError } from '../../utils/httpError';
 import { CURSO_SELECT } from '../../utils/cursoLabel';
 import type { ReportStrategy } from './types';
+import { parseIdOpcional } from './financieros.helpers';
 import { encabezadoReporte, seccion, tabla, horaLabel } from './pdfHelpers';
 
 // TP — "Listado de alumnos por recorrido del servicio de transporte"
@@ -29,10 +30,7 @@ interface Datos {
 }
 
 function parseParams(req: Request): Params {
-  if (req.query.recorridoId === undefined || req.query.recorridoId === '') return { recorridoId: null };
-  const recorridoId = Number(req.query.recorridoId);
-  if (!Number.isInteger(recorridoId) || recorridoId <= 0) throw HttpError.badRequest('El parámetro recorridoId es inválido.');
-  return { recorridoId };
+  return { recorridoId: parseIdOpcional(req.query.recorridoId, 'recorridoId') };
 }
 
 async function obtenerDatos({ recorridoId }: Params): Promise<Datos> {
