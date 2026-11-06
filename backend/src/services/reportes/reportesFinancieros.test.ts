@@ -303,7 +303,7 @@ test('parseRangoObligatorio valida presencia, formato, orden y máximo de 24 mes
 });
 
 test('Listado 1 (ingresos-por-periodo): agrupa pagos por año y por alumno y calcula subtotales y total', async () => {
-  const params = ingresosPorPeriodoStrategy.parseParams(reqQuery({ desde: '2025-11-01', hasta: '2026-11-30' }));
+  const params = await ingresosPorPeriodoStrategy.parseParams(reqQuery({ desde: '2025-11-01', hasta: '2026-11-30' }));
   const data = await ingresosPorPeriodoStrategy.obtenerDatos(params);
 
   assert.equal(data.totalGeneral, 220000 + 260000 + 155000);
@@ -328,7 +328,9 @@ test('Listado 1 (ingresos-por-periodo): agrupa pagos por año y por alumno y cal
 });
 
 test('Listado 2 (pagos-completos-por-periodo): incluye solo facturas PAGADA dentro del rango', async () => {
-  const params = pagosCompletosPorPeriodoStrategy.parseParams(reqQuery({ desde: '2026-09-01', hasta: '2026-11-30' }));
+  const params = await pagosCompletosPorPeriodoStrategy.parseParams(
+    reqQuery({ desde: '2026-09-01', hasta: '2026-11-30' }),
+  );
   const data = await pagosCompletosPorPeriodoStrategy.obtenerDatos(params);
 
   assert.equal(data.totalGeneral, 415000);
@@ -338,7 +340,9 @@ test('Listado 2 (pagos-completos-por-periodo): incluye solo facturas PAGADA dent
 });
 
 test('Listado 3 (pagos-incompletos-por-periodo): incluye PENDIENTE y PARCIAL con total, pagado y saldo', async () => {
-  const params = pagosIncompletosPorPeriodoStrategy.parseParams(reqQuery({ desde: '2026-09-01', hasta: '2026-11-30' }));
+  const params = await pagosIncompletosPorPeriodoStrategy.parseParams(
+    reqQuery({ desde: '2026-09-01', hasta: '2026-11-30' }),
+  );
   const data = await pagosIncompletosPorPeriodoStrategy.obtenerDatos(params);
 
   assert.equal(data.totalFacturado, 415000 + 250000);
@@ -348,7 +352,7 @@ test('Listado 3 (pagos-incompletos-por-periodo): incluye PENDIENTE y PARCIAL con
 });
 
 test('Listado 4 (pagos-por-deporte): reutiliza filtros de RF-32 + profesor y detalla estado y fecha de pago', async () => {
-  const params = pagosPorDeporteStrategy.parseParams(
+  const params = await pagosPorDeporteStrategy.parseParams(
     reqQuery({ desde: '2026-09-01', hasta: '2026-11-30', deporteId: '10', nivelId: '2', docenteId: '2' }),
   );
   const data = await pagosPorDeporteStrategy.obtenerDatos(params);
@@ -362,7 +366,7 @@ test('Listado 4 (pagos-por-deporte): reutiliza filtros de RF-32 + profesor y det
 });
 
 test('Listado 5 (pagos-por-recorrido): filtra por recorridoId y calcula facturado y cobrado', async () => {
-  const params = pagosPorRecorridoStrategy.parseParams(
+  const params = await pagosPorRecorridoStrategy.parseParams(
     reqQuery({ desde: '2026-09-01', hasta: '2026-11-30', recorridoId: '20' }),
   );
   const data = await pagosPorRecorridoStrategy.obtenerDatos(params);
@@ -374,7 +378,7 @@ test('Listado 5 (pagos-por-recorrido): filtra por recorridoId y calcula facturad
 });
 
 test('filtro por alumno o recurso inexistente devuelve 404', async () => {
-  const params = ingresosPorPeriodoStrategy.parseParams(
+  const params = await ingresosPorPeriodoStrategy.parseParams(
     reqQuery({ desde: '2026-09-01', hasta: '2026-11-30', estudianteId: '999' }),
   );
   await assert.rejects(
