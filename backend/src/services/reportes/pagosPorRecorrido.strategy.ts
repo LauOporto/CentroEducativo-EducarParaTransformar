@@ -6,7 +6,6 @@ import { CURSO_SELECT } from '../../utils/cursoLabel';
 import { fechaUTC, hoyArgentina, ZONA_NEGOCIO } from '../../utils/fechas';
 import { HttpError } from '../../utils/httpError';
 import { formatearPesos, sumar, toMonto } from '../../utils/montos';
-import { bloqueTotales, tablaItems } from '../facturaPdf.service';
 import {
   estadoCuotaLabel,
   fechaCorta,
@@ -14,7 +13,7 @@ import {
   parseRangoObligatorio,
   rangoLabel,
 } from './financieros.helpers';
-import { encabezadoReporte, horaLabel, seccion } from './pdfHelpers';
+import { bloqueTotales, encabezadoReporte, horaLabel, seccion, tablaItems } from './pdfHelpers';
 import type { ReportStrategy } from './types';
 
 // RF-53 (D10, Listado 5): "Pagos por recorrido de transporte".
@@ -141,9 +140,7 @@ async function obtenerDatos(
 
   filas.sort(
     (a, b) =>
-      a.recorrido.localeCompare(b.recorrido) ||
-      a.alumno.localeCompare(b.alumno) ||
-      a.periodo.localeCompare(b.periodo),
+      a.recorrido.localeCompare(b.recorrido) || a.alumno.localeCompare(b.alumno) || a.periodo.localeCompare(b.periodo),
   );
 
   return {

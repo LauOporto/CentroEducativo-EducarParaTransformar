@@ -5,9 +5,8 @@ import { CURSO_SELECT, formatCursoLabel } from '../../utils/cursoLabel';
 import { fechaISO, fechaUTC } from '../../utils/fechas';
 import { HttpError } from '../../utils/httpError';
 import { formatearPesos, sumar, toMonto } from '../../utils/montos';
-import { bloqueTotales, tablaItems } from '../facturaPdf.service';
 import { fechaCorta, parseParamsPeriodoAlumno, rangoLabel, type ParamsPeriodoAlumno } from './financieros.helpers';
-import { encabezadoReporte, seccion } from './pdfHelpers';
+import { bloqueTotales, encabezadoReporte, seccion, tablaItems } from './pdfHelpers';
 import type { ReportStrategy } from './types';
 
 // RF-52 (D10, Listado 2): "Pagos completos por período de tiempo, por año y
@@ -187,8 +186,7 @@ function nombreArchivo(data: DatosPagosCompletos) {
 export const pagosCompletosPorPeriodoStrategy: ReportStrategy<ParamsPeriodoAlumno, DatosPagosCompletos> = {
   key: 'pagos-completos-por-periodo',
   titulo: 'Pagos Completos por Período',
-  descripcion:
-    'Facturas pagadas en su totalidad con vencimiento en el período, agrupadas por año y por alumno.',
+  descripcion: 'Facturas pagadas en su totalidad con vencimiento en el período, agrupadas por año y por alumno.',
   rolesAutorizados: [Role.ADMIN],
   parseParams: parseParamsPeriodoAlumno,
   obtenerDatos,

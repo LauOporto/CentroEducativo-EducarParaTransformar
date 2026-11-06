@@ -6,7 +6,6 @@ import { CURSO_SELECT } from '../../utils/cursoLabel';
 import { fechaUTC, hoyArgentina, ZONA_NEGOCIO } from '../../utils/fechas';
 import { HttpError } from '../../utils/httpError';
 import { formatearPesos, sumar, toMonto } from '../../utils/montos';
-import { bloqueTotales, tablaItems } from '../facturaPdf.service';
 import {
   estadoCuotaLabel,
   fechaCorta,
@@ -14,7 +13,7 @@ import {
   parseRangoObligatorio,
   rangoLabel,
 } from './financieros.helpers';
-import { DIA_LABEL, encabezadoReporte, horaLabel, seccion } from './pdfHelpers';
+import { bloqueTotales, DIA_LABEL, encabezadoReporte, horaLabel, seccion, tablaItems } from './pdfHelpers';
 import type { ReportStrategy } from './types';
 
 // RF-53 (D10, Listado 4): "Pagos por alumno por deporte, nivel educativo,
@@ -89,10 +88,7 @@ function fechaArgentinaISO(d: Date): string {
   }).format(d);
 }
 
-async function obtenerDatos(
-  params: ParamsPagosPorDeporte,
-  opts: { hoy?: string } = {},
-): Promise<DatosPagosPorDeporte> {
+async function obtenerDatos(params: ParamsPagosPorDeporte, opts: { hoy?: string } = {}): Promise<DatosPagosPorDeporte> {
   const { desde, hasta, nivelId, deporteId, docenteId, estudianteId } = params;
   const hoy = opts.hoy ?? hoyArgentina();
 
