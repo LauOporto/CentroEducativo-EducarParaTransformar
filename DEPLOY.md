@@ -124,6 +124,16 @@ Cada envío queda registrado (tabla `EnvioRecordatorio`): correrlo dos veces no 
 
 > GitHub desactiva los workflows programados de un repositorio público después de 60 días sin actividad. Si eso pasa, se reactivan desde la pestaña **Actions**.
 
+## 8. Datos de demostración de facturación en producción (Parte 3)
+
+Para cargar en la base de producción (Neon) los precios de cuotas, deportes, transporte y comedor junto con las facturas de los 3 períodos (`2026-09`, `2026-10` y `2026-11`) y los comprobantes/pagos de demostración **sin pisar usuarios ni contraseñas existentes**, corré desde tu máquina apuntando al `DATABASE_URL` de Neon:
+
+```bash
+DATABASE_URL="postgresql://usuario:password@ep-algo.region.aws.neon.tech/neondb?sslmode=require" pnpm --filter backend prisma:seed-facturacion
+```
+
+El script `backend/prisma/seed-facturacion.ts` es idempotente: solo asigna precios que sigan en `0`, no modifica facturas ya emitidas y hace `upsert` de los comprobantes y pagos de prueba.
+
 ## Limitaciones conocidas del plan free
 
 - **El servicio "duerme"**: sin tráfico durante 15 minutos, Render apaga la instancia. El próximo request la despierta, pero tarda entre 30 y 50 segundos en responder. No es un error — si vas a hacer una demo en vivo, abrí la URL un par de minutos antes para que esté despierta. (Los archivos subidos no se pierden con esto: viven en Cloudinary, no en el disco del servicio.)
