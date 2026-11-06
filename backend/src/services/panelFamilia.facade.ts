@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
+import { toMonto, type MontoEntrada } from '../utils/montos';
 
 const MAX_DEPORTES = 2;
 
@@ -8,7 +9,7 @@ const formatHora = (d: Date) => d.toISOString().slice(11, 16);
 function serializeGrupo(g: {
   id: number;
   deporteId: number;
-  deporte: { nombre: string };
+  deporte: { nombre: string; precioMensual: MontoEntrada };
   nivelId: number;
   nivel: { nombre: string };
   diaSemana: string;
@@ -21,6 +22,7 @@ function serializeGrupo(g: {
     id: g.id,
     deporteId: g.deporteId,
     deporte: g.deporte.nombre,
+    precioMensual: toMonto(g.deporte.precioMensual),
     nivelId: g.nivelId,
     nivel: g.nivel.nombre,
     diaSemana: g.diaSemana,
@@ -37,13 +39,24 @@ const GRUPO_INCLUDE = {
   docente: { select: { id: true, nombre: true } },
 } as const;
 
+// Nivel educativo del curso del alumno, o null si no tiene curso asignado.
+// Un grupo de deporte es de un nivel (Primaria, Secundaria...) y solo admite
+// alumnos de ese nivel.
+async function cursoDelAlumno(estudianteId: number) {
+  const alumno = await prisma.user.findUnique({
+    where: { id: estudianteId },
+    select: { curso: { select: { nivelId: true, nivel: { select: { nombre: true } } } } },
+  });
+  return alumno?.curso ?? null;
+}
+
 // Fachada del panel Padre/Alumno (RF-23/RF-24 del Plan de Trabajo): combina
 // el catálogo administrable (Deporte/GrupoDeporte/RecorridoTransporte/
 // TurnoComedor) con el estado transaccional de inscripción de un alumno
 // detrás de una única función por caso de uso, para que el frontend no
 // tenga que orquestar 6 pedidos distintos.
 export async function obtenerResumenServicios(estudianteId: number) {
-  const [inscripcionesDeporte, gruposTodos, transporteActual, recorridosTodos, comedorActual, turnosTodos] =
+  const [inscripcionesDeporte, gruposTodos, transporteActual, recorridosTodos, comedorActual, turnosTodos, curso] =
     await Promise.all([
       prisma.inscripcionDeporte.findMany({
         where: { estudianteId },
@@ -54,24 +67,40 @@ export async function obtenerResumenServicios(estudianteId: number) {
       prisma.recorridoTransporte.findMany({ orderBy: { nombre: 'asc' } }),
       prisma.inscripcionComedor.findMany({ where: { estudianteId }, include: { turno: true } }),
       prisma.turnoComedor.findMany({ orderBy: { nombre: 'asc' } }),
+      cursoDelAlumno(estudianteId),
     ]);
 
   const deporteIdsInscriptos = new Set(inscripcionesDeporte.map((i) => i.deporteId));
 
   return {
     deportes: {
+      nivel: curso?.nivel.nombre ?? null,
       inscriptos: inscripcionesDeporte.map((i) => serializeGrupo(i.grupoDeporte)),
-      disponibles: gruposTodos.filter((g) => !deporteIdsInscriptos.has(g.deporteId)).map(serializeGrupo),
+      disponibles: gruposTodos
+        .filter((g) => g.nivelId === curso?.nivelId && !deporteIdsInscriptos.has(g.deporteId))
+        .map(serializeGrupo),
     },
     transporte: {
       actual: transporteActual[0]
         ? { recorridoId: transporteActual[0].recorridoId, recorrido: transporteActual[0].recorrido.nombre }
         : null,
-      disponibles: recorridosTodos.map((r) => ({ id: r.id, nombre: r.nombre })),
+      disponibles: recorridosTodos.map((r) => ({
+        id: r.id,
+        nombre: r.nombre,
+        horaSalida: formatHora(r.horaSalida),
+        horaRegreso: formatHora(r.horaRegreso),
+        precioMensual: toMonto(r.precioMensual),
+      })),
     },
     comedor: {
       actual: comedorActual[0] ? { turnoId: comedorActual[0].turnoId, turno: comedorActual[0].turno.nombre } : null,
-      disponibles: turnosTodos.map((t) => ({ id: t.id, nombre: t.nombre })),
+      disponibles: turnosTodos.map((t) => ({
+        id: t.id,
+        nombre: t.nombre,
+        horaInicio: formatHora(t.horaInicio),
+        horaFin: formatHora(t.horaFin),
+        precioMensual: toMonto(t.precioMensual),
+      })),
     },
   };
 }
@@ -80,10 +109,22 @@ export async function inscribirDeporte(estudianteId: number, grupoDeporteId: num
   const grupo = await prisma.grupoDeporte.findUnique({ where: { id: grupoDeporteId }, include: GRUPO_INCLUDE });
   if (!grupo) throw HttpError.badRequest('El grupo de deporte indicado no existe.');
 
-  const activas = await prisma.inscripcionDeporte.findMany({
-    where: { estudianteId },
-    include: { grupoDeporte: { include: GRUPO_INCLUDE } },
-  });
+  const [curso, activas] = await Promise.all([
+    cursoDelAlumno(estudianteId),
+    prisma.inscripcionDeporte.findMany({
+      where: { estudianteId },
+      include: { grupoDeporte: { include: GRUPO_INCLUDE } },
+    }),
+  ]);
+
+  if (!curso) {
+    throw HttpError.conflict('El alumno no tiene curso asignado, así que no se puede validar el nivel del grupo.');
+  }
+  if (curso.nivelId !== grupo.nivelId) {
+    throw HttpError.conflict(
+      `El grupo de ${grupo.deporte.nombre} es para ${grupo.nivel.nombre} y el alumno cursa ${curso.nivel.nombre}.`,
+    );
+  }
 
   if (activas.some((i) => i.deporteId === grupo.deporteId)) {
     throw HttpError.conflict(`El alumno ya está inscripto en ${grupo.deporte.nombre}.`);
