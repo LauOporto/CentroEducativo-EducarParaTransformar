@@ -49,7 +49,7 @@ Requerimientos funcionales:
 
 Requerimientos no funcionales:
 
-  RNF-55: Android 10+ e iOS 15+ (con Expo SDK 55: iOS 15.1+ y Android 7+).
+  RNF-55: Android 10+ e iOS 15+ (con Expo SDK 58: iOS 15.1+ y Android 7+).
   RNF-56: Misma API REST, misma base y mismo esquema JWT; sin entidades
           duplicadas ni mecanismo de sesión adicional.
   RNF-57: Todo cambio de estado de una cuota o un pago se refleja de
@@ -312,7 +312,9 @@ D11 — Mails y recordatorios (HU9)
 D12 — Aplicación móvil
   - Carpeta mobile/ FUERA del workspace pnpm, con npm y su propio
     package-lock.json, para no tocar el build de Render ni el CI existente.
-  - Expo SDK 55, TypeScript estricto, expo-router (tabs).
+  - Expo SDK 58, TypeScript estricto, expo-router (tabs). Se pasó del SDK 55
+    planificado al 58 porque Expo Go (Play Store y App Store) solo abre
+    proyectos del SDK vigente: con el 55 no se podía probar en un celular.
   - @tanstack/react-query: refetch al enfocar, pull-to-refresh e
     invalidación después de cada mutación (RNF-57).
   - Librerías: expo-secure-store, expo-image-picker, expo-document-picker,
@@ -348,7 +350,7 @@ documenta en backend/.env.example y DEPLOY.md.
 |      |                                       | precios, BANCO_*, seed con precios y 3        |           |
 |      |                                       | períodos de facturas                          |           |
 | F3   | feature/rf50-comprobantes-pago        | D5, D6 + aprobar/rechazar por API             | completada|
-| F4   | feature/app-movil-base                | D12 + login/logout/recupero + selector de     | pendiente |
+| F4   | lau-rama                              | D12 + login/logout/recupero + selector de     | completada|
 |      |                                       | hijo + job mobile en CI                       |           |
 | F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | pendiente |
 | F6   | feature/rf54-inscripciones-movil      | Pantalla RF-54 + validación de nivel del      | pendiente |

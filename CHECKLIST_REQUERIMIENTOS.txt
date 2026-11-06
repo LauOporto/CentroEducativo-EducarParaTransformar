@@ -400,7 +400,7 @@ resto del archivo.
 
 --- Requerimientos funcionales ---
 
-[PARCIAL] RF-48 Inicio y cierre de sesión del Padre/Tutor en la app, con el
+[OK]      RF-48 Inicio y cierre de sesión del Padre/Tutor en la app, con el
           mismo usuario, contraseña y JWT del web; recuperación y cambio
           de contraseña.
           Evidencia (backend, F1): POST /api/auth/login con el header
@@ -410,7 +410,18 @@ resto del archivo.
           restablecer,cambiar} con código de 6 dígitos por email, tabla
           PasswordReset y rate limit (services/password.service.ts).
           Tests: sesion.service.test.ts y password.service.test.ts.
-          Falta: las pantallas de la app (F4).
+          Evidencia (app, F4): mobile/ (Expo SDK 58). src/app/login.tsx,
+          recuperar.tsx (pide el código y restablece), cambiar-password.tsx
+          y "Cerrar sesión" en (tabs)/cuenta.tsx. src/lib/api.ts manda
+          X-Client-Type: mobile, guarda el access solo en memoria y el
+          refresh en expo-secure-store (lib/tokenStore.ts), y ante un 401
+          renueva una vez y reintenta; si la renovación falla vuelve al
+          login con el motivo del servidor (30 min sin uso, 24 h, etc.).
+          Selector de hijo con GET /api/parent/hijos (hijos/HijosContext).
+          Probado en la versión web de la app contra el backend local:
+          login, rechazo de otros roles, sesión retomada al recargar,
+          selector con 2 hijos, cambio y recuperación de contraseña.
+          Falta: prueba en un dispositivo físico con Expo Go o APK (F10).
 
 [PARCIAL] RF-49 Cuotas por hijo (concepto, importe, vencimiento, estado),
           historial de deuda por ítem (cuota, deporte, transporte,
@@ -459,10 +470,15 @@ resto del archivo.
 
 --- Requerimientos no funcionales ---
 
-[FALTA]   RNF-55 Android 10+ e iOS 15+.
+[PARCIAL] RNF-55 Android 10+ e iOS 15+.
+          Evidencia: Expo SDK 58 compila para Android 7+ (minSdk 24) e
+          iOS 15.1+. Falta: prueba en un dispositivo físico (F10).
 
-[FALTA]   RNF-56 Misma API REST, misma base y mismo esquema JWT, sin
+[OK]      RNF-56 Misma API REST, misma base y mismo esquema JWT, sin
           entidades duplicadas ni mecanismo de sesión adicional.
+          Evidencia: la app no tiene base ni backend propios; consume
+          EXPO_PUBLIC_API_URL + /api con el mismo login, la misma tabla
+          Session y los mismos JWT del web (mobile/src/lib/api.ts).
 
 [FALTA]   RNF-57 Cambios de estado de cuotas y pagos reflejados de
           inmediato en la app y en el web.
