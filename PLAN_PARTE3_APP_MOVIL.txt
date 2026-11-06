@@ -563,6 +563,34 @@ GET /api/pagos/hijos/:estudianteId/estado-cuenta?desde=AAAA-MM-DD&hasta=AAAA-MM-
   404:       "El alumno indicado no existe." (solo ADMIN; al PADRE un id
              ajeno o inexistente le da 403).
 
+GET /api/pagos/facturas/:id                     (F5: detalle para la app)
+  Headers:   Authorization: Bearer <accessToken>
+  200:       { exito, alumno: { id, nombre, curso }, factura }
+             "factura" tiene EXACTAMENTE la misma forma que cada elemento
+             de facturas[] del estado de cuenta (la arma la misma función,
+             vistaFactura de pagos.facade.ts): id, numero, periodo,
+             emitidaEn, vencimiento, total, pagado, saldo, estado, items[]
+             con el estado ya calculado (VENCIDA) y comprobantes[].
+             Ejemplo real (seed, pbarrabino, recortado):
+    {
+      "exito": true,
+      "alumno": { "id": 16, "nombre": "Franco Barrabino",
+                  "curso": "Secundaria — 1° año" },
+      "factura": {
+        "id": 37, "numero": "F-202611-000037", "periodo": "2026-11",
+        "emitidaEn": "2026-11-05T16:01:12.026Z", "vencimiento": "2026-11-10",
+        "total": 415000, "pagado": 0, "saldo": 415000, "estado": "PENDIENTE",
+        "items": [ { "id": 157, "concepto": "CUOTA",
+                     "descripcion": "Cuota mensual — Secundaria",
+                     "importe": 260000, "vencimiento": "2026-11-10",
+                     "estado": "PENDIENTE" }, "…" ],
+        "comprobantes": []
+      }
+    }
+  400:       "El id de la factura es inválido."
+  403:       ver permisos (PADRE no vinculado, DOCENTE, ESTUDIANTE).
+  404:       "La factura indicada no existe."
+
 GET /api/pagos/facturas/:id/pdf
   Headers:   Authorization: Bearer <accessToken>
   200:       application/pdf, Content-Disposition: attachment;
