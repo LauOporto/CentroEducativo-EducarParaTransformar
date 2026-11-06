@@ -465,8 +465,18 @@ resto del archivo.
 [FALTA]   RF-53 (web) Reporte de pagos por alumno filtrado por deporte,
           nivel, horario, profesor y recorrido (filtros de RF-30).
 
-[FALTA]   RF-54 Inscripción a deportes, transporte y comedor por hijo desde
+[OK]      RF-54 Inscripción a deportes, transporte y comedor por hijo desde
           la app, con las mismas reglas del web.
+          Evidencia (F6): mobile/src/app/(tabs)/servicios.tsx con el
+          selector de hijo, sobre los endpoints del web
+          (/api/inscripciones/estudiantes/:id/...): alta y baja de deportes,
+          asignar, cambiar y quitar recorrido y turno de comedor, con precio
+          mensual y confirmación antes de dar de baja; react-query relee el
+          resumen después de cada cambio (RNF-57). Regla nueva en el backend
+          (también para el web): un grupo de deporte solo admite alumnos de
+          su nivel, y el resumen solo ofrece grupos de ese nivel
+          (services/panelFamilia.facade.ts). Tests:
+          panelFamilia.facade.test.ts (nivel distinto y alumno sin curso).
 
 --- Requerimientos no funcionales ---
 

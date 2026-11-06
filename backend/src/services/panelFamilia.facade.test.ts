@@ -9,12 +9,20 @@ import { inscribirDeporte } from './panelFamilia.facade';
 // (sin duplicados) sobre inscribirDeporte, con Prisma reemplazado por datos
 // en memoria, como en asignaciones.service.test.ts.
 const hora = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
-const grupo = (id: number, deporteId: number, nombre: string, diaSemana: string, desde: string, hasta: string) => ({
+const grupo = (
+  id: number,
+  deporteId: number,
+  nombre: string,
+  diaSemana: string,
+  desde: string,
+  hasta: string,
+  nivelId = 1,
+) => ({
   id,
   deporteId,
-  deporte: { nombre },
-  nivelId: 1,
-  nivel: { nombre: 'Secundaria' },
+  deporte: { nombre, precioMensual: 15000 },
+  nivelId,
+  nivel: { nombre: nivelId === 1 ? 'Secundaria' : 'Primaria' },
   diaSemana,
   horaInicio: hora(desde),
   horaFin: hora(hasta),
@@ -27,12 +35,24 @@ const GRUPOS = [
   grupo(2, 2, 'Vóley', 'MIERCOLES', '14:00', '15:00'),
   grupo(3, 3, 'Básquet', 'VIERNES', '13:30', '14:30'),
   grupo(4, 3, 'Básquet', 'MARTES', '16:00', '17:00'), // se superpone con Fútbol
+  grupo(5, 4, 'Handball', 'JUEVES', '14:00', '15:00', 2), // de Primaria
 ];
+
+// Alumno 7 y 8 cursan Secundaria (nivel 1); el 9 no tiene curso asignado.
+const CURSOS: Record<number, { nivelId: number; nivel: { nombre: string } } | null> = {
+  7: { nivelId: 1, nivel: { nombre: 'Secundaria' } },
+  8: { nivelId: 1, nivel: { nombre: 'Secundaria' } },
+  9: null,
+};
 
 let inscripciones: { estudianteId: number; deporteId: number; grupoDeporteId: number }[];
 
 beforeEach(() => {
   inscripciones = [];
+  Object.defineProperty(prisma, 'user', {
+    configurable: true,
+    value: { findUnique: async ({ where }: any) => (where.id in CURSOS ? { curso: CURSOS[where.id] } : null) },
+  });
   Object.defineProperty(prisma, 'grupoDeporte', {
     configurable: true,
     value: { findUnique: async ({ where }: any) => GRUPOS.find((g) => g.id === where.id) ?? null },
@@ -87,4 +107,14 @@ test('RF-21: dos deportes el mismo día con horarios superpuestos se rechazan', 
 
 test('un grupo inexistente da 400', async () => {
   await assert.rejects(inscribirDeporte(7, 99), (err) => err instanceof HttpError && err.status === 400);
+});
+
+test('un grupo de otro nivel se rechaza con 409', async () => {
+  await assert.rejects(inscribirDeporte(7, 5), conflicto('es para Primaria y el alumno cursa Secundaria'));
+  assert.equal(inscripciones.length, 0);
+});
+
+test('un alumno sin curso asignado no se puede inscribir a un deporte', async () => {
+  await assert.rejects(inscribirDeporte(9, 1), conflicto('no tiene curso asignado'));
+  assert.equal(inscripciones.length, 0);
 });

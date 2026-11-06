@@ -25,15 +25,18 @@ export function Pantalla({
   refreshControl,
   bordes = ['top'],
   centrada = false,
+  scrollRef,
 }: {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   bordes?: Edge[];
   centrada?: boolean;
+  scrollRef?: React.Ref<React.ComponentRef<typeof ScrollView>>;
 }) {
   return (
     <SafeAreaView style={estilos.fondo} edges={bordes}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[estilos.contenido, centrada && estilos.centrada]}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
@@ -74,6 +77,7 @@ export function Boton({
   variante = 'primario',
   icono,
   alInicio = false,
+  etiqueta,
 }: {
   titulo: string;
   onPress: () => void;
@@ -83,12 +87,15 @@ export function Boton({
   icono?: keyof typeof Ionicons.glyphMap;
   /** Alineado a la izquierda en vez de ocupar todo el ancho (ej. "Volver"). */
   alInicio?: boolean;
+  /** Texto para lectores de pantalla cuando el título solo no alcanza (ej. "Dar de baja Vóley"). */
+  etiqueta?: string;
 }) {
   const inactivo = deshabilitado || cargando;
   const colorTexto = variante === 'primario' ? colors.white : colors.blue500;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={etiqueta}
       accessibilityState={{ disabled: inactivo, busy: cargando }}
       onPress={onPress}
       disabled={inactivo}

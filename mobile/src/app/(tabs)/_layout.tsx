@@ -24,6 +24,13 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="servicios"
+          options={{
+            title: 'Servicios',
+            tabBarIcon: ({ color, size }) => <Ionicons name="football-outline" color={String(color)} size={size} />,
+          }}
+        />
+        <Tabs.Screen
           name="cuenta"
           options={{
             title: 'Mi cuenta',
