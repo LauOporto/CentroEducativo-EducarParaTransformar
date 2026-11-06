@@ -58,6 +58,26 @@ jobs:
           path: client/dist
           retention-days: 14
 
+  # App móvil (Parte 3): vive en mobile/, fuera del workspace de pnpm, con
+  # npm y su propio package-lock. Typecheck estricto y bundle web de prueba
+  # (detecta imports rotos o dependencias faltantes antes de armar el APK).
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx expo export --platform web --output-dir dist
+
   # Pruebas E2E con Cypress (QA): la app compilada contra un Postgres
   # descartable, con el seed. Es la suite de regresión de cada PR.
   e2e:

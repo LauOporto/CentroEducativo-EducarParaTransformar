@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminService } from '../../services/api/adminService';
+import AvisosFacturacion from '../../components/features/AvisosFacturacion';
 
 const TILES = [
   { key: 'totalUsuarios', label: 'Usuarios totales', cls: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40' },
@@ -18,7 +19,9 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Dashboard institucional</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+        Dashboard institucional
+      </h3>
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
         {TILES.map((t) => (
           <div key={t.key} className={`rounded-xl p-4 ${t.cls}`}>
@@ -27,6 +30,7 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+      <AvisosFacturacion />
     </div>
   );
 }

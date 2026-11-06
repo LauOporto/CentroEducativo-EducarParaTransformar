@@ -1,0 +1,61 @@
+# Jobs diarios (HU9, D11): todos los días llama a POST /api/jobs/diario del
+# backend en producción, que decide qué corre (emisión de facturas el último
+# día hábil, aviso de deuda el día 20). Se hace desde acá porque Render free
+# apaga el servicio sin tráfico y un cron dentro del proceso no es confiable.
+#
+# Necesita dos secrets del repositorio (Settings → Secrets and variables →
+# Actions): APP_URL (ej. https://educar-para-transformar-iffe.onrender.com) y
+# CRON_SECRET (el mismo valor que la variable CRON_SECRET de Render).
+name: Jobs diarios
+
+on:
+  schedule:
+    - cron: '0 11 * * *' # 11:00 UTC = 08:00 en Argentina
+  workflow_dispatch:
+    inputs:
+      fecha:
+        description: 'Simular un día (AAAA-MM-DD). Vacío = hoy.'
+        required: false
+
+permissions:
+  contents: read
+
+# Nunca dos corridas a la vez (igual el backend no repite envíos).
+concurrency:
+  group: jobs-diarios
+  cancel-in-progress: false
+
+jobs:
+  diario:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Llamar al job diario
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          FECHA: ${{ inputs.fecha }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Faltan los secrets APP_URL o CRON_SECRET: no se ejecuta nada."
+            exit 0
+          fi
+          url="${APP_URL%/}/api/jobs/diario"
+          if [ -n "$FECHA" ]; then url="$url?fecha=$FECHA"; fi
+
+          # Reintentos: la primera request despierta al servicio de Render,
+          # que puede tardar cerca de un minuto en responder.
+          for intento in 1 2 3 4 5; do
+            code=$(curl -sS -o respuesta.json -w '%{http_code}' -X POST \
+              -H "X-Cron-Secret: $CRON_SECRET" --max-time 300 "$url" || echo 000)
+            if [ "$code" = "200" ]; then
+              cat respuesta.json
+              exit 0
+            fi
+            echo "Intento $intento: HTTP $code"
+            cat respuesta.json 2>/dev/null || true
+            # Clave o fecha inválidas no se arreglan reintentando.
+            if [ "$code" = "400" ] || [ "$code" = "401" ]; then exit 1; fi
+            sleep 30
+          done
+          exit 1

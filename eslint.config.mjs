@@ -9,7 +9,9 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   // frontend/ es el cliente HTML anterior, ya reemplazado por client/.
-  { ignores: ['**/dist/**', '**/node_modules/**', 'frontend/**', 'backend/prisma/migrations/**'] },
+  // mobile/ es la app Expo: tiene su propio npm y su typecheck estricto (job
+  // "mobile" del CI), fuera del workspace de pnpm.
+  { ignores: ['**/dist/**', '**/node_modules/**', 'frontend/**', 'backend/prisma/migrations/**', 'mobile/**'] },
 
   js.configs.recommended,
   // `_algo` marca un parámetro obligatorio que no se usa (ej. el `next` de

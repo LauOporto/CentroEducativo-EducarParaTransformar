@@ -34,3 +34,11 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # Mails (HU9): ver DEPLOY.md, paso 7. Opcionales: sin RESEND_API_KEY
+      # los mails solo quedan en el log; sin CRON_SECRET no corre ningún job.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_REDIRECT_TO
+        sync: false
+      - key: CRON_SECRET
+        sync: false

@@ -9,8 +9,8 @@ import { logger } from '../utils/logger';
 
 // RF-48 (D2 / A2): recuperar y cambiar la contraseña, con Prisma reemplazado
 // por datos en memoria (patrón de panelFamilia.facade.test.ts). El envío
-// del código se observa en el log del canal EMAIL (hoy no hay proveedor de
-// mail: NotificacionEmail deja el mensaje en el logger). password.service
+// del código se observa en el log de mail.service: en los tests nunca hay
+// proveedor, así que el mail queda registrado en el logger. password.service
 // importa config/env a través de sesion.service: se cargan valores de
 // prueba antes del import dinámico, porque en CI no hay backend/.env.
 let svc: typeof import('./password.service');
@@ -131,7 +131,7 @@ beforeEach(() => {
 
   mock.restoreAll();
   mock.method(logger, 'info', (msg: string, meta: any) => {
-    if (msg.startsWith('Notificación por email')) mails.push({ to: meta.to, contenido: meta.contenido });
+    if (msg.startsWith('Mail sin enviar')) mails.push({ to: meta.to, contenido: meta.texto });
   });
   mock.method(logger, 'error', () => {});
 });

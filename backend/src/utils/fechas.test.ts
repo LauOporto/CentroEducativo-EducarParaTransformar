@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 
 import { HttpError } from './httpError';
 import {
+  esUltimoDiaHabil,
   hoyArgentina,
   parseRangoFechas,
   periodoSiguiente,
   sumarMeses,
+  ultimoDiaHabilDelMes,
   validarPeriodo,
   vencimientoDePeriodo,
 } from './fechas';
@@ -77,4 +79,13 @@ test('parseRangoFechas: formato o fecha inexistente → 400', () => {
   ]) {
     assert.throws(() => parseRangoFechas(d, h), es400, `${d} ${h}`);
   }
+});
+
+test('último día hábil del mes: si el último cae sábado o domingo, retrocede al viernes', () => {
+  assert.equal(ultimoDiaHabilDelMes('2026-11'), '2026-11-30'); // lunes
+  assert.equal(ultimoDiaHabilDelMes('2026-01'), '2026-01-30'); // el 31 es sábado
+  assert.equal(ultimoDiaHabilDelMes('2026-02'), '2026-02-27'); // el 28 es sábado
+  assert.equal(esUltimoDiaHabil('2026-01-30'), true);
+  assert.equal(esUltimoDiaHabil('2026-01-31'), false);
+  assert.equal(esUltimoDiaHabil('2026-11-27'), false);
 });
