@@ -1,8 +1,10 @@
+import type { Request } from 'express';
 import { ConceptoCuota, EstadoCuota, Prisma } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { CURSO_SELECT, formatCursoLabel } from '../utils/cursoLabel';
 import { HttpError } from '../utils/httpError';
+import { assertPuedeVerPagos } from '../utils/pagosAccess';
 import { sumar, toMonto } from '../utils/montos';
 import { diaSiguiente, fechaISO, fechaUTC, hoyArgentina, inicioDiaArgentina, type RangoFechas } from '../utils/fechas';
 
@@ -40,6 +42,44 @@ const FACTURA_INCLUDE = {
   },
   pagos: { select: { monto: true } },
 } satisfies Prisma.FacturaInclude;
+
+type FacturaCompleta = Prisma.FacturaGetPayload<{ include: typeof FACTURA_INCLUDE }>;
+
+// Vista de una factura para el Padre/Tutor: la usan el estado de cuenta
+// (facturas[]) y el detalle (GET /pagos/facturas/:id), así la app recibe
+// exactamente la misma forma en los dos lugares.
+export function vistaFactura(f: FacturaCompleta, hoy: string) {
+  const pagado = sumar(f.pagos.map((p) => p.monto));
+  return {
+    id: f.id,
+    numero: f.numero,
+    periodo: f.periodo,
+    emitidaEn: f.emitidaEn.toISOString(),
+    vencimiento: fechaISO(f.vencimiento),
+    total: toMonto(f.total),
+    pagado: toMonto(pagado),
+    saldo: toMonto(new Prisma.Decimal(f.total).minus(pagado)),
+    estado: f.estado,
+    items: f.cuotas.map((c) => ({
+      id: c.id,
+      concepto: c.concepto,
+      descripcion: c.descripcion,
+      importe: toMonto(c.importe),
+      vencimiento: fechaISO(c.vencimiento),
+      estado: estadoItem(c.estado, c.vencimiento, hoy),
+    })),
+    comprobantes: f.comprobantes.map((cp) => ({
+      id: cp.id,
+      numero: cp.numero,
+      total: toMonto(cp.total),
+      estado: cp.estado,
+      nroOperacion: cp.nroOperacion,
+      cargadoEn: cp.cargadoEn?.toISOString() ?? null,
+      motivoRechazo: cp.motivoRechazo,
+      tieneArchivo: cp.archivoId !== null,
+    })),
+  };
+}
 
 type AlumnoEstadoCuenta = { id: number; nombre: string; curso: { nombre: string; nivel: { nombre: string } } | null };
 
@@ -95,38 +135,7 @@ export async function obtenerEstadoCuenta(
     alumno: { id: alumno.id, nombre: alumno.nombre, curso: formatCursoLabel(alumno.curso) },
     rango,
     resumen,
-    facturas: facturas.map((f) => {
-      const pagado = sumar(f.pagos.map((p) => p.monto));
-      return {
-        id: f.id,
-        numero: f.numero,
-        periodo: f.periodo,
-        emitidaEn: f.emitidaEn.toISOString(),
-        vencimiento: fechaISO(f.vencimiento),
-        total: toMonto(f.total),
-        pagado: toMonto(pagado),
-        saldo: toMonto(new Prisma.Decimal(f.total).minus(pagado)),
-        estado: f.estado,
-        items: f.cuotas.map((c) => ({
-          id: c.id,
-          concepto: c.concepto,
-          descripcion: c.descripcion,
-          importe: toMonto(c.importe),
-          vencimiento: fechaISO(c.vencimiento),
-          estado: estadoItem(c.estado, c.vencimiento, hoy),
-        })),
-        comprobantes: f.comprobantes.map((cp) => ({
-          id: cp.id,
-          numero: cp.numero,
-          total: toMonto(cp.total),
-          estado: cp.estado,
-          nroOperacion: cp.nroOperacion,
-          cargadoEn: cp.cargadoEn?.toISOString() ?? null,
-          motivoRechazo: cp.motivoRechazo,
-          tieneArchivo: cp.archivoId !== null,
-        })),
-      };
-    }),
+    facturas: facturas.map((f) => vistaFactura(f, hoy)),
     pagos: pagos.map((p) => ({
       id: p.id,
       fechaAcreditacion: p.fechaAcreditacion.toISOString(),
@@ -135,5 +144,17 @@ export async function obtenerEstadoCuenta(
       facturaNumero: p.factura.numero,
       periodo: p.factura.periodo,
     })),
+  };
+}
+
+// Detalle de una factura (pantalla de la app que permite elegir ítems para
+// pagar). 404 si no existe; después, los permisos de D7 sobre su alumno.
+export async function obtenerFactura(req: Pick<Request, 'authUser'>, id: number, opts: { hoy?: string } = {}) {
+  const factura = await prisma.factura.findUnique({ where: { id }, include: FACTURA_INCLUDE });
+  if (!factura) throw HttpError.notFound('La factura indicada no existe.');
+  const alumno = await assertPuedeVerPagos(req, factura.estudianteId);
+  return {
+    alumno: { id: alumno.id, nombre: alumno.nombre, curso: formatCursoLabel(alumno.curso) },
+    factura: vistaFactura(factura, opts.hoy ?? hoyArgentina()),
   };
 }

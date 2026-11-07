@@ -34,7 +34,9 @@ function parseParams(req: Request): Params {
 }
 
 async function obtenerDatos({ recorridoId }: Params): Promise<Datos> {
-  const recorridoFiltroRow = recorridoId ? await prisma.recorridoTransporte.findUnique({ where: { id: recorridoId } }) : null;
+  const recorridoFiltroRow = recorridoId
+    ? await prisma.recorridoTransporte.findUnique({ where: { id: recorridoId } })
+    : null;
   if (recorridoId && !recorridoFiltroRow) throw HttpError.notFound('El recorrido indicado no existe.');
 
   const recorridos = await prisma.recorridoTransporte.findMany({
@@ -90,7 +92,8 @@ function nombreArchivo(data: Datos) {
 export const listadoAlumnosPorRecorridoStrategy: ReportStrategy<Params, Datos> = {
   key: 'listado-alumnos-por-recorrido',
   titulo: 'Listado de Alumnos por Recorrido de Transporte',
-  descripcion: 'Alumnos agrupados por recorrido de transporte, con horario de salida y regreso — filtrable por recorrido.',
+  descripcion:
+    'Alumnos agrupados por recorrido de transporte, con horario de salida y regreso — filtrable por recorrido.',
   rolesAutorizados: [Role.ADMIN],
   parseParams,
   obtenerDatos,

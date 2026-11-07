@@ -1,11 +1,11 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { parseRangoFechas } from '../utils/fechas';
-import { obtenerEstadoCuenta } from './pagos.facade';
+import { obtenerEstadoCuenta, obtenerFactura } from './pagos.facade';
 
 // RF-49 (D9 + A5): estado de cuenta con Prisma en memoria. "Hoy" se fija en
 // 2026-11-05 para que VENCIDA no dependa del día en que corre el test.
@@ -135,6 +135,10 @@ beforeEach(() => {
   Object.defineProperty(prisma, 'factura', {
     configurable: true,
     value: {
+      findUnique: async ({ where }: any) => {
+        queries.push('factura.findUnique');
+        return facturas.find((f) => f.id === where.id) ?? null;
+      },
       findMany: async ({ where, orderBy }: any) => {
         queries.push('factura.findMany');
         assert.deepEqual(orderBy, { periodo: 'desc' });
@@ -160,7 +164,18 @@ beforeEach(() => {
     value: {
       findUnique: async () => {
         queries.push('user.findUnique');
-        return ALUMNO;
+        return { ...ALUMNO, role: Role.ESTUDIANTE };
+      },
+    },
+  });
+
+  // Padre 50 vinculado al alumno 7; el 52 tiene otro hijo.
+  Object.defineProperty(prisma, 'parentStudentLink', {
+    configurable: true,
+    value: {
+      findUnique: async ({ where }: any) => {
+        const { padreId, estudianteId } = where.padreId_estudianteId;
+        return padreId === 50 && estudianteId === 7 ? { padreId, estudianteId } : null;
       },
     },
   });
@@ -287,4 +302,51 @@ test('rango de más de 24 meses → 400 antes de consultar la base', async () =>
 test('sin queries de más: con el alumno ya cargado, 2 consultas (facturas y pagos)', async () => {
   await estadoCuenta();
   assert.deepEqual(queries.sort(), ['factura.findMany', 'pago.findMany']);
+});
+
+// ---- Detalle de factura (GET /pagos/facturas/:id) ----
+
+const quien = (id: number, role: Role) => ({ authUser: { id, role } }) as any;
+const PADRE = quien(50, Role.PADRE);
+
+test('detalle de factura: misma forma que el elemento de facturas[] del estado de cuenta', async () => {
+  const estado = await estadoCuenta();
+  for (const id of [1, 2, 3]) {
+    const detalle = await obtenerFactura(PADRE, id, { hoy: HOY });
+    assert.deepEqual(
+      detalle.factura,
+      estado.facturas.find((f) => f.id === id),
+    );
+    assert.deepEqual(detalle.alumno, { id: 7, nombre: 'Franco Barrabino', curso: 'Secundaria — 1° año' });
+  }
+  const oct = await obtenerFactura(PADRE, 2, { hoy: HOY });
+  assert.deepEqual(
+    oct.factura.items.map((i) => i.estado),
+    ['PAGADA', 'VENCIDA', 'EN_REVISION', 'VENCIDA'],
+  );
+});
+
+test('detalle de factura: el ADMIN la ve', async () => {
+  const r = await obtenerFactura(quien(1, Role.ADMIN), 3, { hoy: HOY });
+  assert.equal(r.factura.numero, 'F-202611-000003');
+});
+
+test('detalle de factura: 404 si no existe', async () => {
+  await assert.rejects(
+    obtenerFactura(PADRE, 999, { hoy: HOY }),
+    (err) => err instanceof HttpError && err.status === 404 && err.message === 'La factura indicada no existe.',
+  );
+});
+
+test('detalle de factura: 403 a un PADRE no vinculado, a un DOCENTE y a un ESTUDIANTE', async () => {
+  for (const [actor, mensaje] of [
+    [quien(52, Role.PADRE), 'Ese alumno no está vinculado a tu cuenta.'],
+    [quien(60, Role.DOCENTE), 'Tu rol no tiene acceso a la información de pagos.'],
+    [quien(7, Role.ESTUDIANTE), 'Tu rol no tiene acceso a la información de pagos.'],
+  ] as const) {
+    await assert.rejects(
+      obtenerFactura(actor, 2, { hoy: HOY }),
+      (err) => err instanceof HttpError && err.status === 403 && err.message === mensaje,
+    );
+  }
 });

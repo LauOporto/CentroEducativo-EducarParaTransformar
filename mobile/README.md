@@ -40,6 +40,32 @@ Contraseña `123456`. La app solo deja entrar a Padres/Tutores:
 | `rperez` | Juan Pérez |
 | `pbarrabino` | Franco Barrabino |
 
+## Pagos
+
+Pestaña **Pagos** (RF-49 y RF-50): estado de cuenta por hijo, deuda por ítem, facturas, historial de pagos, comprobantes de pago y carga de la transferencia. Solo se paga por transferencia bancaria.
+
+Cómo probar el flujo contra el backend local (con `mobile/.env.local` apuntando a `http://localhost:4000`):
+
+1. Entrar con `pbarrabino` / `123456` y abrir **Pagos**. Probar el filtro de período (presets y "Personalizado") y desplegar una fila de **Deuda por ítem**.
+2. Tocar una factura con saldo → elegir ítems (o "Elegir todo lo pendiente") → **Generar comprobante de pago**.
+3. En el comprobante: copiar CBU o alias, descargar el PDF y completar **Cargar transferencia** con una foto, una imagen de la galería o un PDF (hasta 5 MB). El monto tiene que ser exactamente el total. Queda **En revisión**.
+4. Aprobar o rechazar como administrador. Mientras no esté el panel web (F7), por API:
+
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:4000/api/auth/login -H 'Content-Type: application/json' \
+     -d '{"usuario":"admin","password":"123456"}' | node -pe 'JSON.parse(require("fs").readFileSync(0)).usuario.token')
+   curl -X POST http://localhost:4000/api/admin/pagos/comprobantes/<id>/aprobar -H "Authorization: Bearer $TOKEN"
+   curl -X POST http://localhost:4000/api/admin/pagos/comprobantes/<id>/rechazar -H "Authorization: Bearer $TOKEN" \
+     -H 'Content-Type: application/json' -d '{"motivo":"La transferencia no figura en el banco"}'
+   ```
+
+   Con la pantalla del comprobante abierta, el cambio aparece solo en hasta 20 segundos (RNF-57).
+5. Un comprobante **Generado** se puede anular: sus ítems vuelven a estar pendientes.
+
+Para tener ítems pendientes nuevos, el administrador puede emitir el período siguiente: `POST /api/admin/facturacion/generar { "periodo": "AAAA-MM" }`.
+
+Tests de la app: `npm test` (formatos, rango de fechas, selección de ítems, cliente HTTP y pantallas de pagos).
+
 ## Estructura
 
 ```

@@ -55,8 +55,7 @@ export function parseParamsPeriodoAlumno(req: Request): ParamsPeriodoAlumno {
 
 export const fechaCorta = (iso: string) => iso.split('-').reverse().join('/');
 
-export const rangoLabel = (rango: RangoFechas) =>
-  `Período: ${fechaCorta(rango.desde)} al ${fechaCorta(rango.hasta)}`;
+export const rangoLabel = (rango: RangoFechas) => `Período: ${fechaCorta(rango.desde)} al ${fechaCorta(rango.hasta)}`;
 
 export const ESTADO_CUOTA_REPORTE_LABEL: Record<EstadoCuota | 'VENCIDA', string> = {
   PENDIENTE: 'Pendiente',

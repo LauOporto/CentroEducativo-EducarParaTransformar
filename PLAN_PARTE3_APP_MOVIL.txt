@@ -355,7 +355,7 @@ documenta en backend/.env.example y DEPLOY.md.
 | F3   | feature/rf50-comprobantes-pago        | D5, D6 + aprobar/rechazar por API             | completada|
 | F4   | lau-rama                              | D12 + login/logout/recupero + selector de     | completada|
 |      |                                       | hijo + job mobile en CI                       |           |
-| F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | pendiente |
+| F5   | feature/app-movil-pagos               | Pantallas RF-49 y RF-50                       | completada|
 | F6   | lau-rama                              | Pantalla RF-54 + validación de nivel del      | completada|
 |      |                                       | alumno al inscribir en un grupo de deporte    |           |
 | F7   | feature/admin-pagos-web               | Panel web: precios, facturación manual,       | pendiente |
@@ -563,6 +563,34 @@ GET /api/pagos/hijos/:estudianteId/estado-cuenta?desde=AAAA-MM-DD&hasta=AAAA-MM-
   404:       "El alumno indicado no existe." (solo ADMIN; al PADRE un id
              ajeno o inexistente le da 403).
 
+GET /api/pagos/facturas/:id                     (F5: detalle para la app)
+  Headers:   Authorization: Bearer <accessToken>
+  200:       { exito, alumno: { id, nombre, curso }, factura }
+             "factura" tiene EXACTAMENTE la misma forma que cada elemento
+             de facturas[] del estado de cuenta (la arma la misma función,
+             vistaFactura de pagos.facade.ts): id, numero, periodo,
+             emitidaEn, vencimiento, total, pagado, saldo, estado, items[]
+             con el estado ya calculado (VENCIDA) y comprobantes[].
+             Ejemplo real (seed, pbarrabino, recortado):
+    {
+      "exito": true,
+      "alumno": { "id": 16, "nombre": "Franco Barrabino",
+                  "curso": "Secundaria — 1° año" },
+      "factura": {
+        "id": 37, "numero": "F-202611-000037", "periodo": "2026-11",
+        "emitidaEn": "2026-11-05T16:01:12.026Z", "vencimiento": "2026-11-10",
+        "total": 415000, "pagado": 0, "saldo": 415000, "estado": "PENDIENTE",
+        "items": [ { "id": 157, "concepto": "CUOTA",
+                     "descripcion": "Cuota mensual — Secundaria",
+                     "importe": 260000, "vencimiento": "2026-11-10",
+                     "estado": "PENDIENTE" }, "…" ],
+        "comprobantes": []
+      }
+    }
+  400:       "El id de la factura es inválido."
+  403:       ver permisos (PADRE no vinculado, DOCENTE, ESTUDIANTE).
+  404:       "La factura indicada no existe."
+
 GET /api/pagos/facturas/:id/pdf
   Headers:   Authorization: Bearer <accessToken>
   200:       application/pdf, Content-Disposition: attachment;
@@ -693,6 +721,41 @@ GET /api/pagos/comprobantes/:id/archivo
 GET /api/pagos/archivos/:token            (solo driver local, sin sesión)
   200:       el archivo con su Content-Type.  403: "El enlace del archivo
              es inválido o venció. Pedí uno nuevo."
+
+---- F5 — Pantallas de pagos (RF-49, RF-50, RNF-57) ----
+
+Endpoint nuevo: GET /api/pagos/facturas/:id (ver F2). El resto son los de
+F2 y F3, llamados desde mobile/src/pagos/api.ts con el cliente de
+mobile/src/lib/api.ts (X-Client-Type, Bearer, 401 → renovar → reintento;
+apiMultipart para la transferencia y descargarArchivo para los PDF).
+
+Navegación (pestaña "Pagos", pila propia en src/app/(tabs)/pagos/):
+  pagos/index.tsx            → GET /pagos/hijos/:id/estado-cuenta?desde&hasta
+    Selector de hijo, filtro por meses (desde = día 1, hasta = último
+    día; máximo 24 meses), resumen, deuda por ítem, facturas e
+    historial de pagos.
+  pagos/factura/[id].tsx     → GET /pagos/facturas/:id (+ GET de cada
+    comprobante GENERADO o EN_REVISION, para mostrar qué ítem tiene
+    tomado), POST /pagos/comprobantes, GET /pagos/facturas/:id/pdf.
+  pagos/comprobante/[id].tsx → GET /pagos/comprobantes/:id,
+    GET .../pdf, POST .../transferencia (multipart), POST .../anular,
+    GET .../archivo (se abre con expo-web-browser).
+
+Claves de react-query: ['estado-cuenta', hijoId, desde, hasta],
+['factura', id] y ['comprobante', id].
+Invalidaciones (invalidarPagos): después de generar, anular y cargar la
+transferencia se invalidan el estado de cuenta del hijo (prefijo
+['estado-cuenta', hijoId]), la factura y el comprobante. Un 409 al
+generar también relee la factura.
+Polling: el comprobante se consulta cada 20 s mientras está EN_REVISION
+(refetchInterval). Si el estado cambia (el admin aprobó o rechazó desde
+el web), se invalidan la factura y el estado de cuenta.
+Además: refetch al volver a la app (focusManager) y pull-to-refresh en
+las tres pantallas.
+Archivos: PDF con expo-file-system (File.downloadFileAsync con headers,
+API nueva del SDK 58; un status no-2xx rechaza con "UnableToDownload"
+y el código) + expo-sharing; en la versión web, fetch → blob → pestaña
+nueva.
 
 ---- F6 — Inscripciones (RF-54) ----
 

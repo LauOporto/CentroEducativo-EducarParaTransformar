@@ -62,7 +62,11 @@ async function obtenerDatos({ nivelId, deporteId }: Params): Promise<Datos> {
       estudiante: { select: { nombre: true, curso: { select: CURSO_SELECT } } },
       grupoDeporte: { include: { nivel: true, docente: { select: { nombre: true } } } },
     },
-    orderBy: [{ deporte: { nombre: 'asc' } }, { grupoDeporte: { nivel: { id: 'asc' } } }, { estudiante: { nombre: 'asc' } }],
+    orderBy: [
+      { deporte: { nombre: 'asc' } },
+      { grupoDeporte: { nivel: { id: 'asc' } } },
+      { estudiante: { nombre: 'asc' } },
+    ],
   });
 
   return {
@@ -106,7 +110,8 @@ function nombreArchivo() {
 export const listadoAlumnosPorDeporteNivelHorarioStrategy: ReportStrategy<Params, Datos> = {
   key: 'listado-alumnos-por-deporte-nivel-horario',
   titulo: 'Listado de Alumnos por Deporte, Nivel, Horario y Profesor',
-  descripcion: 'Deporte, nivel, alumno, curso, día, horario y profesor a cargo de cada grupo — filtrable por deporte y/o nivel.',
+  descripcion:
+    'Deporte, nivel, alumno, curso, día, horario y profesor a cargo de cada grupo — filtrable por deporte y/o nivel.',
   rolesAutorizados: [Role.ADMIN],
   parseParams,
   obtenerDatos,
