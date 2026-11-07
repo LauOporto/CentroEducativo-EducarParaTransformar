@@ -82,9 +82,23 @@ src/
   theme.ts          paleta y tipografías del campus web
 ```
 
-## Verificación
+## Verificación y generación de APK (F10 / RNF-55)
 
 ```bash
 npm run typecheck
 npx expo export --platform web --output-dir dist   # lo mismo que corre el job "mobile" del CI
 ```
+
+### Generar APK instalable para Android (EAS Build)
+
+`mobile/eas.json` define el perfil `preview` con `android.buildType: "apk"` y `EXPO_PUBLIC_API_URL` apuntando al backend en Render (`https://educar-para-transformar-iffe.onrender.com`).
+
+Para generar el archivo `.apk` e instalarlo directamente en un celular Android (Android 10+, RNF-55):
+
+```bash
+cd mobile
+npx eas-cli login
+npm run build:apk
+```
+
+Al terminar el build en la nube de Expo, EAS entrega un link y un código QR para descargar e instalar el `.apk` en el dispositivo físico sin depender de Expo Go ni de estar en la misma red Wi-Fi que la PC.

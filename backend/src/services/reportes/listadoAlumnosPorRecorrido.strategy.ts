@@ -5,6 +5,7 @@ import { prisma } from '../../db/prisma';
 import { HttpError } from '../../utils/httpError';
 import { CURSO_SELECT } from '../../utils/cursoLabel';
 import type { ReportStrategy } from './types';
+import { parseIdOpcional } from './financieros.helpers';
 import { encabezadoReporte, seccion, tabla, horaLabel } from './pdfHelpers';
 
 // TP — "Listado de alumnos por recorrido del servicio de transporte"
@@ -29,14 +30,13 @@ interface Datos {
 }
 
 function parseParams(req: Request): Params {
-  if (req.query.recorridoId === undefined || req.query.recorridoId === '') return { recorridoId: null };
-  const recorridoId = Number(req.query.recorridoId);
-  if (!Number.isInteger(recorridoId) || recorridoId <= 0) throw HttpError.badRequest('El parámetro recorridoId es inválido.');
-  return { recorridoId };
+  return { recorridoId: parseIdOpcional(req.query.recorridoId, 'recorridoId') };
 }
 
 async function obtenerDatos({ recorridoId }: Params): Promise<Datos> {
-  const recorridoFiltroRow = recorridoId ? await prisma.recorridoTransporte.findUnique({ where: { id: recorridoId } }) : null;
+  const recorridoFiltroRow = recorridoId
+    ? await prisma.recorridoTransporte.findUnique({ where: { id: recorridoId } })
+    : null;
   if (recorridoId && !recorridoFiltroRow) throw HttpError.notFound('El recorrido indicado no existe.');
 
   const recorridos = await prisma.recorridoTransporte.findMany({
@@ -92,7 +92,8 @@ function nombreArchivo(data: Datos) {
 export const listadoAlumnosPorRecorridoStrategy: ReportStrategy<Params, Datos> = {
   key: 'listado-alumnos-por-recorrido',
   titulo: 'Listado de Alumnos por Recorrido de Transporte',
-  descripcion: 'Alumnos agrupados por recorrido de transporte, con horario de salida y regreso — filtrable por recorrido.',
+  descripcion:
+    'Alumnos agrupados por recorrido de transporte, con horario de salida y regreso — filtrable por recorrido.',
   rolesAutorizados: [Role.ADMIN],
   parseParams,
   obtenerDatos,

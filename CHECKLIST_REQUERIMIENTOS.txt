@@ -480,11 +480,26 @@ resto del archivo.
           cargo de Lautaro). Hoy se aprueba por API
           (POST /api/admin/pagos/comprobantes/:id/aprobar | rechazar).
 
-[FALTA]   RF-52 (web) Reportes de ingresos y de pagos completos e
+[OK]      RF-52 (web) Reportes de ingresos y de pagos completos e
           incompletos por período, discriminados por año y por alumno.
+          Evidencia (F8): backend/src/services/reportes/
+          {ingresosPorPeriodo,pagosCompletosPorPeriodo,
+          pagosIncompletosPorPeriodo}.strategy.ts + financieros.helpers.ts,
+          registrados en el Motor de Reportes con patrón Strategy (solo
+          ADMIN, rango desde/hasta obligatorio de hasta 24 meses y filtro
+          opcional por estudianteId). Tarjetas en
+          client/src/pages/admin/ReportesPage.jsx. Tests:
+          reportesFinancieros.test.ts.
 
-[FALTA]   RF-53 (web) Reporte de pagos por alumno filtrado por deporte,
+[OK]      RF-53 (web) Reporte de pagos por alumno filtrado por deporte,
           nivel, horario, profesor y recorrido (filtros de RF-30).
+          Evidencia (F8): backend/src/services/reportes/
+          {pagosPorDeporte,pagosPorRecorrido}.strategy.ts, reutilizando
+          parseIdOpcional y los parámetros de RF-32 (deporteId, nivelId +
+          docenteId) y RF-33 (recorridoId), con detalle de día, horario,
+          profesor, curso, período, importe, estado (calculando VENCIDA) y
+          fecha de pago. Tarjetas en ReportesPage.jsx y tests en
+          reportesFinancieros.test.ts.
 
 [OK]      RF-54 Inscripción a deportes, transporte y comedor por hijo desde
           la app, con las mismas reglas del web.
@@ -503,7 +518,9 @@ resto del archivo.
 
 [PARCIAL] RNF-55 Android 10+ e iOS 15+.
           Evidencia: Expo SDK 58 compila para Android 7+ (minSdk 24) e
-          iOS 15.1+. Falta: prueba en un dispositivo físico (F10).
+          iOS 15.1+, y mobile/eas.json define el perfil preview para
+          generar el APK instalable (npm run build:apk). Falta: prueba
+          en un dispositivo físico (F10).
 
 [OK]      RNF-56 Misma API REST, misma base y mismo esquema JWT, sin
           entidades duplicadas ni mecanismo de sesión adicional.
@@ -547,16 +564,26 @@ resto del archivo.
 
 --- Listados web (enunciado) ---
 
-[FALTA]   Listado 1: ingresos por período (por año y por alumno).
+[OK]      Listado 1: ingresos por período (por año y por alumno).
+          Evidencia (F8): ingresosPorPeriodo.strategy.ts (clave
+          ingresos-por-periodo).
 
-[FALTA]   Listado 2: pagos completos por período (por año y por alumno).
+[OK]      Listado 2: pagos completos por período (por año y por alumno).
+          Evidencia (F8): pagosCompletosPorPeriodo.strategy.ts (clave
+          pagos-completos-por-periodo).
 
-[FALTA]   Listado 3: pagos incompletos por período (por año y por alumno,
+[OK]      Listado 3: pagos incompletos por período (por año y por alumno,
           con total, pagado y saldo).
+          Evidencia (F8): pagosIncompletosPorPeriodo.strategy.ts (clave
+          pagos-incompletos-por-periodo).
 
-[FALTA]   Listado 4: pagos por deporte (filtros de RF-32 + profesor).
+[OK]      Listado 4: pagos por deporte (filtros de RF-32 + profesor).
+          Evidencia (F8): pagosPorDeporte.strategy.ts (clave
+          pagos-por-deporte).
 
-[FALTA]   Listado 5: pagos por recorrido de transporte (filtro de RF-33).
+[OK]      Listado 5: pagos por recorrido de transporte (filtro de RF-33).
+          Evidencia (F8): pagosPorRecorrido.strategy.ts (clave
+          pagos-por-recorrido).
 
 ================================================================================
 Fin del documento.

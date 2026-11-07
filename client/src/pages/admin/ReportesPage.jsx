@@ -49,21 +49,33 @@ function PorAlumnoCard() {
 
   return (
     <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
-      <h4 className="mb-1 text-lg font-semibold"><i className="fas fa-file-pdf mr-2 text-accent" />Reporte por Alumno</h4>
+      <h4 className="mb-1 text-lg font-semibold">
+        <i className="fas fa-file-pdf mr-2 text-accent" />
+        Reporte por Alumno
+      </h4>
       <p className="mb-4 text-sm text-ink-faint">
         Curso, materias con profesor a cargo, deportes con horarios, transporte y comedor de un alumno.
       </p>
       <form onSubmit={descargar} className="flex flex-wrap gap-2">
         <select
-          required value={estudianteId} onChange={(e) => setEstudianteId(e.target.value)}
+          required
+          value={estudianteId}
+          onChange={(e) => setEstudianteId(e.target.value)}
           className="min-w-[280px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Elegir alumno…</option>
           {estudiantes.map((a) => (
-            <option key={a.id} value={a.id}>{a.nombre} — {a.legajo || a.dni}{a.curso ? ` (${a.curso})` : ''}</option>
+            <option key={a.id} value={a.id}>
+              {a.nombre} — {a.legajo || a.dni}
+              {a.curso ? ` (${a.curso})` : ''}
+            </option>
           ))}
         </select>
-        <button disabled={generando} type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        <button
+          disabled={generando}
+          type="submit"
+          className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
           <i className="fas fa-download" /> {generando ? 'Generando…' : 'Descargar PDF'}
         </button>
       </form>
@@ -97,19 +109,31 @@ function ListadoPorCursoCard() {
 
   return (
     <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
-      <h4 className="mb-1 text-lg font-semibold"><i className="fas fa-file-pdf mr-2 text-accent" />Listado de Alumnos por Curso</h4>
+      <h4 className="mb-1 text-lg font-semibold">
+        <i className="fas fa-file-pdf mr-2 text-accent" />
+        Listado de Alumnos por Curso
+      </h4>
       <p className="mb-4 text-sm text-ink-faint">
         Nivel, curso, legajo, apellido y nombre — de toda la matrícula o de un curso puntual.
       </p>
       <form onSubmit={descargar} className="flex flex-wrap gap-2">
         <select
-          value={cursoId} onChange={(e) => setCursoId(e.target.value)}
+          value={cursoId}
+          onChange={(e) => setCursoId(e.target.value)}
           className="min-w-[280px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Todos los cursos</option>
-          {cursos.map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
+          {cursos.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.etiqueta}
+            </option>
+          ))}
         </select>
-        <button disabled={generando} type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        <button
+          disabled={generando}
+          type="submit"
+          className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
           <i className="fas fa-download" /> {generando ? 'Generando…' : 'Descargar PDF'}
         </button>
       </form>
@@ -131,7 +155,9 @@ function FiltroReporteCard({ titulo, descripcion, reportKey, nombreArchivo, camp
     setGenerando(true);
     try {
       const params = {};
-      campos.forEach((c) => { if (c.value) params[c.key] = c.value; });
+      campos.forEach((c) => {
+        if (c.value) params[c.key] = c.value;
+      });
       const blob = await reportesService.descargarPdf(reportKey, params);
       descargarBlob(blob, nombreArchivo);
     } catch (err) {
@@ -143,7 +169,10 @@ function FiltroReporteCard({ titulo, descripcion, reportKey, nombreArchivo, camp
 
   return (
     <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
-      <h4 className="mb-1 text-lg font-semibold"><i className="fas fa-file-pdf mr-2 text-accent" />{titulo}</h4>
+      <h4 className="mb-1 text-lg font-semibold">
+        <i className="fas fa-file-pdf mr-2 text-accent" />
+        {titulo}
+      </h4>
       <p className="mb-4 text-sm text-ink-faint">{descripcion}</p>
       <form onSubmit={descargar} className="flex flex-wrap gap-2">
         {campos.map((c) => (
@@ -155,10 +184,18 @@ function FiltroReporteCard({ titulo, descripcion, reportKey, nombreArchivo, camp
             className="min-w-[200px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
           >
             <option value="">{c.placeholder}</option>
-            {c.opciones.map((o) => <option key={o.id} value={o.id}>{o.etiqueta}</option>)}
+            {c.opciones.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.etiqueta}
+              </option>
+            ))}
           </select>
         ))}
-        <button disabled={generando} type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        <button
+          disabled={generando}
+          type="submit"
+          className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
           <i className="fas fa-download" /> {generando ? 'Generando…' : 'Descargar PDF'}
         </button>
       </form>
@@ -182,11 +219,16 @@ function PorDocenteCard() {
       descripcion="Cursos a cargo agrupados por nivel educativo, y horarios de las actividades deportivas que dicta."
       reportKey="por-docente"
       nombreArchivo="reporte-docente.pdf"
-      campos={[{
-        key: 'docenteId', placeholder: 'Elegir profesor…', required: true,
-        value: docenteId, onChange: setDocenteId,
-        opciones: docentes.map((d) => ({ id: d.id, etiqueta: `${d.nombre} — ${d.dni}` })),
-      }]}
+      campos={[
+        {
+          key: 'docenteId',
+          placeholder: 'Elegir profesor…',
+          required: true,
+          value: docenteId,
+          onChange: setDocenteId,
+          opciones: docentes.map((d) => ({ id: d.id, etiqueta: `${d.nombre} — ${d.dni}` })),
+        },
+      ]}
     />
   );
 }
@@ -210,11 +252,17 @@ function ListadoPorMateriaCard() {
       nombreArchivo="listado-alumnos-por-materia.pdf"
       campos={[
         {
-          key: 'materiaId', placeholder: 'Todas las materias', value: materiaId, onChange: setMateriaId,
+          key: 'materiaId',
+          placeholder: 'Todas las materias',
+          value: materiaId,
+          onChange: setMateriaId,
           opciones: materias.map((m) => ({ id: m.id, etiqueta: m.nombre })),
         },
         {
-          key: 'cursoId', placeholder: 'Todos los cursos', value: cursoId, onChange: setCursoId,
+          key: 'cursoId',
+          placeholder: 'Todos los cursos',
+          value: cursoId,
+          onChange: setCursoId,
           opciones: cursos.map((c) => ({ id: c.id, etiqueta: c.etiqueta })),
         },
       ]}
@@ -236,10 +284,15 @@ function ListadoDocentesPorNivelCard() {
       descripcion="Nivel, profesor, materias a cargo y cursos."
       reportKey="listado-docentes-por-nivel"
       nombreArchivo="listado-docentes-por-nivel.pdf"
-      campos={[{
-        key: 'nivelId', placeholder: 'Todos los niveles', value: nivelId, onChange: setNivelId,
-        opciones: niveles.map((n) => ({ id: n.id, etiqueta: n.nombre })),
-      }]}
+      campos={[
+        {
+          key: 'nivelId',
+          placeholder: 'Todos los niveles',
+          value: nivelId,
+          onChange: setNivelId,
+          opciones: niveles.map((n) => ({ id: n.id, etiqueta: n.nombre })),
+        },
+      ]}
     />
   );
 }
@@ -258,10 +311,15 @@ function ListadoPorDeporteCard() {
       descripcion="Deporte, alumno, curso y nivel educativo."
       reportKey="listado-alumnos-por-deporte"
       nombreArchivo="listado-alumnos-por-deporte.pdf"
-      campos={[{
-        key: 'deporteId', placeholder: 'Todos los deportes', value: deporteId, onChange: setDeporteId,
-        opciones: deportes.map((d) => ({ id: d.id, etiqueta: d.nombre })),
-      }]}
+      campos={[
+        {
+          key: 'deporteId',
+          placeholder: 'Todos los deportes',
+          value: deporteId,
+          onChange: setDeporteId,
+          opciones: deportes.map((d) => ({ id: d.id, etiqueta: d.nombre })),
+        },
+      ]}
     />
   );
 }
@@ -285,11 +343,18 @@ function ListadoPorDeporteYNivelCard() {
       nombreArchivo="listado-alumnos-deporte-nivel.pdf"
       campos={[
         {
-          key: 'nivelId', placeholder: 'Elegir nivel…', required: true, value: nivelId, onChange: setNivelId,
+          key: 'nivelId',
+          placeholder: 'Elegir nivel…',
+          required: true,
+          value: nivelId,
+          onChange: setNivelId,
           opciones: niveles.map((n) => ({ id: n.id, etiqueta: n.nombre })),
         },
         {
-          key: 'deporteId', placeholder: 'Todos los deportes', value: deporteId, onChange: setDeporteId,
+          key: 'deporteId',
+          placeholder: 'Todos los deportes',
+          value: deporteId,
+          onChange: setDeporteId,
           opciones: deportes.map((d) => ({ id: d.id, etiqueta: d.nombre })),
         },
       ]}
@@ -316,11 +381,17 @@ function ListadoPorDeporteNivelHorarioCard() {
       nombreArchivo="listado-alumnos-deporte-nivel-horario.pdf"
       campos={[
         {
-          key: 'deporteId', placeholder: 'Todos los deportes', value: deporteId, onChange: setDeporteId,
+          key: 'deporteId',
+          placeholder: 'Todos los deportes',
+          value: deporteId,
+          onChange: setDeporteId,
           opciones: deportes.map((d) => ({ id: d.id, etiqueta: d.nombre })),
         },
         {
-          key: 'nivelId', placeholder: 'Todos los niveles', value: nivelId, onChange: setNivelId,
+          key: 'nivelId',
+          placeholder: 'Todos los niveles',
+          value: nivelId,
+          onChange: setNivelId,
           opciones: niveles.map((n) => ({ id: n.id, etiqueta: n.nombre })),
         },
       ]}
@@ -342,28 +413,312 @@ function ListadoPorRecorridoCard() {
       descripcion="Alumnos agrupados por recorrido de transporte, con horario de salida y regreso."
       reportKey="listado-alumnos-por-recorrido"
       nombreArchivo="listado-alumnos-por-recorrido.pdf"
-      campos={[{
-        key: 'recorridoId', placeholder: 'Todos los recorridos', value: recorridoId, onChange: setRecorridoId,
-        opciones: recorridos.map((r) => ({ id: r.id, etiqueta: r.nombre })),
-      }]}
+      campos={[
+        {
+          key: 'recorridoId',
+          placeholder: 'Todos los recorridos',
+          value: recorridoId,
+          onChange: setRecorridoId,
+          opciones: recorridos.map((r) => ({ id: r.id, etiqueta: r.nombre })),
+        },
+      ]}
+    />
+  );
+}
+
+// --- Reportes Financieros (RF-52 y RF-53, D10) ---
+
+function rangoDefectoFinanciero() {
+  const hoy = new Date();
+  const haceDosMeses = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - 2, 1));
+  const finMesSiguiente = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 2, 0));
+  return {
+    desde: haceDosMeses.toISOString().slice(0, 10),
+    hasta: finMesSiguiente.toISOString().slice(0, 10),
+  };
+}
+
+function ReporteFinancieroCard({ titulo, descripcion, reportKey, prefijoArchivo, selects = [] }) {
+  const toast = useToast();
+  const defecto = rangoDefectoFinanciero();
+  const [desde, setDesde] = useState(defecto.desde);
+  const [hasta, setHasta] = useState(defecto.hasta);
+  const [generando, setGenerando] = useState(false);
+
+  const descargar = async (e) => {
+    e.preventDefault();
+    if (!desde || !hasta) return;
+    setGenerando(true);
+    try {
+      const params = { desde, hasta };
+      selects.forEach((s) => {
+        if (s.value) params[s.key] = s.value;
+      });
+      const blob = await reportesService.descargarPdf(reportKey, params);
+      descargarBlob(blob, `${prefijoArchivo}-${desde}-a-${hasta}.pdf`);
+    } catch (err) {
+      toast.error(err.message || 'No se pudo generar el reporte.');
+    } finally {
+      setGenerando(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-blue-100 p-5 dark:border-slate-700">
+      <h4 className="mb-1 text-lg font-semibold">
+        <i className="fas fa-file-invoice-dollar mr-2 text-accent" />
+        {titulo}
+      </h4>
+      <p className="mb-4 text-sm text-ink-faint">{descripcion}</p>
+      <form onSubmit={descargar} className="space-y-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="text-xs font-medium text-ink-faint">
+            Desde
+            <input
+              type="date"
+              required
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+              className="mt-1 w-full rounded border border-blue-200 p-2 text-sm text-ink dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <label className="text-xs font-medium text-ink-faint">
+            Hasta
+            <input
+              type="date"
+              required
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              className="mt-1 w-full rounded border border-blue-200 p-2 text-sm text-ink dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {selects.map((s) => (
+            <select
+              key={s.key}
+              value={s.value}
+              onChange={(e) => s.onChange(e.target.value)}
+              className="min-w-[180px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+            >
+              <option value="">{s.placeholder}</option>
+              {s.opciones.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.etiqueta}
+                </option>
+              ))}
+            </select>
+          ))}
+          <button
+            disabled={generando}
+            type="submit"
+            className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            <i className="fas fa-download" /> {generando ? 'Generando…' : 'Descargar PDF'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function IngresosPorPeriodoCard({ opcionesAlumnos }) {
+  const [estudianteId, setEstudianteId] = useState('');
+  return (
+    <ReporteFinancieroCard
+      titulo="Ingresos por Período"
+      descripcion="Pagos acreditados en el rango de fechas, agrupados por año y por alumno, con subtotales y total general."
+      reportKey="ingresos-por-periodo"
+      prefijoArchivo="ingresos"
+      selects={[
+        {
+          key: 'estudianteId',
+          placeholder: 'Todos los alumnos',
+          value: estudianteId,
+          onChange: setEstudianteId,
+          opciones: opcionesAlumnos,
+        },
+      ]}
+    />
+  );
+}
+
+function PagosCompletosPorPeriodoCard({ opcionesAlumnos }) {
+  const [estudianteId, setEstudianteId] = useState('');
+  return (
+    <ReporteFinancieroCard
+      titulo="Pagos Completos por Período"
+      descripcion="Facturas pagadas en su totalidad con vencimiento en el período, agrupadas por año y por alumno."
+      reportKey="pagos-completos-por-periodo"
+      prefijoArchivo="pagos-completos"
+      selects={[
+        {
+          key: 'estudianteId',
+          placeholder: 'Todos los alumnos',
+          value: estudianteId,
+          onChange: setEstudianteId,
+          opciones: opcionesAlumnos,
+        },
+      ]}
+    />
+  );
+}
+
+function PagosIncompletosPorPeriodoCard({ opcionesAlumnos }) {
+  const [estudianteId, setEstudianteId] = useState('');
+  return (
+    <ReporteFinancieroCard
+      titulo="Pagos Incompletos por Período"
+      descripcion="Facturas pendientes o parciales con saldo a pagar en el período, agrupadas por año y por alumno."
+      reportKey="pagos-incompletos-por-periodo"
+      prefijoArchivo="pagos-incompletos"
+      selects={[
+        {
+          key: 'estudianteId',
+          placeholder: 'Todos los alumnos',
+          value: estudianteId,
+          onChange: setEstudianteId,
+          opciones: opcionesAlumnos,
+        },
+      ]}
+    />
+  );
+}
+
+function PagosPorDeporteCard({ opcionesAlumnos }) {
+  const [deportes, setDeportes] = useState([]);
+  const [niveles, setNiveles] = useState([]);
+  const [docentes, setDocentes] = useState([]);
+  const [deporteId, setDeporteId] = useState('');
+  const [nivelId, setNivelId] = useState('');
+  const [docenteId, setDocenteId] = useState('');
+  const [estudianteId, setEstudianteId] = useState('');
+
+  useEffect(() => {
+    deportesService.list().then((data) => setDeportes(data.exito ? data.deportes : []));
+    nivelesService.list().then((data) => setNiveles(data.exito ? data.niveles : []));
+    adminService.listUsers({ role: 'DOCENTE' }).then((data) => {
+      setDocentes(data.exito ? data.usuarios.filter((u) => u.isActive) : []);
+    });
+  }, []);
+
+  return (
+    <ReporteFinancieroCard
+      titulo="Pagos por Deporte, Nivel, Horario y Profesor"
+      descripcion="Cuotas de deportes en el período con día, horario, profesor a cargo, alumno, curso, importe, estado y fecha de pago."
+      reportKey="pagos-por-deporte"
+      prefijoArchivo="pagos-por-deporte"
+      selects={[
+        {
+          key: 'deporteId',
+          placeholder: 'Todos los deportes',
+          value: deporteId,
+          onChange: setDeporteId,
+          opciones: deportes.map((d) => ({ id: d.id, etiqueta: d.nombre })),
+        },
+        {
+          key: 'nivelId',
+          placeholder: 'Todos los niveles',
+          value: nivelId,
+          onChange: setNivelId,
+          opciones: niveles.map((n) => ({ id: n.id, etiqueta: n.nombre })),
+        },
+        {
+          key: 'docenteId',
+          placeholder: 'Todos los profesores',
+          value: docenteId,
+          onChange: setDocenteId,
+          opciones: docentes.map((d) => ({ id: d.id, etiqueta: d.nombre })),
+        },
+        {
+          key: 'estudianteId',
+          placeholder: 'Todos los alumnos',
+          value: estudianteId,
+          onChange: setEstudianteId,
+          opciones: opcionesAlumnos,
+        },
+      ]}
+    />
+  );
+}
+
+function PagosPorRecorridoCard({ opcionesAlumnos }) {
+  const [recorridos, setRecorridos] = useState([]);
+  const [recorridoId, setRecorridoId] = useState('');
+  const [estudianteId, setEstudianteId] = useState('');
+
+  useEffect(() => {
+    transporteService.list().then((data) => setRecorridos(data.exito ? data.recorridos : []));
+  }, []);
+
+  return (
+    <ReporteFinancieroCard
+      titulo="Pagos por Recorrido de Transporte"
+      descripcion="Cuotas de transporte en el período con recorrido, horario, alumno, curso, importe, estado y fecha de pago."
+      reportKey="pagos-por-recorrido"
+      prefijoArchivo="pagos-por-recorrido"
+      selects={[
+        {
+          key: 'recorridoId',
+          placeholder: 'Todos los recorridos',
+          value: recorridoId,
+          onChange: setRecorridoId,
+          opciones: recorridos.map((r) => ({ id: r.id, etiqueta: r.nombre })),
+        },
+        {
+          key: 'estudianteId',
+          placeholder: 'Todos los alumnos',
+          value: estudianteId,
+          onChange: setEstudianteId,
+          opciones: opcionesAlumnos,
+        },
+      ]}
     />
   );
 }
 
 export default function ReportesPage() {
+  const [estudiantes, setEstudiantes] = useState([]);
+
+  useEffect(() => {
+    studentsService.list().then((data) => setEstudiantes(data.exito ? data.estudiantes : []));
+  }, []);
+
+  const opcionesAlumnos = estudiantes.map((a) => ({
+    id: a.id,
+    etiqueta: `${a.nombre} — ${a.legajo || a.dni}`,
+  }));
+
   return (
-    <div>
-      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Reportes Gerenciales</h3>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <PorAlumnoCard />
-        <ListadoPorCursoCard />
-        <PorDocenteCard />
-        <ListadoPorMateriaCard />
-        <ListadoDocentesPorNivelCard />
-        <ListadoPorDeporteCard />
-        <ListadoPorDeporteYNivelCard />
-        <ListadoPorDeporteNivelHorarioCard />
-        <ListadoPorRecorridoCard />
+    <div className="space-y-8">
+      <div>
+        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+          Reportes Gerenciales Académicos y de Servicios
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <PorAlumnoCard />
+          <ListadoPorCursoCard />
+          <PorDocenteCard />
+          <ListadoPorMateriaCard />
+          <ListadoDocentesPorNivelCard />
+          <ListadoPorDeporteCard />
+          <ListadoPorDeporteYNivelCard />
+          <ListadoPorDeporteNivelHorarioCard />
+          <ListadoPorRecorridoCard />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+          Reportes Financieros y de Pagos
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <IngresosPorPeriodoCard opcionesAlumnos={opcionesAlumnos} />
+          <PagosCompletosPorPeriodoCard opcionesAlumnos={opcionesAlumnos} />
+          <PagosIncompletosPorPeriodoCard opcionesAlumnos={opcionesAlumnos} />
+          <PagosPorDeporteCard opcionesAlumnos={opcionesAlumnos} />
+          <PagosPorRecorridoCard opcionesAlumnos={opcionesAlumnos} />
+        </div>
       </div>
     </div>
   );
