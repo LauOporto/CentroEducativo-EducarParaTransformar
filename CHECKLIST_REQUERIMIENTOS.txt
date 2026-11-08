@@ -450,7 +450,7 @@ resto del archivo.
           Tests: pagos.facade.test.ts (forma idéntica y permisos) y
           mobile/src/pagos/__tests__ (formatos, rango y pantallas).
 
-[PARCIAL] RF-50 Selección de ítems a pagar, comprobante de pago generado
+[OK]      RF-50 Selección de ítems a pagar, comprobante de pago generado
           por el sistema y carga del comprobante de transferencia asociado
           a la factura (una factura admite varios comprobantes).
           Evidencia (backend, F3): services/comprobantes.service.ts —
@@ -476,9 +476,28 @@ resto del archivo.
           RECHAZADO (con motivo) y ANULADO. Una factura lista todos sus
           comprobantes (HU8). QA de punta a punta contra el backend local
           (generar, transferir, aprobar, rechazar y anular).
-          Falta: la pantalla web del ADMIN para aprobar o rechazar (F7, a
-          cargo de Lautaro). Hoy se aprueba por API
-          (POST /api/admin/pagos/comprobantes/:id/aprobar | rechazar).
+          Evidencia (web, F7): panel del ADMIN en /admin/pagos
+          (client/src/pages/admin/PagosPage.jsx + components/features/
+          pagos/) con tres pestañas. Comprobantes: bandeja con filtro por
+          estado (En revisión por defecto) y rango de fechas, paginada,
+          detalle con ítems y datos de la transferencia, "Ver archivo"
+          (URL firmada de 5 min), PDF del comprobante, aprobar con fecha de
+          acreditación (no futura ni anterior a la transferencia) y
+          rechazar con motivo de 5 a 300 caracteres; un 409 muestra el
+          mensaje del backend y recarga la lista. Precios: cuota por nivel,
+          deportes, recorridos y turnos de comedor (PUT .../precio, solo
+          ADMIN) con el aviso "Las facturas ya emitidas no cambian".
+          Facturación: período actual o siguiente, generación idempotente
+          con el detalle de omitidas. Servicio:
+          client/src/services/api/pagosAdminService.js. Test E2E:
+          client/cypress/e2e/rf50-admin-pagos.cy.js (rechazo desde la UI,
+          cambio de precio con restauración y facturación idempotente).
+          Circuito de punta a punta verificado: el padre genera y carga
+          la transferencia, el admin aprueba desde la UI, la factura pasa
+          de PARCIAL a PAGADA y el estado de cuenta del padre lo refleja.
+          Regla "solo el Administrador fija los valores": [OK]. Los PUT de
+          precios exigen ADMIN en el backend (F2) y la única pantalla que
+          los edita es la pestaña Precios del panel de ADMIN.
 
 [OK]      RF-52 (web) Reportes de ingresos y de pagos completos e
           incompletos por período, discriminados por año y por alumno.

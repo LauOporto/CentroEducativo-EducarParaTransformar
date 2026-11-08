@@ -38,6 +38,7 @@ const EmpleoPage = lazy(() => import('../pages/admin/EmpleoPage'));
 const VinculosPage = lazy(() => import('../pages/admin/VinculosPage'));
 const AcademicoPage = lazy(() => import('../pages/admin/AcademicoPage'));
 const ServiciosPage = lazy(() => import('../pages/admin/ServiciosPage'));
+const PagosPage = lazy(() => import('../pages/admin/PagosPage'));
 const ReportesPage = lazy(() => import('../pages/admin/ReportesPage'));
 const AuditoriaPage = lazy(() => import('../pages/admin/AuditoriaPage'));
 const GaleriaPage = lazy(() => import('../pages/admin/GaleriaPage'));
@@ -112,6 +113,7 @@ export default function AppRoutes() {
           <Route path="vinculos" element={<VinculosPage />} />
           <Route path="academico" element={<AcademicoPage />} />
           <Route path="servicios" element={<ServiciosPage />} />
+          <Route path="pagos" element={<PagosPage />} />
           <Route path="reportes" element={<ReportesPage />} />
           <Route path="auditoria" element={<AuditoriaPage />} />
           <Route path="galeria" element={<GaleriaPage />} />

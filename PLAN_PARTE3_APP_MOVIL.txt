@@ -902,6 +902,34 @@ Factura (según la suma de sus Pagos; un Pago por comprobante aprobado):
     dentro de la misma transacción (RNF-57: web y app leen la misma base).
 
 
+--------------------------------------------------------------------------------
+7. PANEL WEB DE PAGOS (F7, RF-50)
+--------------------------------------------------------------------------------
+
+Ruta: /admin/pagos (solo ADMIN; las notificaciones del backend a los admins
+enlazan a esta ruta). Ítem "Pagos" en el menú del panel de administración.
+Código: client/src/pages/admin/PagosPage.jsx (pestañas) y
+client/src/components/features/pagos/. Servicio:
+client/src/services/api/pagosAdminService.js.
+
+Pestaña Comprobantes
+  GET  /api/admin/pagos/comprobantes?estado=&desde=&hasta=&limit=&offset=
+  GET  /api/pagos/comprobantes/:id/archivo    (URL firmada, 5 min)
+  GET  /api/pagos/comprobantes/:id/pdf
+  POST /api/admin/pagos/comprobantes/:id/aprobar   { fechaAcreditacion }
+  POST /api/admin/pagos/comprobantes/:id/rechazar  { motivo }
+Pestaña Precios
+  PUT /api/niveles/:id/cuota · /api/deportes/:id/precio ·
+  /api/transporte/:id/precio · /api/comedor/:id/precio   { precio }
+  (los valores se leen de los GET de cada catálogo)
+Pestaña Facturación
+  POST /api/admin/facturacion/generar   { periodo }  (actual o siguiente)
+
+Sincronización con la app: el estado que aprueba o rechaza el ADMIN se
+escribe en la misma base; la app lo muestra por el refetch de 20 s y la
+invalidación de react-query (RNF-57). El padre recibe la notificación.
+
+
 ================================================================================
 Fin del documento.
 ================================================================================
