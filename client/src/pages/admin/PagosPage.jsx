@@ -22,7 +22,7 @@ export default function PagosPage() {
       <div
         role="tablist"
         aria-label="Secciones de pagos"
-        className="mb-5 flex gap-1 overflow-x-auto border-b border-blue-100"
+        className="mb-5 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-blue-100"
       >
         {TABS.map((t) => (
           <button
@@ -32,11 +32,11 @@ export default function PagosPage() {
             aria-selected={tab === t.key}
             aria-controls={`panel-${t.key}`}
             onClick={() => setTab(t.key)}
-            className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm sm:px-4 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
               tab === t.key ? 'border-accent text-accent' : 'border-transparent text-ink-soft hover:text-ink'
             }`}
           >
-            <i className={`fas ${t.icon}`} aria-hidden="true" />
+            <i className={`fas ${t.icon} hidden sm:inline`} aria-hidden="true" />
             {t.label}
           </button>
         ))}

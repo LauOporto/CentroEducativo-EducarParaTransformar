@@ -7,7 +7,7 @@ import { ESTADOS_COMPROBANTE, formatearFecha, formatearMonto } from '../../../do
 
 const LIMITE = 20;
 const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1';
-const inputCls = `rounded border border-blue-200 bg-white p-2 text-sm ${focus}`;
+const inputCls = `w-full sm:w-auto rounded border border-blue-200 bg-white p-2 text-sm ${focus}`;
 const btnGhost = `rounded border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft hover:bg-blue-50 disabled:opacity-40 ${focus}`;
 
 export default function BandejaComprobantes() {
@@ -80,8 +80,8 @@ export default function BandejaComprobantes() {
 
   return (
     <div>
-      <form className="mb-4 flex flex-wrap items-end gap-3" onSubmit={(e) => e.preventDefault()}>
-        <div>
+      <form className="mb-4 grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap" onSubmit={(e) => e.preventDefault()}>
+        <div className="col-span-2 sm:col-auto">
           <label htmlFor="filtro-estado" className="mb-1 block text-xs font-semibold text-ink-soft">
             Estado
           </label>
@@ -132,7 +132,7 @@ export default function BandejaComprobantes() {
             Limpiar fechas
           </button>
         )}
-        <button type="button" onClick={cargar} className={`${btnGhost} ml-auto`}>
+        <button type="button" onClick={cargar} className={`${btnGhost} col-span-2 py-2 sm:col-auto sm:ml-auto`}>
           <i className="fas fa-rotate mr-1" /> Actualizar
         </button>
       </form>
@@ -172,28 +172,26 @@ export default function BandejaComprobantes() {
 
       {filas.length > 0 && (
         <>
-          {/* Escritorio: tabla */}
-          <div className="hidden overflow-x-auto rounded-lg border border-blue-100 bg-white md:block">
+          {/* Pantallas anchas: tabla compacta (número+factura y operación+fecha comparten celda) */}
+          <div className="hidden overflow-x-auto rounded-lg border border-blue-100 bg-white xl:block">
             <table className="w-full border-collapse text-sm">
               <caption className="sr-only">Comprobantes de pago</caption>
               <thead>
                 <tr className="bg-blue-50 text-left text-ink-soft">
                   {[
-                    'N.º',
+                    'N.º y factura',
                     'Alumno y curso',
                     'Padre',
-                    'Factura',
                     'Total',
                     'Transferido',
-                    'N.º operación',
-                    'Fecha transf.',
+                    'Operación y fecha',
                     'Estado',
                     '',
                   ].map((h, i) => (
                     <th
                       key={i}
                       scope="col"
-                      className="whitespace-nowrap border-b border-blue-100 px-3 py-2.5 font-semibold"
+                      className="whitespace-nowrap border-b border-blue-100 px-2.5 py-2.5 font-semibold"
                     >
                       {h || <span className="sr-only">Acciones</span>}
                     </th>
@@ -205,18 +203,19 @@ export default function BandejaComprobantes() {
                   const distinto = c.montoTransferido !== null && Number(c.montoTransferido) !== Number(c.total);
                   return (
                     <tr key={c.id} className="border-b border-blue-100 last:border-0">
-                      <td className="whitespace-nowrap px-3 py-2.5 font-medium">{c.numero}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="whitespace-nowrap px-2.5 py-2.5">
+                        <div className="font-medium">{c.numero}</div>
+                        <div className="text-xs text-ink-faint">
+                          {c.factura.numero} · {c.factura.periodo}
+                        </div>
+                      </td>
+                      <td className="px-2.5 py-2.5">
                         <div className="font-medium">{c.alumno.nombre}</div>
                         <div className="text-xs text-ink-faint">{c.alumno.curso}</div>
                       </td>
-                      <td className="px-3 py-2.5">{c.padre.nombre}</td>
-                      <td className="whitespace-nowrap px-3 py-2.5">
-                        <div>{c.factura.numero}</div>
-                        <div className="text-xs text-ink-faint">{c.factura.periodo}</div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 font-medium">{formatearMonto(c.total)}</td>
-                      <td className={`whitespace-nowrap px-3 py-2.5 ${distinto ? 'font-bold text-[#B23A16]' : ''}`}>
+                      <td className="px-2.5 py-2.5">{c.padre.nombre}</td>
+                      <td className="whitespace-nowrap px-2.5 py-2.5 font-medium">{formatearMonto(c.total)}</td>
+                      <td className={`whitespace-nowrap px-2.5 py-2.5 ${distinto ? 'font-bold text-[#B23A16]' : ''}`}>
                         {formatearMonto(c.montoTransferido)}
                         {distinto && (
                           <i
@@ -226,19 +225,21 @@ export default function BandejaComprobantes() {
                           />
                         )}
                       </td>
-                      <td className="px-3 py-2.5">{c.nroOperacion || '—'}</td>
-                      <td className="whitespace-nowrap px-3 py-2.5">{formatearFecha(c.fechaTransferencia)}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-2.5 py-2.5">
+                        <div className="max-w-[9.5rem] break-all">{c.nroOperacion || '—'}</div>
+                        <div className="text-xs text-ink-faint">{formatearFecha(c.fechaTransferencia)}</div>
+                      </td>
+                      <td className="px-2.5 py-2.5">
                         <EstadoBadge estado={c.estado} />
                       </td>
-                      <td className="px-3 py-2.5 text-right">
+                      <td className="px-2.5 py-2.5 text-right">
                         <button
                           type="button"
                           onClick={() => setSeleccionadoId(c.id)}
                           className={btnGhost}
                           aria-label={`Ver detalle del comprobante ${c.numero}`}
                         >
-                          Ver detalle
+                          Detalle
                         </button>
                       </td>
                     </tr>
@@ -248,8 +249,8 @@ export default function BandejaComprobantes() {
             </table>
           </div>
 
-          {/* Móvil: tarjetas */}
-          <ul className="space-y-3 md:hidden">
+          {/* Tablet y móvil: tarjetas */}
+          <ul className="grid gap-3 sm:grid-cols-2 xl:hidden">
             {filas.map((c) => {
               const distinto = c.montoTransferido !== null && Number(c.montoTransferido) !== Number(c.total);
               return (
