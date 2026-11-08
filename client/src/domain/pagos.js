@@ -70,7 +70,22 @@ export function precioValido(texto) {
   const t = String(texto ?? '')
     .trim()
     .replace(',', '.');
-  if (!/^\d+(\.\d{1,2})?$/.test(t)) return false;
+  // Validación por partes (sin regex anidada): evita backtracking.
+  const [entera, decimales, ...sobrante] = t.split('.');
+  if (sobrante.length > 0 || !/^\d+$/.test(entera)) return false;
+  if (decimales !== undefined && !/^\d{1,2}$/.test(decimales)) return false;
   const n = Number(t);
-  return n >= 0 && n <= 10_000_000;
+  return n >= 0 && n <= 10000000;
+}
+
+const ESTILOS = new Map(Object.entries(ESTADO_ESTILO));
+
+// Estilo de un estado; si es desconocido, un gris neutro con el texto crudo.
+export function estiloDeEstado(estado) {
+  return ESTILOS.get(estado) ?? { label: estado, cls: 'bg-slate-100 text-slate-700' };
+}
+
+// Lee un campo de un objeto por nombre dinámico sin indexarlo directamente.
+export function leerCampo(obj, campo) {
+  return Object.entries(obj ?? {}).find(([k]) => k === campo)?.[1];
 }

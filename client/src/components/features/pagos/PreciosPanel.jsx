@@ -5,7 +5,7 @@ import { transporteService } from '../../../services/api/transporteService';
 import { comedorService } from '../../../services/api/comedorService';
 import { pagosAdminService } from '../../../services/api/pagosAdminService';
 import { useToast } from '../../../hooks/useToast';
-import { formatearMonto, precioValido } from '../../../domain/pagos';
+import { formatearMonto, leerCampo, precioValido } from '../../../domain/pagos';
 
 const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1';
 
@@ -119,14 +119,14 @@ export default function PreciosPanel() {
     setTurnos(t.exito ? t.turnos : []);
   };
   useEffect(() => {
-    cargar();
+    void cargar();
   }, []);
 
   // Cada bloque guarda con su endpoint y refleja el valor que devolvió el backend.
-  const crearGuardar = (fn, setLista, clave, campo, etiqueta) => async (id, nombre, precio) => {
+  const crearGuardar = (fn, setLista, entidad, campo, etiqueta) => async (id, nombre, precio) => {
     const res = await fn(id, precio);
     if (res.exito) {
-      const nuevo = res[clave]?.[campo] ?? precio;
+      const nuevo = leerCampo(entidad(res), campo) ?? precio;
       setLista((lista) => lista.map((x) => (x.id === id ? { ...x, [campo]: nuevo } : x)));
       toast.success(`${etiqueta} de ${nombre} actualizado: ${formatearMonto(nuevo)}.`);
     } else {
@@ -158,7 +158,7 @@ export default function PreciosPanel() {
         items={niveles}
         valorDe={(x) => x.cuotaMensual}
         vacio="No hay niveles educativos cargados."
-        guardar={crearGuardar(pagosAdminService.fijarCuotaNivel, setNiveles, 'nivel', 'cuotaMensual', 'Cuota')}
+        guardar={crearGuardar(pagosAdminService.fijarCuotaNivel, setNiveles, (r) => r.nivel, 'cuotaMensual', 'Cuota')}
       />
       <Bloque
         titulo="Deportes"
@@ -167,7 +167,13 @@ export default function PreciosPanel() {
         items={deportes}
         valorDe={(x) => x.precioMensual}
         vacio="No hay deportes cargados."
-        guardar={crearGuardar(pagosAdminService.fijarPrecioDeporte, setDeportes, 'deporte', 'precioMensual', 'Precio')}
+        guardar={crearGuardar(
+          pagosAdminService.fijarPrecioDeporte,
+          setDeportes,
+          (r) => r.deporte,
+          'precioMensual',
+          'Precio',
+        )}
       />
       <Bloque
         titulo="Recorridos de transporte"
@@ -179,7 +185,7 @@ export default function PreciosPanel() {
         guardar={crearGuardar(
           pagosAdminService.fijarPrecioRecorrido,
           setRecorridos,
-          'recorrido',
+          (r) => r.recorrido,
           'precioMensual',
           'Precio',
         )}
@@ -191,7 +197,7 @@ export default function PreciosPanel() {
         items={turnos}
         valorDe={(x) => x.precioMensual}
         vacio="No hay turnos de comedor cargados."
-        guardar={crearGuardar(pagosAdminService.fijarPrecioTurno, setTurnos, 'turno', 'precioMensual', 'Precio')}
+        guardar={crearGuardar(pagosAdminService.fijarPrecioTurno, setTurnos, (r) => r.turno, 'precioMensual', 'Precio')}
       />
     </div>
   );
