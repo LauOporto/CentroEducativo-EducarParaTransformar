@@ -65,6 +65,8 @@ export const ESTADO_ESTILO = {
   RECHAZADO: { label: 'Rechazado', cls: 'bg-coral/15 text-[#B23A16]' },
 };
 
+const PRECIO_MAXIMO = 10 ** 7;
+
 // Precio válido: número ≥ 0, ≤ 10.000.000 y hasta 2 decimales.
 export function precioValido(texto) {
   const t = String(texto ?? '')
@@ -75,7 +77,7 @@ export function precioValido(texto) {
   if (sobrante.length > 0 || !/^\d+$/.test(entera)) return false;
   if (decimales !== undefined && !/^\d{1,2}$/.test(decimales)) return false;
   const n = Number(t);
-  return n >= 0 && n <= 10000000;
+  return n >= 0 && n <= PRECIO_MAXIMO;
 }
 
 const ESTILOS = new Map(Object.entries(ESTADO_ESTILO));
