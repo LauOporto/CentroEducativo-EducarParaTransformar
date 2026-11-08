@@ -61,8 +61,8 @@ export const ESTADO_ESTILO = {
   PENDIENTE: { label: 'Pendiente', cls: 'bg-slate-100 text-slate-700' },
   ANULADO: { label: 'Anulado', cls: 'bg-slate-100 text-slate-700' },
   EN_REVISION: { label: 'En revisión', cls: 'bg-blue-100 text-blue-700' },
-  APROBADO: { label: 'Aprobado', cls: 'bg-teal/15 text-teal-800' },
-  RECHAZADO: { label: 'Rechazado', cls: 'bg-coral/15 text-coral-800' },
+  APROBADO: { label: 'Aprobado', cls: 'bg-teal/15 text-[#0A6F5F]' },
+  RECHAZADO: { label: 'Rechazado', cls: 'bg-coral/15 text-[#B23A16]' },
 };
 
 // Precio válido: número ≥ 0, ≤ 10.000.000 y hasta 2 decimales.
