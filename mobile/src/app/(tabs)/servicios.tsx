@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Aviso } from '@/auth/AuthContext';
+import { useEsAlumno, type Aviso } from '@/auth/AuthContext';
 import { AvisoBanner, Boton, Cargando, Pantalla, Tarjeta, Texto, Titulo } from '@/components/ui';
 import { primerNombre, SelectorHijo } from '@/components/SelectorHijo';
 import { BotonVolver } from '@/components/BotonVolver';
@@ -111,6 +111,7 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
     mutacion.mutate({ ...a, ruta: base + (a.ruta ?? '') });
   const enCurso = (k: string) => mutacion.isPending && mutacion.variables?.clave === k;
   const nombre = primerNombre(hijo.nombre);
+  const alumno = useEsAlumno();
 
   const darDeBaja = async (titulo: string, mensaje: string, accion: Parameters<typeof ejecutar>[0]) => {
     if (await confirmar(titulo, mensaje, 'Dar de baja')) ejecutar(accion);
@@ -142,8 +143,9 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
       <View style={{ gap: 2 }}>
         <Titulo>Servicios</Titulo>
         <Texto suave>
-          Deportes, transporte y comedor. No se paga al inscribir: cada servicio se suma a la factura mensual
-          siguiente, que se emite el último día hábil del mes y se paga desde Pagos.
+          {alumno
+            ? 'Deportes, transporte y comedor. No se paga al inscribirte: cada servicio se suma a la factura mensual siguiente, que abona tu familia.'
+            : 'Deportes, transporte y comedor. No se paga al inscribir: cada servicio se suma a la factura mensual siguiente, que se emite el último día hábil del mes y se paga desde Pagos.'}
         </Texto>
       </View>
       <SelectorHijo />
@@ -228,13 +230,18 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
                         cargando={enCurso(`deporte-${g.id}`)}
                         deshabilitado={mutacion.isPending || consulta.data.deportes.inscriptos.length >= MAX_DEPORTES}
                         onPress={() =>
-                          void darDeAlta(`¿Inscribir a ${nombre} a ${g.deporte}?`, g.precioMensual, 'Inscribir', {
-                            ruta: '/deportes',
-                            method: 'POST',
-                            body: { grupoDeporteId: g.id },
-                            exito: `${nombre} quedó inscripto a ${g.deporte}.`,
-                            clave: `deporte-${g.id}`,
-                          })
+                          void darDeAlta(
+                            alumno ? `¿Inscribirte a ${g.deporte}?` : `¿Inscribir a ${nombre} a ${g.deporte}?`,
+                            g.precioMensual,
+                            'Inscribir',
+                            {
+                              ruta: '/deportes',
+                              method: 'POST',
+                              body: { grupoDeporteId: g.id },
+                              exito: `${nombre} quedó inscripto a ${g.deporte}.`,
+                              clave: `deporte-${g.id}`,
+                            },
+                          )
                         }
                       />
                     </Fila>

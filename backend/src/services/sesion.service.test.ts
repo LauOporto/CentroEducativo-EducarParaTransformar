@@ -66,6 +66,8 @@ beforeEach(() => {
     u(2, 'docente', Role.DOCENTE),
     u(3, 'docente-pendiente', Role.DOCENTE, false),
     u(4, 'padre-baja', Role.PADRE, false),
+    u(5, 'alumno', Role.ESTUDIANTE),
+    u(6, 'admin', Role.ADMIN),
   ];
   sesiones = [];
   sessionCreates = 0;
@@ -138,6 +140,28 @@ test('a) login móvil de un DOCENTE con contraseña errónea: 401 genérico, no 
     rechazo(401, svc.MSG_CREDENCIALES_INVALIDAS),
   );
   assert.equal(sessionCreates, 0);
+});
+
+test('a) login móvil de un ADMIN: 403 (usa el campus web)', async () => {
+  await assert.rejects(
+    svc.iniciarSesion({ usuario: 'admin', password: PASSWORD, movil: true }),
+    rechazo(403, svc.MSG_SOLO_PADRES),
+  );
+  assert.equal(sesiones.length, 0);
+});
+
+test('b) login móvil de un ESTUDIANTE: crea la sesión (gestiona sus propias inscripciones)', async () => {
+  const sesion = await svc.iniciarSesion({ usuario: 'alumno', password: PASSWORD, movil: true });
+  assert.equal(sesion.user.id, 5);
+  assert.ok(sesion.accessToken);
+  assert.equal(sesiones.length, 1);
+});
+
+test('refresh móvil de un ESTUDIANTE: renueva la sesión', async () => {
+  const { token } = sesionCon(5);
+  const sesion = await svc.refrescarSesion(token, { movil: true });
+  assert.ok(sesion.accessToken);
+  assert.equal(sesiones.length, 1);
 });
 
 test('b) login móvil de un PADRE: crea la sesión y devuelve access y refresh token', async () => {
@@ -239,7 +263,7 @@ test('d) refresh válido: rota el token y actualiza ultimaActividad', async () =
   assert.equal(fila.expiraEn.getTime(), expiraAnterior, 'el tope de 24hs nunca se extiende');
 });
 
-test('refresh móvil de un usuario que no es PADRE: 403 y se borra la sesión', async () => {
+test('refresh móvil de un DOCENTE (no es PADRE ni ESTUDIANTE): 403 y se borra la sesión', async () => {
   const { token } = sesionCon(2);
   await assert.rejects(svc.refrescarSesion(token, { movil: true }), rechazo(403, svc.MSG_SOLO_PADRES));
   assert.equal(sesiones.length, 0);

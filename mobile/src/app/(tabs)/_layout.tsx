@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEsAlumno } from '@/auth/AuthContext';
 import { HijosProvider } from '@/hijos/HijosContext';
 import { colors, fonts } from '@/theme';
 
 export default function TabsLayout() {
+  const alumno = useEsAlumno();
   return (
     <HijosProvider>
       <Tabs
@@ -28,6 +30,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="pagos"
           options={{
+            // Los pagos son del padre: el alumno no ve la pestaña (regla de negocio).
+            href: alumno ? null : undefined,
             title: 'Pagos',
             tabBarIcon: ({ color, size }) => <Ionicons name="wallet-outline" color={String(color)} size={size} />,
           }}

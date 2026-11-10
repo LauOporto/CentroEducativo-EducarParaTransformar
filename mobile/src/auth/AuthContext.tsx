@@ -124,3 +124,14 @@ export function useUsuario(): UsuarioSesion {
   if (estado.estado !== 'conSesion') throw new Error('No hay sesión iniciada.');
   return estado.usuario;
 }
+
+/**
+ * Rol en la app (el backend solo deja entrar a padres y alumnos). El alumno
+ * gestiona sus propias inscripciones; los pagos son del padre, así que no ve
+ * la pestaña Pagos (y la API le responde 403 igual).
+ */
+export const esAlumno = (usuario: Pick<UsuarioSesion, 'tipo'>) => usuario.tipo === 'estudiante';
+
+export function useEsAlumno(): boolean {
+  return esAlumno(useUsuario());
+}
