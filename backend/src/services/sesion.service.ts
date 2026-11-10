@@ -19,7 +19,15 @@ export const SESSION_MAX_MS = 1000 * 60 * 60 * 24; // 24hs
 export const SESSION_INACTIVITY_MS = 1000 * 60 * 30; // 30min
 
 export const MSG_CREDENCIALES_INVALIDAS = 'Usuario o contraseña incorrectos.';
-export const MSG_SOLO_PADRES = 'La app móvil es exclusiva para Padres/Tutores. Ingresá desde el campus web.';
+export const MSG_SOLO_PADRES = 'La app móvil es para Padres/Tutores y Alumnos. Ingresá desde el campus web.';
+
+// Roles que pueden usar la app móvil. PADRE: pagos e inscripciones de sus
+// hijos. ESTUDIANTE: sus propias inscripciones a deportes, transporte y
+// comedor ("Cada alumno puede inscribirse a dos deportes…"); los pagos siguen
+// siendo solo del padre (assertPuedeVerPagos le responde 403 al alumno).
+// DOCENTE y ADMIN no tienen funcionalidades en la app: usan el campus web.
+const ROLES_APP_MOVIL: readonly Role[] = [Role.PADRE, Role.ESTUDIANTE];
+const puedeUsarAppMovil = (role: Role) => ROLES_APP_MOVIL.includes(role);
 export const MSG_SESION_INVALIDA = 'Sesión inválida. Iniciá sesión de nuevo.';
 export const MSG_SESION_VENCIDA = 'La sesión expiró (máximo 24hs desde el login). Iniciá sesión de nuevo.';
 export const MSG_SESION_INACTIVA = 'Sesión cerrada por 30min de inactividad. Iniciá sesión de nuevo.';
@@ -68,16 +76,16 @@ export async function verificarCredenciales(usuario: string, password: string): 
   return user;
 }
 
-// D1: la app móvil es solo para PADRE. El chequeo va después de validar la
-// contraseña (no revela el rol de cuentas ajenas) y antes de crear la
-// sesión (un 403 no deja filas en Session).
+// D1: la app móvil es para PADRE y ESTUDIANTE (ROLES_APP_MOVIL). El chequeo
+// va después de validar la contraseña (no revela el rol de cuentas ajenas) y
+// antes de crear la sesión (un 403 no deja filas en Session).
 export async function iniciarSesion(params: {
   usuario: string;
   password: string;
   movil: boolean;
 }): Promise<SesionEmitida> {
   const user = await verificarCredenciales(params.usuario, params.password);
-  if (params.movil && user.role !== Role.PADRE) {
+  if (params.movil && !puedeUsarAppMovil(user.role)) {
     throw HttpError.forbidden(MSG_SOLO_PADRES);
   }
   const session = await prisma.session.create({
@@ -121,7 +129,7 @@ export async function refrescarSesion(token: string | undefined, opts: { movil: 
     await prisma.session.delete({ where: { id: session.id } });
     throw HttpError.unauthorized(MSG_CUENTA_DESHABILITADA);
   }
-  if (opts.movil && user.role !== Role.PADRE) {
+  if (opts.movil && !puedeUsarAppMovil(user.role)) {
     await prisma.session.delete({ where: { id: session.id } });
     throw HttpError.forbidden(MSG_SOLO_PADRES);
   }

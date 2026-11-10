@@ -1,11 +1,18 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useEsAlumno } from '@/auth/AuthContext';
 import { api } from '@/lib/api';
-import type { Hijo, RespuestaHijos } from '@/lib/tipos';
+import type { Hijo, RespuestaHijos, RespuestaPerfil } from '@/lib/tipos';
 
 // Hijo seleccionado: todas las pantallas de la app (pagos, inscripciones)
 // trabajan sobre un hijo por vez. El backend ya limita la lista a los hijos
-// vinculados al padre autenticado (RNF-47).
+// vinculados al padre autenticado (RNF-47). Si entra un alumno, la "lista"
+// es él mismo: así Inicio y Servicios funcionan igual, sobre su propia ficha.
+
+const fichaPropia = () =>
+  api<RespuestaPerfil>('/auth/me').then(({ usuario: u }): Hijo[] => [
+    { id: u.id, nombre: u.nombre, dni: u.dni, curso: u.curso },
+  ]);
 
 type ValorHijos = {
   hijos: Hijo[];
@@ -22,9 +29,10 @@ const HijosContext = createContext<ValorHijos | null>(null);
 export const CLAVE_HIJOS = ['hijos'] as const;
 
 export function HijosProvider({ children }: { children: ReactNode }) {
+  const alumno = useEsAlumno();
   const consulta = useQuery({
-    queryKey: CLAVE_HIJOS,
-    queryFn: () => api<RespuestaHijos>('/parent/hijos').then((r) => r.hijos),
+    queryKey: [...CLAVE_HIJOS, alumno ? 'propio' : 'vinculados'],
+    queryFn: alumno ? fichaPropia : () => api<RespuestaHijos>('/parent/hijos').then((r) => r.hijos),
   });
   const [idElegido, setIdElegido] = useState<number | null>(null);
 

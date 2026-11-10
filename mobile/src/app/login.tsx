@@ -85,7 +85,7 @@ export default function Login() {
         </Link>
 
         <Texto suave style={estilos.pie}>
-          Usá el mismo usuario y contraseña que en el campus web. La app es para Padres y Tutores.
+          Usá el mismo usuario y contraseña que en el campus web. La app es para Padres, Tutores y Alumnos.
         </Texto>
       </Pantalla>
     </KeyboardAvoidingView>

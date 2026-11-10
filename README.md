@@ -94,7 +94,7 @@ Reúne tres productos que comparten una única API y una única base de datos:
 
 - **Boletín** de calificaciones, asistencias y planes de estudio.
 - Perfil con su **horario de cursado**.
-- Autogestión de servicios: deportes, transporte y comedor.
+- Autogestión de servicios (deportes, transporte y comedor), desde el campus o **desde la app móvil**. En la app, el alumno ve su ficha y sus servicios, pero no los pagos, que son de su familia.
 
 </details>
 
@@ -440,11 +440,16 @@ Todos los usuarios de los datos de ejemplo tienen la contraseña **`123456`**. E
 |---|---|---|
 | 🛠️ Administración | `admin` | Panel completo, facturación, pagos y reportes *(solo local)* |
 | 👩‍🏫 Docente | `mlopez` | Calificaciones, asistencia y planes de estudio |
-| 🧑‍🎓 Alumno | `fbarrabino` | Boletín, horario y servicios |
+| 🧑‍🎓 Alumno | `fbarrabino` | Boletín, horario y servicios (también en la app) |
 | 👨‍👩‍👧 Familia | `pbarrabino` | Un hijo, con facturas pagada, parcial y pendiente |
 | 👨‍👩‍👧 Familia | `mgomezp` | Dos hijos, para probar el selector de hijo |
 
-> 📱 La **app móvil** solo permite el ingreso de padres y tutores. En la **demo en vivo** podés entrar con `pbarrabino` / `123456`.
+> 📱 La **app móvil** muestra a cada rol solo lo que le corresponde:
+> - **Padres y tutores** ven pagos y servicios de sus hijos.
+> - **Alumnos** ven su ficha y gestionan sus propios servicios, pero no los pagos.
+> - **Docentes y administración** usan el campus web: la app no les permite el ingreso.
+>
+> En la **demo en vivo** podés entrar con `pbarrabino` / `123456` (familia) o `fbarrabino` / `123456` (alumno).
 
 ---
 

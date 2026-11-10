@@ -1,5 +1,6 @@
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { useUsuario } from '@/auth/AuthContext';
+import { router } from 'expo-router';
+import { esAlumno, useUsuario } from '@/auth/AuthContext';
 import { AvisoBanner, Boton, Cargando, Pantalla, Tarjeta, Texto, Titulo } from '@/components/ui';
 import { primerNombre, SelectorHijo } from '@/components/SelectorHijo';
 import { useHijos } from '@/hijos/HijosContext';
@@ -8,6 +9,7 @@ import { colors, fonts, spacing } from '@/theme';
 
 export default function Inicio() {
   const usuario = useUsuario();
+  const alumno = esAlumno(usuario);
   const { hijos, seleccionado, cargando, error, recargar, recargando } = useHijos();
 
   return (
@@ -18,11 +20,11 @@ export default function Inicio() {
     >
       <View style={estilos.encabezado}>
         <Texto suave>Hola, {primerNombre(usuario.nombre)}</Texto>
-        <Titulo>Tus hijos</Titulo>
+        <Titulo>{alumno ? 'Tu ficha' : 'Tus hijos'}</Titulo>
       </View>
 
       {cargando ? (
-        <Cargando texto="Cargando tus hijos…" />
+        <Cargando texto={alumno ? 'Cargando tu ficha…' : 'Cargando tus hijos…'} />
       ) : error ? (
         <>
           <AvisoBanner aviso={{ tipo: 'error', texto: error.message }} />
@@ -40,6 +42,21 @@ export default function Inicio() {
         <>
           <SelectorHijo />
           {seleccionado ? <FichaHijo hijo={seleccionado} /> : null}
+          {alumno ? (
+            <Tarjeta>
+              <Texto style={estilos.fuerte}>Tus servicios</Texto>
+              <Texto suave>
+                Desde Servicios podés inscribirte hasta en 2 deportes, elegir tu recorrido de transporte y tu turno de
+                comedor. Las cuotas las abona tu familia desde su cuenta.
+              </Texto>
+              <Boton
+                titulo="Ir a Servicios"
+                variante="secundario"
+                icono="football-outline"
+                onPress={() => router.navigate('/servicios')}
+              />
+            </Tarjeta>
+          ) : null}
         </>
       )}
     </Pantalla>
