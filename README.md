@@ -297,7 +297,7 @@ El `.apk` es exclusivo de Android. Para iOS hay dos caminos, y ninguno necesita 
 
 **1. Descargá el build para simulador**
 
-👉 **[Descargar Educar para Transformar para simulador iOS (.tar.gz)](https://expo.dev/accounts/lauoporto/projects/educar-para-transformar/builds/198fe00e-7b13-4678-bade-735e8c72daaf)**
+👉 **[Descargar Educar para Transformar para simulador iOS (.tar.gz)](https://expo.dev/accounts/lauoporto/projects/educar-para-transformar/builds/a18c7041-ff91-4ed5-bfcd-e2490e47cad1)**
 
 En la página del build, tocá **Download**. No hace falta descomprimir el archivo.
 
