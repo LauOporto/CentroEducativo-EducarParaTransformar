@@ -1,8 +1,25 @@
 const NIVELES = [
-  { nombre: 'Inicial', rango: 'Sala de 3 a Sala de 5', desc: 'Estimulación temprana y juego como motor del aprendizaje.', color: '#0F9E86' },
-  { nombre: 'Primario', rango: '1° a 6° grado', desc: 'Bases sólidas en lengua, matemática y ciencias.', color: '#1D63B4' },
-  { nombre: 'Secundario', rango: '1° a 5° año', desc: 'Orientación vocacional y preparación para el nivel superior.', color: '#E85A32' },
+  {
+    nombre: 'Inicial',
+    rango: 'Sala de 3 a Sala de 5',
+    desc: 'Estimulación temprana y juego como motor del aprendizaje.',
+    color: '#0F9E86',
+  },
+  {
+    nombre: 'Primario',
+    rango: '1° a 6° grado',
+    desc: 'Bases sólidas en lengua, matemática y ciencias.',
+    color: '#1D63B4',
+  },
+  {
+    nombre: 'Secundario',
+    rango: '1° a 5° año',
+    desc: 'Orientación vocacional y preparación para el nivel superior.',
+    color: '#E85A32',
+  },
 ];
+
+const IDIOMAS = ['Inglés', 'Portugués', 'Francés'];
 
 export default function Niveles() {
   return (
@@ -11,7 +28,9 @@ export default function Niveles() {
         <div className="mb-5 h-1 w-14 rounded-full bg-blue-500" />
         <h2 className="font-display text-3xl text-ink sm:text-4xl">Niveles educativos</h2>
         <p className="mt-5 text-lg leading-relaxed text-ink-soft">
-          Un mismo recorrido pedagógico, pensado para sostenerse de un nivel al siguiente.
+          Un mismo recorrido pedagógico, pensado para sostenerse de un nivel al siguiente. Los tres niveles funcionan
+          con <strong className="text-ink">jornada extendida</strong>: por la tarde se suman idiomas, deportes,
+          laboratorios y espacios de apoyo.
         </p>
       </div>
 
@@ -36,6 +55,20 @@ export default function Niveles() {
             <p className="mt-2.5 text-ink-soft">{n.desc}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mt-14 flex flex-col gap-4 rounded-xl border border-blue-100 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="font-display text-xl text-ink">Idiomas en todos los niveles</h3>
+          <p className="mt-1 text-ink-soft">Desde Sala de 3, con continuidad hasta el último año del Secundario.</p>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {IDIOMAS.map((idioma) => (
+            <li key={idioma} className="rounded-full bg-blue-50 px-4 py-1.5 text-sm font-semibold text-blue-600">
+              {idioma}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

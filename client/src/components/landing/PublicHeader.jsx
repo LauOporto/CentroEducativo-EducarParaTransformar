@@ -3,13 +3,18 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROLE_ROUTES } from '../../domain/roles';
 import BrandMark from './BrandMark';
+import { CONTACTO, whatsappUrl } from '../../config/institucion';
 
 const NAV = [
   { href: '#nosotros', label: 'Quiénes somos' },
-  { href: '#niveles', label: 'Niveles educativos' },
-  { href: '#bienestar', label: 'Bienestar estudiantil' },
+  { href: '#niveles', label: 'Niveles' },
+  { href: '#bienestar', label: 'Bienestar' },
+  { href: '#instalaciones', label: 'Instalaciones' },
   { href: '#noticias', label: 'Noticias' },
+  { href: '#galeria', label: 'Galería' },
+  { href: '#inscripcion', label: 'Inscripción' },
   { href: '#empleo', label: 'Empleo' },
+  { href: '#contacto', label: 'Contacto' },
 ];
 
 export default function PublicHeader({ onLogin }) {
@@ -21,9 +26,7 @@ export default function PublicHeader({ onLogin }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
         <a href="#inicio" className="flex shrink-0 items-center gap-3" onClick={() => setMenuOpen(false)}>
           <BrandMark className="h-9 w-9 shrink-0" />
-          <span className="whitespace-nowrap font-display text-lg leading-tight text-ink">
-            Educar Para Transformar
-          </span>
+          <span className="whitespace-nowrap font-display text-lg leading-tight text-ink">Educar Para Transformar</span>
         </a>
 
         <nav className="hidden items-center gap-6 whitespace-nowrap text-sm font-medium text-ink-soft xl:flex">
@@ -35,8 +38,21 @@ export default function PublicHeader({ onLogin }) {
         </nav>
 
         <div className="flex shrink-0 items-center gap-4">
-          <a href="tel:0111234-5678" className="hidden items-center gap-1.5 whitespace-nowrap text-sm text-ink-soft md:flex">
-            <i className="fas fa-phone text-xs" /> (011) 1234-5678
+          <a
+            href={CONTACTO.telefonoHref}
+            className="hidden items-center gap-1.5 whitespace-nowrap text-sm text-ink-soft md:flex xl:hidden 2xl:flex"
+          >
+            <i className="fas fa-phone text-xs" /> {CONTACTO.telefono}
+          </a>
+          <a
+            href={whatsappUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp"
+            title={`WhatsApp ${CONTACTO.whatsappTexto}`}
+            className="hidden text-xl text-teal hover:text-blue-500 md:block"
+          >
+            <i className="fab fa-whatsapp" aria-hidden="true" />
           </a>
           <div className="hidden items-center gap-4 xl:flex">
             {user ? (
@@ -83,8 +99,16 @@ export default function PublicHeader({ onLogin }) {
             ))}
           </nav>
           <div className="mt-3 flex flex-col gap-3 border-t border-blue-100 pt-4">
-            <a href="tel:0111234-5678" className="flex items-center gap-1.5 px-2 text-sm text-ink-soft">
-              <i className="fas fa-phone text-xs" /> (011) 1234-5678
+            <a href={CONTACTO.telefonoHref} className="flex items-center gap-1.5 px-2 text-sm text-ink-soft">
+              <i className="fas fa-phone text-xs" /> {CONTACTO.telefono}
+            </a>
+            <a
+              href={whatsappUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2 text-sm text-ink-soft"
+            >
+              <i className="fab fa-whatsapp" /> WhatsApp {CONTACTO.whatsappTexto}
             </a>
             {user ? (
               <div className="flex items-center justify-between px-2">

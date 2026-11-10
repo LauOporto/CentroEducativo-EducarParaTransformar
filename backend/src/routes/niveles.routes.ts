@@ -39,7 +39,9 @@ const nivelSchema = z.object({ nombre: z.string().trim().min(2).max(40) });
 router.post('/', async (req, res, next) => {
   try {
     const data = nivelSchema.parse(req.body);
-    const existe = await prisma.nivelEducativo.findUnique({ where: { nombre: data.nombre } });
+    const existe = await prisma.nivelEducativo.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
+    });
     if (existe) throw HttpError.conflict('Ya existe un nivel educativo con ese nombre.');
     const nivel = await prisma.nivelEducativo.create({ data });
     res.json({ exito: true, nivel: conMonto(nivel, 'cuotaMensual') });
@@ -52,7 +54,9 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = nivelSchema.parse(req.body);
-    const conflicto = await prisma.nivelEducativo.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
+    const conflicto = await prisma.nivelEducativo.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
+    });
     if (conflicto) throw HttpError.conflict('Ya existe un nivel educativo con ese nombre.');
     const nivel = await prisma.nivelEducativo.update({ where: { id }, data });
     res.json({ exito: true, nivel: conMonto(nivel, 'cuotaMensual') });

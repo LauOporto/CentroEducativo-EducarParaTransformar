@@ -68,6 +68,12 @@ const envSchema = z.object({
   RESEND_API_KEY: opcional(z.string().trim()),
   MAIL_FROM: z.string().trim().min(1).default('Educar para Transformar <onboarding@resend.dev>'),
   MAIL_REDIRECT_TO: opcional(z.string().trim().email('MAIL_REDIRECT_TO debe ser un email válido')),
+  // HU9: puentes y días no laborables decretados cada año, que se suman a los
+  // feriados nacionales calculados en utils/feriados.ts ("AAAA-MM-DD,…").
+  FERIADOS_EXTRA: opcional(z.string().trim()),
+  // Parte 1: casilla del colegio que recibe el aviso de cada consulta del
+  // formulario de contacto. Con MAIL_REDIRECT_TO cargado, llega a esa casilla.
+  CONTACTO_EMAIL: z.string().trim().email().default('info@educarparatransformar.edu.ar'),
 
   // D11: clave que protege POST /api/jobs/diario (lo llama el workflow
   // jobs-diarios.yml). Sin cargar, el endpoint responde 503.

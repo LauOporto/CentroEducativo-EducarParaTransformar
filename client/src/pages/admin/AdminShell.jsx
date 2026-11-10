@@ -18,6 +18,8 @@ export default function AdminShell() {
     { to: '/admin/opiniones', label: 'Opiniones', icon: 'fa-comment-dots', badge: counts?.opiniones },
     { to: '/admin/empleo', label: 'Postulaciones empleo', icon: 'fa-briefcase', badge: counts?.empleo },
     { to: '/admin/vinculos', label: 'Vínculos Padre-Hijo', icon: 'fa-link' },
+    { to: '/admin/consultas', label: 'Consultas web', icon: 'fa-envelope-open-text' },
+    { to: '/admin/noticias', label: 'Noticias', icon: 'fa-newspaper' },
     { to: '/admin/galeria', label: 'Galería', icon: 'fa-images' },
     { to: '/admin/auditoria', label: 'Auditoría', icon: 'fa-clipboard-list' },
   ];

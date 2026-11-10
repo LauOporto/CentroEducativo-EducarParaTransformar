@@ -10,6 +10,7 @@ import bcrypt from 'bcrypt';
 
 import { generarLegajo } from '../src/utils/legajo';
 import { seedFacturacion } from './seed-facturacion';
+import { ajustarCatalogo, generarHorarios, sembrarNoticias } from './contenido';
 
 const prisma = new PrismaClient();
 
@@ -93,7 +94,7 @@ const SEED_USERS: UserSeed[] = [
 ];
 
 // ---- Deportes, grupos de deporte, transporte y comedor ----
-const DEPORTES = ['Fútbol', 'Vóley', 'Básquet', 'Handball', 'Hockey', 'Atletismo', 'Natación', 'Ajedrez'] as const;
+const DEPORTES = ['Fútbol', 'Vóleibol', 'Básquet', 'Artes Marciales', 'Danza', 'Atletismo', 'Natación', 'Ajedrez'] as const;
 
 type GrupoDeporteSeed = {
   deporte: (typeof DEPORTES)[number];
@@ -107,17 +108,17 @@ type GrupoDeporteSeed = {
 const GRUPOS_DEPORTE: GrupoDeporteSeed[] = [
   { deporte: 'Fútbol', nivel: 'Primaria', diaSemana: DiaSemana.LUNES, horaInicio: '14:00', horaFin: '15:30', docente: 'amartinez' },
   { deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30', docente: 'amartinez' },
-  { deporte: 'Vóley', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
+  { deporte: 'Vóleibol', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
   { deporte: 'Básquet', nivel: 'Primaria', diaSemana: DiaSemana.VIERNES, horaInicio: '13:30', horaFin: '14:30', docente: 'jgarcia' },
   // Grupos agregados para tener un catálogo amplio. Un mismo docente no
   // tiene dos grupos superpuestos.
   { deporte: 'Fútbol',    nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:30', docente: 'gacosta' },
-  { deporte: 'Vóley',     nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
+  { deporte: 'Vóleibol',     nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:00', docente: 'csilva' },
   { deporte: 'Básquet',   nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '15:00', horaFin: '16:30', docente: 'gacosta' },
-  { deporte: 'Handball',  nivel: 'Secundaria', diaSemana: DiaSemana.VIERNES,   horaInicio: '15:00', horaFin: '16:30', docente: 'gacosta' },
-  { deporte: 'Handball',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00', docente: 'amartinez' },
-  { deporte: 'Hockey',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30', docente: 'gacosta' },
-  { deporte: 'Hockey',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00', docente: 'amartinez' },
+  { deporte: 'Artes Marciales',  nivel: 'Secundaria', diaSemana: DiaSemana.VIERNES,   horaInicio: '15:00', horaFin: '16:30', docente: 'gacosta' },
+  { deporte: 'Artes Marciales',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00', docente: 'amartinez' },
+  { deporte: 'Danza',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30', docente: 'gacosta' },
+  { deporte: 'Danza',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00', docente: 'amartinez' },
   { deporte: 'Atletismo', nivel: 'Inicial',    diaSemana: DiaSemana.VIERNES,   horaInicio: '10:00', horaFin: '11:00', docente: 'cmedina' },
   { deporte: 'Atletismo', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '16:00', horaFin: '17:30', docente: 'gacosta' },
   { deporte: 'Natación',  nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:00', docente: 'amartinez' },
@@ -159,32 +160,32 @@ type InscripcionDeporteSeed = {
 
 const INSCRIPCIONES_DEPORTE: InscripcionDeporteSeed[] = [
   { estudiante: 'fbarrabino', deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30' },
-  { estudiante: 'fbarrabino', deporte: 'Vóley', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'fbarrabino', deporte: 'Vóleibol', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
   { estudiante: 'jperez', deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: DiaSemana.MARTES, horaInicio: '15:00', horaFin: '16:30' },
   { estudiante: 'mgomez', deporte: 'Básquet', nivel: 'Primaria', diaSemana: DiaSemana.VIERNES, horaInicio: '13:30', horaFin: '14:30' },
   // El resto respeta las mismas reglas: máximo 2 deportes y sin superposición.
   { estudiante: 'jperez',     deporte: 'Ajedrez',   nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:30' },
-  { estudiante: 'mgomez',     deporte: 'Vóley',     nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:00' },
-  { estudiante: 'lferreyra',  deporte: 'Handball',  nivel: 'Secundaria', diaSemana: DiaSemana.VIERNES,   horaInicio: '15:00', horaFin: '16:30' },
-  { estudiante: 'lferreyra',  deporte: 'Hockey',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30' },
+  { estudiante: 'mgomez',     deporte: 'Vóleibol',     nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'lferreyra',  deporte: 'Artes Marciales',  nivel: 'Secundaria', diaSemana: DiaSemana.VIERNES,   horaInicio: '15:00', horaFin: '16:30' },
+  { estudiante: 'lferreyra',  deporte: 'Danza',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30' },
   { estudiante: 'srodriguez', deporte: 'Atletismo', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '16:00', horaFin: '17:30' },
-  { estudiante: 'vsanchez',   deporte: 'Vóley',     nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'vsanchez',   deporte: 'Vóleibol',     nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
   { estudiante: 'vsanchez',   deporte: 'Básquet',   nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '15:00', horaFin: '16:30' },
   { estudiante: 'tmoreno',    deporte: 'Natación',  nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:00' },
-  { estudiante: 'tmoreno',    deporte: 'Handball',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'tmoreno',    deporte: 'Artes Marciales',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00' },
   { estudiante: 'iflores',    deporte: 'Ajedrez',   nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '16:00', horaFin: '17:00' },
-  { estudiante: 'iflores',    deporte: 'Hockey',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00' },
+  { estudiante: 'iflores',    deporte: 'Danza',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00' },
   { estudiante: 'nruiz',      deporte: 'Fútbol',    nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:30' },
-  { estudiante: 'nruiz',      deporte: 'Hockey',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30' },
+  { estudiante: 'nruiz',      deporte: 'Danza',    nivel: 'Secundaria', diaSemana: DiaSemana.LUNES,     horaInicio: '17:00', horaFin: '18:30' },
   { estudiante: 'cgimenez',   deporte: 'Ajedrez',   nivel: 'Secundaria', diaSemana: DiaSemana.JUEVES,    horaInicio: '14:00', horaFin: '15:30' },
   { estudiante: 'bortiz',     deporte: 'Fútbol',    nivel: 'Secundaria', diaSemana: DiaSemana.MARTES,    horaInicio: '15:00', horaFin: '16:30' },
   { estudiante: 'bortiz',     deporte: 'Atletismo', nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '16:00', horaFin: '17:30' },
-  { estudiante: 'mcabrera',   deporte: 'Vóley',     nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'mcabrera',   deporte: 'Vóleibol',     nivel: 'Secundaria', diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '15:00' },
   { estudiante: 'aluna',      deporte: 'Natación',  nivel: 'Primaria',   diaSemana: DiaSemana.JUEVES,    horaInicio: '16:00', horaFin: '17:00' },
   { estudiante: 'fluna',      deporte: 'Fútbol',    nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '14:00', horaFin: '15:30' },
   { estudiante: 'fluna',      deporte: 'Básquet',   nivel: 'Primaria',   diaSemana: DiaSemana.VIERNES,   horaInicio: '13:30', horaFin: '14:30' },
-  { estudiante: 'etorres',    deporte: 'Hockey',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00' },
-  { estudiante: 'rortiz',     deporte: 'Handball',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00' },
+  { estudiante: 'etorres',    deporte: 'Danza',    nivel: 'Primaria',   diaSemana: DiaSemana.MIERCOLES, horaInicio: '15:00', horaFin: '16:00' },
+  { estudiante: 'rortiz',     deporte: 'Artes Marciales',  nivel: 'Primaria',   diaSemana: DiaSemana.MARTES,    horaInicio: '14:00', horaFin: '15:00' },
   { estudiante: 'rortiz',     deporte: 'Ajedrez',   nivel: 'Primaria',   diaSemana: DiaSemana.LUNES,     horaInicio: '16:00', horaFin: '17:00' },
   { estudiante: 'jtorres',    deporte: 'Natación',  nivel: 'Inicial',    diaSemana: DiaSemana.MARTES,    horaInicio: '10:00', horaFin: '11:00' },
   { estudiante: 'ocabrera',   deporte: 'Atletismo', nivel: 'Inicial',    diaSemana: DiaSemana.VIERNES,   horaInicio: '10:00', horaFin: '11:00' },
@@ -775,6 +776,12 @@ async function main() {
     if (await prisma.employmentApplication.findFirst({ where: { email: p.email } })) continue;
     await prisma.employmentApplication.create({ data: { ...p, resolvedAt: p.status === ModerationStatus.PENDIENTE ? null : new Date() } });
   }
+
+  // ---- Parte 1 y 2: noticias del sitio, catálogo y horario de cursado ----
+  for (const linea of await ajustarCatalogo(prisma)) console.log(`   ${linea}`);
+  const noticiasNuevas = await sembrarNoticias(prisma);
+  const horarios = await generarHorarios(prisma);
+  console.log(`   ${noticiasNuevas} noticias nuevas · horario de cursado: ${horarios.bloques} bloques en ${horarios.cursos} cursos`);
 
   // ---- Parte 3: precios, facturas e historial de pagos ----
   await seedFacturacion();

@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { profesoresService } from '../../services/api/profesoresService';
+import { horariosService } from '../../services/api/horariosService';
+import HorarioSemanal from '../../components/features/HorarioSemanal';
 
 export default function MisCursosPage() {
   const [materiasPorNivel, setMateriasPorNivel] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [horarios, setHorarios] = useState(null);
 
   useEffect(() => {
     cargarCursos();
   }, []);
 
   const cargarCursos = async () => {
+    horariosService.list().then((h) => setHorarios(h.exito ? h.horarios : []));
     const data = await profesoresService.me();
     if (data.exito) {
       setMateriasPorNivel(data.materiasPorNivel || []);
@@ -21,7 +25,9 @@ export default function MisCursosPage() {
 
   return (
     <div>
-      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Mis Cursos Asignados</h3>
+      <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+        Mis Cursos Asignados
+      </h3>
 
       {materiasPorNivel.length === 0 ? (
         <p className="text-ink-faint">No tenés materias asignadas todavía.</p>
@@ -32,7 +38,10 @@ export default function MisCursosPage() {
               <h4 className="mb-3 text-lg font-semibold text-accent">{grupo.nivel}</h4>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {grupo.materias.map((mc) => (
-                  <div key={mc.id} className="rounded-lg border border-blue-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                  <div
+                    key={mc.id}
+                    className="rounded-lg border border-blue-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                  >
                     <h5 className="font-bold text-ink dark:text-slate-100">{mc.materia}</h5>
                     <p className="text-sm text-ink-faint">Curso: {mc.curso}</p>
                   </div>
@@ -42,6 +51,11 @@ export default function MisCursosPage() {
           ))}
         </div>
       )}
+
+      <h3 className="mb-4 mt-10 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+        Mi horario semanal
+      </h3>
+      <HorarioSemanal horarios={horarios} mostrar="curso" />
     </div>
   );
 }

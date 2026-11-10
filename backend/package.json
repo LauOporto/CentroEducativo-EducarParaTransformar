@@ -19,6 +19,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed-facturacion": "tsx prisma/seed-facturacion.ts",
+    "prisma:ajustes-produccion": "tsx prisma/ajustes-produccion.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {

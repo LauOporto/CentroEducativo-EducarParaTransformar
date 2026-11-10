@@ -1,4 +1,5 @@
 import { HttpError } from './httpError';
+import { esFeriado } from './feriados';
 
 // Fechas de negocio de la Parte 3, en la zona del colegio. Argentina no
 // tiene horario de verano desde 2009: el offset es fijo (-03:00).
@@ -66,18 +67,20 @@ export function sumarMeses(fecha: string, meses: number): string {
   return new Date(Date.UTC(anio, mes - 1 + meses, Math.min(dia, ultimoDia))).toISOString().slice(0, 10);
 }
 
-// HU9: día hábil = lunes a viernes. Los feriados no se consideran: no hay
-// un calendario de feriados cargado en el sistema.
+// HU9: día hábil = lunes a viernes que no sea feriado nacional (ver
+// utils/feriados.ts). `extras` suma los puentes y no laborables que fija un
+// decreto cada año (variable FERIADOS_EXTRA).
 const esFinDeSemana = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
 
-export function ultimoDiaHabilDelMes(periodo: string): string {
+export function ultimoDiaHabilDelMes(periodo: string, extras: Set<string> = new Set()): string {
   const { anio, mes } = partesPeriodo(periodo);
   const d = new Date(Date.UTC(anio, mes, 0)); // día 0 del mes siguiente = último de este
-  while (esFinDeSemana(d)) d.setUTCDate(d.getUTCDate() - 1);
+  while (esFinDeSemana(d) || esFeriado(d.toISOString().slice(0, 10), extras)) d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }
 
-export const esUltimoDiaHabil = (fecha: string) => ultimoDiaHabilDelMes(periodoDeFecha(fecha)) === fecha;
+export const esUltimoDiaHabil = (fecha: string, extras: Set<string> = new Set()) =>
+  ultimoDiaHabilDelMes(periodoDeFecha(fecha), extras) === fecha;
 
 export function diaSiguiente(fecha: string): string {
   const d = new Date(`${fecha}T00:00:00.000Z`);

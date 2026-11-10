@@ -23,6 +23,9 @@ import { facturacionAdminRouter } from './facturacion.routes';
 import { pagosRouter } from './pagos.routes';
 import { pagosAdminRouter } from './pagosAdmin.routes';
 import { jobsRouter } from './jobs.routes';
+import { noticiasPublicRouter, noticiasAdminRouter } from './noticias.routes';
+import { consultasPublicRouter, consultasAdminRouter } from './consultas.routes';
+import { horariosRouter } from './horarios.routes';
 
 const router = Router();
 
@@ -54,6 +57,11 @@ router.use('/reportes', reportesRouter);
 router.use('/profesores', profesoresRouter);
 router.use('/public', galeriaPublicRouter);
 router.use('/admin', ...requireAdmin(), galeriaAdminRouter);
+router.use('/public', noticiasPublicRouter);
+router.use('/admin', ...requireAdmin(), noticiasAdminRouter);
+router.use('/public', consultasPublicRouter);
+router.use('/admin', ...requireAdmin(), consultasAdminRouter);
+router.use('/horarios', horariosRouter);
 router.use('/admin/facturacion', ...requireAdmin(), facturacionAdminRouter);
 router.use('/admin/pagos', ...requireAdmin(), pagosAdminRouter);
 router.use('/pagos', pagosRouter);

@@ -42,3 +42,9 @@ services:
         sync: false
       - key: CRON_SECRET
         sync: false
+      # Opcionales: casilla que recibe las consultas web y puentes/no
+      # laborables del año (ver backend/.env.example).
+      - key: CONTACTO_EMAIL
+        sync: false
+      - key: FERIADOS_EXTRA
+        sync: false

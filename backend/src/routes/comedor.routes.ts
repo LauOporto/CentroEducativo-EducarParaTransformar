@@ -52,7 +52,9 @@ const toTime = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 router.post('/', async (req, res, next) => {
   try {
     const data = turnoSchema.parse(req.body);
-    const existe = await prisma.turnoComedor.findUnique({ where: { nombre: data.nombre } });
+    const existe = await prisma.turnoComedor.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
+    });
     if (existe) throw HttpError.conflict('Ya existe un turno con ese nombre.');
     const turno = await prisma.turnoComedor.create({
       data: { nombre: data.nombre, horaInicio: toTime(data.horaInicio), horaFin: toTime(data.horaFin) },
@@ -67,7 +69,9 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = turnoSchema.parse(req.body);
-    const conflicto = await prisma.turnoComedor.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
+    const conflicto = await prisma.turnoComedor.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
+    });
     if (conflicto) throw HttpError.conflict('Ya existe un turno con ese nombre.');
     const turno = await prisma.turnoComedor.update({
       where: { id },

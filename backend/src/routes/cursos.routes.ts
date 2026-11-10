@@ -26,7 +26,9 @@ router.get('/', async (_req, res, next) => {
         etiqueta: `${c.nivel.nombre} — ${c.nombre}`,
       })),
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.use(requireAuth, requireRole(Role.ADMIN));
@@ -41,11 +43,15 @@ router.post('/', async (req, res, next) => {
     const data = cursoSchema.parse(req.body);
     const nivel = await prisma.nivelEducativo.findUnique({ where: { id: data.nivelId } });
     if (!nivel) throw HttpError.badRequest('El nivel educativo indicado no existe.');
-    const existe = await prisma.curso.findFirst({ where: { nombre: data.nombre, nivelId: data.nivelId } });
+    const existe = await prisma.curso.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, nivelId: data.nivelId },
+    });
     if (existe) throw HttpError.conflict('Ya existe ese curso en ese nivel.');
     const curso = await prisma.curso.create({ data, include: { nivel: true } });
     res.json({ exito: true, curso });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch('/:id', async (req, res, next) => {
@@ -58,7 +64,9 @@ router.patch('/:id', async (req, res, next) => {
     }
     const curso = await prisma.curso.update({ where: { id }, data, include: { nivel: true } });
     res.json({ exito: true, curso });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.delete('/:id', async (req, res, next) => {
@@ -72,11 +80,15 @@ router.delete('/:id', async (req, res, next) => {
       throw HttpError.conflict(`No se puede eliminar: hay ${alumnos} alumno(s) en este curso. Reasignalos primero.`);
     }
     if (asignaciones > 0) {
-      throw HttpError.conflict('No se puede eliminar: el curso tiene materias asignadas. Eliminá esas asignaciones primero.');
+      throw HttpError.conflict(
+        'No se puede eliminar: el curso tiene materias asignadas. Eliminá esas asignaciones primero.',
+      );
     }
     await prisma.curso.delete({ where: { id } });
     res.json({ exito: true });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 export { router as cursosRouter };

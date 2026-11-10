@@ -3,6 +3,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { studentsService } from '../../services/api/studentsService';
 import MateriasCursoList from '../../components/features/MateriasCursoList';
+import HorarioSemanal from '../../components/features/HorarioSemanal';
+import { horariosService } from '../../services/api/horariosService';
 
 const ESTADO_LABEL = { ACTIVO: 'Activo', INACTIVO: 'Inactivo', EGRESADO: 'Egresado' };
 
@@ -26,6 +28,7 @@ export default function PerfilPage() {
   const [alumno, setAlumno] = useState(null);
   const [materias, setMaterias] = useState(null);
   const [mensajeMaterias, setMensajeMaterias] = useState('');
+  const [horarios, setHorarios] = useState(null);
   const [contacto, setContacto] = useState({ email: '', telefono: '', domicilio: '' });
 
   const cargar = useCallback(async () => {
@@ -41,6 +44,8 @@ export default function PerfilPage() {
     const mats = await studentsService.getMaterias(user.id);
     setMaterias(mats.exito ? mats.materias : []);
     setMensajeMaterias(mats.mensaje || '');
+    const hs = await horariosService.list();
+    setHorarios(hs.exito ? hs.horarios : []);
   }, [user.id]);
 
   useEffect(() => {
@@ -77,11 +82,16 @@ export default function PerfilPage() {
         <h3 className="mb-3 mt-6 border-b border-blue-100 pb-3 text-lg font-bold dark:border-slate-700">
           Datos de contacto <span className="text-xs font-normal text-ink-faint">(vos podés editarlos)</span>
         </h3>
-        <form onSubmit={guardarContacto} className="grid gap-3 rounded-lg border border-blue-100 p-4 dark:border-slate-700">
+        <form
+          onSubmit={guardarContacto}
+          className="grid gap-3 rounded-lg border border-blue-100 p-4 dark:border-slate-700"
+        >
           <label className="flex flex-col gap-1 text-xs text-ink-faint">
             Email
             <input
-              required type="email" value={contacto.email}
+              required
+              type="email"
+              value={contacto.email}
               onChange={(e) => setContacto({ ...contacto, email: e.target.value })}
               className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
             />
@@ -89,7 +99,10 @@ export default function PerfilPage() {
           <label className="flex flex-col gap-1 text-xs text-ink-faint">
             Teléfono
             <input
-              required pattern="[0-9]{6,20}" placeholder="Solo dígitos" value={contacto.telefono}
+              required
+              pattern="[0-9]{6,20}"
+              placeholder="Solo dígitos"
+              value={contacto.telefono}
               onChange={(e) => setContacto({ ...contacto, telefono: e.target.value })}
               className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
             />
@@ -97,20 +110,33 @@ export default function PerfilPage() {
           <label className="flex flex-col gap-1 text-xs text-ink-faint">
             Domicilio
             <input
-              required value={contacto.domicilio}
+              required
+              value={contacto.domicilio}
               onChange={(e) => setContacto({ ...contacto, domicilio: e.target.value })}
               className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
             />
           </label>
-          <button type="submit" className="justify-self-end rounded bg-accent px-4 py-2 text-sm font-semibold text-white">
+          <button
+            type="submit"
+            className="justify-self-end rounded bg-accent px-4 py-2 text-sm font-semibold text-white"
+          >
             <i className="fas fa-save" /> Guardar
           </button>
         </form>
       </div>
 
       <div>
-        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Materias que estoy cursando</h3>
+        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+          Materias que estoy cursando
+        </h3>
         <MateriasCursoList materias={materias} loading={materias === null} mensaje={mensajeMaterias} />
+      </div>
+
+      <div className="lg:col-span-2">
+        <h3 className="mb-5 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+          Mi horario de cursado
+        </h3>
+        <HorarioSemanal horarios={horarios} />
       </div>
     </div>
   );

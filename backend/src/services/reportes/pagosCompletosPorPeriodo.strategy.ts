@@ -5,7 +5,15 @@ import { CURSO_SELECT, formatCursoLabel } from '../../utils/cursoLabel';
 import { fechaISO, fechaUTC } from '../../utils/fechas';
 import { HttpError } from '../../utils/httpError';
 import { formatearPesos, sumar, toMonto } from '../../utils/montos';
-import { fechaCorta, parseParamsPeriodoAlumno, rangoLabel, type ParamsPeriodoAlumno } from './financieros.helpers';
+import {
+  fechaCorta,
+  parseParamsPeriodoAlumno,
+  porCursoYAlumno,
+  rangoLabel,
+  resumenPorCurso,
+  type ParamsPeriodoAlumno,
+  type ResumenCurso,
+} from './financieros.helpers';
 import { bloqueTotales, encabezadoReporte, seccion, tablaItems } from './pdfHelpers';
 import type { ReportStrategy } from './types';
 
@@ -34,6 +42,8 @@ export interface GrupoAlumnoPagosCompletos {
 export interface GrupoAnioPagosCompletos {
   anio: string;
   subtotal: number;
+  /** Corte por año escolar (curso) del alumno dentro del año. */
+  cursos: ResumenCurso[];
   alumnos: GrupoAlumnoPagosCompletos[];
 }
 
@@ -122,6 +132,7 @@ async function obtenerDatos({ desde, hasta, estudianteId }: ParamsPeriodoAlumno)
       return {
         anio,
         subtotal: toMonto(sumar(alumnos.map((a) => a.subtotal))),
+        cursos: resumenPorCurso(alumnos, (a) => a.subtotal),
         alumnos,
       };
     });
@@ -148,7 +159,12 @@ function renderPdf(doc: PDFKit.PDFDocument, data: DatosPagosCompletos) {
 
   for (const grupoAnio of data.anios) {
     seccion(doc, `Año ${grupoAnio.anio} — Subtotal: ${formatearPesos(grupoAnio.subtotal)}`);
-    for (const al of grupoAnio.alumnos) {
+    tablaItems(
+      doc,
+      { titulos: ['Año escolar (curso)', 'Alumnos', 'Subtotal'], anchos: [250, 90, 120], derecha: [1, 2] },
+      grupoAnio.cursos.map((c) => [c.curso, String(c.alumnos), formatearPesos(c.subtotal)]),
+    );
+    for (const al of [...grupoAnio.alumnos].sort(porCursoYAlumno)) {
       doc.moveDown(0.3);
       doc
         .font('Helvetica-Bold')
@@ -186,7 +202,8 @@ function nombreArchivo(data: DatosPagosCompletos) {
 export const pagosCompletosPorPeriodoStrategy: ReportStrategy<ParamsPeriodoAlumno, DatosPagosCompletos> = {
   key: 'pagos-completos-por-periodo',
   titulo: 'Pagos Completos por Período',
-  descripcion: 'Facturas pagadas en su totalidad con vencimiento en el período, agrupadas por año y por alumno.',
+  descripcion:
+    'Facturas pagadas en su totalidad con vencimiento en el período, agrupadas por año, por año escolar (curso) y por alumno.',
   rolesAutorizados: [Role.ADMIN],
   parseParams: parseParamsPeriodoAlumno,
   obtenerDatos,

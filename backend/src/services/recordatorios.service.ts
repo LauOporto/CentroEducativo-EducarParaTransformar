@@ -1,7 +1,9 @@
 import { EstadoCuota, EstadoFactura, Prisma, Role, TipoRecordatorio } from '@prisma/client';
 
+import { env } from '../config/env';
 import { prisma } from '../db/prisma';
 import { logger } from '../utils/logger';
+import { parseFeriadosExtra } from '../utils/feriados';
 import { esUltimoDiaHabil, fechaISO, hoyArgentina, periodoDeFecha, periodoSiguiente } from '../utils/fechas';
 import { sumar, CERO } from '../utils/montos';
 import { generarFacturasPeriodo, type ResultadoFacturacion } from './facturacion.service';
@@ -296,10 +298,14 @@ export async function enviarAvisoDeuda(
 }
 
 /** Qué le toca correr a una fecha ("AAAA-MM-DD", en Argentina). */
-export function tareasDelDia(fecha: string): { tipo: TipoRecordatorio; periodo: string }[] {
+export function tareasDelDia(
+  fecha: string,
+  feriadosExtra: Set<string> = parseFeriadosExtra(env.FERIADOS_EXTRA),
+): { tipo: TipoRecordatorio; periodo: string }[] {
   const tareas: { tipo: TipoRecordatorio; periodo: string }[] = [];
   const periodo = periodoDeFecha(fecha);
-  if (esUltimoDiaHabil(fecha)) tareas.push({ tipo: TipoRecordatorio.EMISION, periodo: periodoSiguiente(periodo) });
+  if (esUltimoDiaHabil(fecha, feriadosExtra))
+    tareas.push({ tipo: TipoRecordatorio.EMISION, periodo: periodoSiguiente(periodo) });
   if (fecha.endsWith('-20')) tareas.push({ tipo: TipoRecordatorio.DEUDA, periodo });
   return tareas;
 }

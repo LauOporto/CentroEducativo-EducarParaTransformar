@@ -5,6 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { upload } from '../middleware/upload';
+import { resolverMateriaDelDocente } from '../services/asignaciones.service';
 
 const router = Router();
 
@@ -44,10 +45,11 @@ const createSchema = z.object({
 router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), upload.single('file'), async (req, res, next) => {
   try {
     const data = createSchema.parse(req.body);
+    const materia = await resolverMateriaDelDocente(data.materia, req.authUser!);
     const created = await prisma.studyPlan.create({
       data: {
         docenteId: req.authUser!.id,
-        materia: data.materia,
+        materia,
         titulo: data.titulo,
         objetivos: data.objetivos,
         contenidos: data.contenidos,
