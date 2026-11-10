@@ -514,7 +514,6 @@ Desarrollado por el equipo **FLCODE**:
 | **Lautaro Oporto** |
 | **Franco Barrabino** |
 | **Facundo Jáuregui** |
-| **Fabricio Thompson** |
 
 ---
 
