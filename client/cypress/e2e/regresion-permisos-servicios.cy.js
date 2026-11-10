@@ -11,7 +11,7 @@ describe('Regresión 5fca3d9 · permisos de inscripción a servicios', () => {
   it('un alumno puede dar de baja y volver a inscribirse a sus propios deportes', () => {
     cy.loginApi('fbarrabino').then(({ id, token }) => {
       cy.api('GET', `${BASE}/${id}/resumen`, token).then(({ body }) => {
-        const voley = body.deportes.inscriptos.find((g) => g.deporte === 'Vóley');
+        const voley = body.deportes.inscriptos.find((g) => g.deporte === 'Vóleibol');
         cy.api('DELETE', `${BASE}/${id}/deportes/${voley.id}`, token).its('status').should('eq', 200);
         cy.api('POST', `${BASE}/${id}/deportes`, token, { grupoDeporteId: voley.id }).its('status').should('eq', 200);
       });

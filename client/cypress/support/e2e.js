@@ -21,12 +21,12 @@ Cypress.Commands.add('loginUI', (usuario) => {
   cy.contains('button', 'Ingresar').click();
 });
 
-// Deja a fbarrabino como en el seed: Fútbol y Vóley de Secundaria. Así cada
+// Deja a fbarrabino como en el seed: Fútbol y Vóleibol de Secundaria. Así cada
 // prueba arranca del mismo estado, sin depender del orden en que corren.
 // Hay varios grupos por deporte: se identifica el del seed por día y nivel.
 const GRUPOS_SEED = [
   { deporte: 'Fútbol', nivel: 'Secundaria', diaSemana: 'MARTES' },
-  { deporte: 'Vóley', nivel: 'Secundaria', diaSemana: 'MIERCOLES' },
+  { deporte: 'Vóleibol', nivel: 'Secundaria', diaSemana: 'MIERCOLES' },
 ];
 const esDelSeed = (g, s) => g.deporte === s.deporte && g.nivel === s.nivel && g.diaSemana === s.diaSemana;
 const BASE_INSCRIPCIONES = '/api/inscripciones/estudiantes';
