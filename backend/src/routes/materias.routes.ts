@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
+import { hayNombreEquivalente } from '../utils/texto';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { crearAsignacion, actualizarAsignacion } from '../services/asignaciones.service';
 
@@ -69,9 +70,10 @@ const materiaSchema = z.object({ nombre: z.string().trim().min(2).max(60) });
 router.post('/', async (req, res, next) => {
   try {
     const data = materiaSchema.parse(req.body);
-    const existe = await prisma.materia.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
-    });
+    const existe = hayNombreEquivalente(
+      await prisma.materia.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+    );
     if (existe) throw HttpError.conflict('Ya existe una materia con ese nombre.');
     const materia = await prisma.materia.create({ data });
     res.json({ exito: true, materia });
@@ -84,9 +86,11 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = materiaSchema.parse(req.body);
-    const conflicto = await prisma.materia.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
-    });
+    const conflicto = hayNombreEquivalente(
+      await prisma.materia.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+      id,
+    );
     if (conflicto) throw HttpError.conflict('Ya existe una materia con ese nombre.');
     const anterior = await prisma.materia.findUnique({ where: { id } });
     if (!anterior) throw HttpError.notFound('Esa materia no existe.');

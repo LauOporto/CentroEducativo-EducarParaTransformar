@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
+import { hayNombreEquivalente } from '../utils/texto';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { actualizarPrecio, conMonto } from '../services/precios.service';
 
@@ -52,9 +53,10 @@ const toTime = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 router.post('/', async (req, res, next) => {
   try {
     const data = turnoSchema.parse(req.body);
-    const existe = await prisma.turnoComedor.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
-    });
+    const existe = hayNombreEquivalente(
+      await prisma.turnoComedor.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+    );
     if (existe) throw HttpError.conflict('Ya existe un turno con ese nombre.');
     const turno = await prisma.turnoComedor.create({
       data: { nombre: data.nombre, horaInicio: toTime(data.horaInicio), horaFin: toTime(data.horaFin) },
@@ -69,9 +71,11 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = turnoSchema.parse(req.body);
-    const conflicto = await prisma.turnoComedor.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
-    });
+    const conflicto = hayNombreEquivalente(
+      await prisma.turnoComedor.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+      id,
+    );
     if (conflicto) throw HttpError.conflict('Ya existe un turno con ese nombre.');
     const turno = await prisma.turnoComedor.update({
       where: { id },

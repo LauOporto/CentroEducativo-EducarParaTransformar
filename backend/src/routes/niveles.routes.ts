@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
+import { hayNombreEquivalente } from '../utils/texto';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { actualizarPrecio, conMonto } from '../services/precios.service';
 
@@ -39,9 +40,10 @@ const nivelSchema = z.object({ nombre: z.string().trim().min(2).max(40) });
 router.post('/', async (req, res, next) => {
   try {
     const data = nivelSchema.parse(req.body);
-    const existe = await prisma.nivelEducativo.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
-    });
+    const existe = hayNombreEquivalente(
+      await prisma.nivelEducativo.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+    );
     if (existe) throw HttpError.conflict('Ya existe un nivel educativo con ese nombre.');
     const nivel = await prisma.nivelEducativo.create({ data });
     res.json({ exito: true, nivel: conMonto(nivel, 'cuotaMensual') });
@@ -54,9 +56,11 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = nivelSchema.parse(req.body);
-    const conflicto = await prisma.nivelEducativo.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
-    });
+    const conflicto = hayNombreEquivalente(
+      await prisma.nivelEducativo.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+      id,
+    );
     if (conflicto) throw HttpError.conflict('Ya existe un nivel educativo con ese nombre.');
     const nivel = await prisma.nivelEducativo.update({ where: { id }, data });
     res.json({ exito: true, nivel: conMonto(nivel, 'cuotaMensual') });

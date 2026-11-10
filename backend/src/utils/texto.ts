@@ -17,3 +17,16 @@ export const sinBarrasFinales = (url: string): string => recortarFinal(url, (c) 
 
 // "Monto incorrecto. " → "Monto incorrecto" (para agregar el punto propio).
 export const sinPuntoFinal = (texto: string): string => recortarFinal(texto, (c) => c === '.' || esEspacio(c));
+
+// Clave para comparar nombres de catálogo (deportes, turnos, materias…) sin
+// distinguir mayúsculas, tildes ni espacios repetidos: "Fútbol", "futbol" y
+// " FUTBOL " son el mismo nombre.
+export const claveNombre = (nombre: string): string =>
+  nombre.normalize('NFD').replace(/\p{M}/gu, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+
+// ¿Algún registro (salvo `excluirId`) tiene un nombre equivalente?
+export const hayNombreEquivalente = (
+  filas: { id: number; nombre: string }[],
+  nombre: string,
+  excluirId?: number,
+): boolean => filas.some((f) => f.id !== excluirId && claveNombre(f.nombre) === claveNombre(nombre));

@@ -1,6 +1,7 @@
 import type { DiaSemana, PrismaClient } from '@prisma/client';
 
 import { seSolapan, type Franja } from '../src/services/horarios.service';
+import { claveNombre } from '../src/utils/texto';
 
 // Contenido compartido por el seed de desarrollo (seed.ts) y por el script de
 // ajustes de producción (ajustes-produccion.ts). Todo es idempotente: se
@@ -90,10 +91,64 @@ export const DEPORTES_TP = [
 ];
 const RENOMBRES_DEPORTE: Record<string, string> = { Vóley: 'Vóleibol', Handball: 'Artes Marciales', Hockey: 'Danza' };
 
-const normalizar = (s: string) => s.trim().toLocaleLowerCase('es');
+// Deportes cargados dos veces con distinta tilde o mayúscula ("Futbol" y
+// "Fútbol"): se conserva el del enunciado (o el que tiene más grupos) y se le
+// pasan los grupos y las inscripciones del duplicado. Si mover algo chocara
+// con un registro existente, no se toca y se avisa para revisarlo a mano.
+async function unificarDeportesDuplicados(prisma: PrismaClient, log: string[]) {
+  const preferidos = new Set([...DEPORTES_TP, ...Object.keys(RENOMBRES_DEPORTE)]);
+  const deportes = await prisma.deporte.findMany({
+    orderBy: { id: 'asc' },
+    include: { grupos: true, inscripciones: true },
+  });
+  const porClave = new Map<string, typeof deportes>();
+  for (const d of deportes) porClave.set(claveNombre(d.nombre), [...(porClave.get(claveNombre(d.nombre)) ?? []), d]);
+
+  for (const grupo of porClave.values()) {
+    if (grupo.length < 2) continue;
+    const [conservado, ...duplicados] = [...grupo].sort(
+      (a, b) =>
+        Number(preferidos.has(b.nombre)) - Number(preferidos.has(a.nombre)) ||
+        b.grupos.length - a.grupos.length ||
+        a.id - b.id,
+    );
+    for (const dup of duplicados) {
+      const choqueGrupo = dup.grupos.find((g) =>
+        conservado.grupos.some(
+          (c) =>
+            c.nivelId === g.nivelId &&
+            c.diaSemana === g.diaSemana &&
+            hhmm(c.horaInicio) === hhmm(g.horaInicio) &&
+            hhmm(c.horaFin) === hhmm(g.horaFin),
+        ),
+      );
+      const choqueAlumno = dup.inscripciones.find((i) =>
+        conservado.inscripciones.some((c) => c.estudianteId === i.estudianteId),
+      );
+      if (choqueGrupo || choqueAlumno) {
+        log.push(
+          `⚠ No se unificó "${dup.nombre}" con "${conservado.nombre}": hay grupos o alumnos repetidos. Revisalo a mano.`,
+        );
+        continue;
+      }
+      await prisma.$transaction([
+        prisma.grupoDeporte.updateMany({ where: { deporteId: dup.id }, data: { deporteId: conservado.id } }),
+        prisma.inscripcionDeporte.updateMany({ where: { deporteId: dup.id }, data: { deporteId: conservado.id } }),
+        prisma.deporte.delete({ where: { id: dup.id } }),
+      ]);
+      conservado.grupos.push(...dup.grupos);
+      conservado.inscripciones.push(...dup.inscripciones);
+      log.push(
+        `Deporte duplicado "${dup.nombre}" unificado con "${conservado.nombre}" (${dup.grupos.length} grupos, ${dup.inscripciones.length} inscripciones)`,
+      );
+    }
+  }
+}
 
 export async function ajustarCatalogo(prisma: PrismaClient): Promise<string[]> {
   const log: string[] = [];
+
+  await unificarDeportesDuplicados(prisma, log);
 
   for (const [viejo, nuevo] of Object.entries(RENOMBRES_DEPORTE)) {
     const [origen, destino] = await Promise.all([
@@ -114,11 +169,11 @@ export async function ajustarCatalogo(prisma: PrismaClient): Promise<string[]> {
     log.push(`Deporte creado: "${nombre}" (falta crearle grupos desde el panel)`);
   }
 
-  // Turnos de comedor duplicados por mayúsculas/espacios ("Primer Turno" y
+  // Turnos de comedor duplicados por mayúsculas, tildes o espacios ("Primer Turno" y
   // "Primer turno"): se conserva el más antiguo y se le pasan las inscripciones.
   const turnos = await prisma.turnoComedor.findMany({ orderBy: { id: 'asc' } });
   const porNombre = new Map<string, typeof turnos>();
-  for (const t of turnos) porNombre.set(normalizar(t.nombre), [...(porNombre.get(normalizar(t.nombre)) ?? []), t]);
+  for (const t of turnos) porNombre.set(claveNombre(t.nombre), [...(porNombre.get(claveNombre(t.nombre)) ?? []), t]);
   for (const grupo of porNombre.values()) {
     const [conservado, ...duplicados] = grupo;
     for (const dup of duplicados) {
