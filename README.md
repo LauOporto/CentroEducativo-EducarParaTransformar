@@ -1,155 +1,527 @@
-# Educar para Transformar — Campus Virtual
+<div align="center">
 
-Plataforma del campus virtual del colegio "Educar para Transformar". Monorepo con backend en Node/Express/Prisma y frontend en React 18 + Tailwind (Vite). En producción (o corriendo `pnpm run backend:dev` con el cliente ya compilado) el backend sirve directamente el build de `client/` desde un único puerto — no hace falta un servidor aparte para el frontend.
+# 🎓 Educar para Transformar
 
-## Estructura
+### Plataforma de gestión educativa integral: sitio institucional, campus virtual y app para familias
 
+Una sola plataforma para que la escuela, los docentes, los alumnos y las familias trabajen conectados:
+calificaciones, asistencia, servicios, facturación y pagos, todo en un mismo lugar.
+
+[![Demo en vivo](https://img.shields.io/badge/Demo-en%20vivo-1F6FEB?style=for-the-badge&logo=render&logoColor=white)](https://educar-para-transformar-iffe.onrender.com)
+[![Descargar APK](https://img.shields.io/badge/Android-Descargar%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://expo.dev/accounts/lauoporto/projects/educar-para-transformar/builds/41e607c9-e712-48f6-a16c-fdd53da8aaed)
+
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![Expo](https://img.shields.io/badge/Expo-SDK%2058-000020?logo=expo&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
+
+</div>
+
+---
+
+## 📑 Contenido
+
+- [Sobre el proyecto](#-sobre-el-proyecto)
+- [Funcionalidades](#-funcionalidades)
+- [Tecnologías](#-tecnologías)
+- [Arquitectura](#-arquitectura)
+- [Instalar la app en Android (APK)](#-instalar-la-app-en-android-apk)
+- [Ejecutar el proyecto localmente](#-ejecutar-el-proyecto-localmente)
+- [Usuarios de prueba](#-usuarios-de-prueba)
+- [Calidad y testing](#-calidad-y-testing)
+- [Estructura del repositorio](#-estructura-del-repositorio)
+- [Despliegue](#-despliegue)
+- [Equipo](#-equipo)
+
+---
+
+## 🏫 Sobre el proyecto
+
+**Educar para Transformar** es una plataforma pensada para un instituto educativo con nivel **Inicial, Primaria y Secundaria**, que necesita digitalizar su gestión diaria sin perder la cercanía con las familias.
+
+Reúne tres productos que comparten una única API y una única base de datos:
+
+| | Producto | Para quién | Qué resuelve |
+|---|---|---|---|
+| 🌐 | **Sitio institucional** | Público general | Presenta la escuela, sus niveles e instalaciones; publica noticias y recibe consultas, preinscripciones y postulaciones laborales. |
+| 💻 | **Campus virtual** | Administración, docentes, alumnos y familias | Gestión académica, asistencia, servicios complementarios, facturación, pagos y reportes en PDF. |
+| 📱 | **App para familias** | Padres y tutores | Estado de cuenta, pago de cuotas por transferencia e inscripción de los hijos a deportes, transporte y comedor, desde el celular. |
+
+> 💡 **Una sola fuente de verdad.** La web y la app consumen la misma API REST: lo que una familia hace desde el celular se ve al instante en el campus, y viceversa.
+
+---
+
+## ✨ Funcionalidades
+
+<details open>
+<summary><b>🌐 Sitio institucional</b></summary>
+
+- Secciones de presentación: nosotros, niveles educativos, bienestar estudiantil e instalaciones.
+- **Noticias** administradas desde el panel (alta, edición, publicación y baja).
+- **Formulario de contacto** con aviso por mail a la escuela y botón directo a WhatsApp.
+- **Preinscripción online** de alumnos, **opiniones** de la comunidad (moderadas) y **"Trabajá con nosotros"** con carga de CV.
+- Galería de imágenes.
+
+</details>
+
+<details>
+<summary><b>🛠️ Administración</b></summary>
+
+- **Usuarios y roles**: altas, aprobación de cuentas docentes y vínculos padre–hijo.
+- **Estructura académica**: niveles, cursos, materias, asignación docente–materia–curso y **horario semanal de cursado**, con detección de superposiciones.
+- **Servicios**: deportes y sus grupos (día, horario, nivel y profesor), recorridos de transporte y turnos de comedor, cada uno con su precio mensual.
+- **Facturación mensual automática** y revisión de pagos: aprobar o rechazar transferencias con su comprobante adjunto.
+- **Reportes en PDF**: 14 reportes académicos, de servicios y financieros (alumnos por curso, por docente, por deporte o recorrido, ingresos por período, pagos completos e incompletos, etc.).
+- **Auditoría** de las acciones sensibles y moderación de preinscripciones, opiniones y postulaciones.
+- Gestión de **noticias** y **consultas web**.
+
+</details>
+
+<details>
+<summary><b>👩‍🏫 Docentes</b></summary>
+
+- Carga de **calificaciones** por instancia y de **asistencia** diaria, con historial.
+- **Planes de estudio** por materia (con archivo adjunto).
+- Vista de sus cursos con el **horario semanal**.
+
+</details>
+
+<details>
+<summary><b>🧑‍🎓 Alumnos</b></summary>
+
+- **Boletín** de calificaciones, asistencias y planes de estudio.
+- Perfil con su **horario de cursado**.
+- Autogestión de servicios: deportes, transporte y comedor.
+
+</details>
+
+<details>
+<summary><b>👨‍👩‍👧 Familias (web y app)</b></summary>
+
+- Boletín, materias, horario y asistencia de cada hijo.
+- **Alerta automática** ante 3 inasistencias consecutivas sin justificar, por notificación interna o por email, según la preferencia de cada familia.
+- **Estado de cuenta** con la deuda discriminada por ítem (cuota, deporte, transporte y comedor).
+- **Pago por transferencia**: se genera un comprobante con los datos bancarios y se carga la transferencia con una foto o un PDF del banco.
+- Inscripción a servicios, con el precio y el mes desde el que se cobra.
+
+</details>
+
+### 💳 Ciclo de facturación
+
+Las inscripciones no se cobran al momento: se suman a la factura mensual siguiente. Así funciona el circuito completo:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant F as 👨‍👩‍👧 Familia (app/web)
+    participant API as ⚙️ API
+    participant J as ⏰ Job diario
+    participant A as 🛠️ Administración
+
+    F->>API: Inscribe al hijo a un deporte
+    Note over API: Queda activo, sin cobro inmediato
+    J->>API: Último día hábil del mes
+    API->>API: Emite la factura del mes siguiente<br/>(cuota + servicios activos)
+    API-->>F: Mail con la factura en PDF
+    F->>API: Genera el comprobante y carga la transferencia
+    API-->>A: Comprobante "En revisión"
+    A->>API: Aprueba o rechaza
+    API-->>F: La factura pasa a Pagada / Parcial
+    J->>API: Día 20
+    API-->>F: Recordatorio si quedó saldo pendiente
 ```
-.
-├── backend/    # API REST + servidor (Node + Express + Prisma + PostgreSQL)
-├── client/     # SPA en React 18 + Tailwind (Vite) — lo que sirve el backend
-├── mobile/     # App móvil para Padres/Tutores (Expo SDK 58 + React Native + TypeScript)
-└── frontend/   # Sitio estático anterior (HTML + CSS + JS) — en desuso, reemplazado por client/
+
+---
+
+## 🧰 Tecnologías
+
+| Capa | Tecnologías |
+|---|---|
+| **Backend** | Node.js 22 · Express 4 · TypeScript · Prisma ORM 6 · Zod (validación) · JWT + bcrypt · PDFKit · Multer · Helmet · express-rate-limit |
+| **Base de datos** | PostgreSQL 16+ (Neon en producción) |
+| **Web** | React 18 · React Router 6 · Tailwind CSS 3 · Vite 5 |
+| **Mobile** | Expo SDK 58 · React Native 0.88 · TypeScript · expo-router · TanStack Query · expo-secure-store |
+| **Servicios externos** | Cloudinary (archivos) · Resend (emails) · EAS Build (APK) |
+| **Infraestructura** | Render (API + web) · GitHub Actions (CI y jobs programados) |
+| **Calidad** | node:test (unit) · Jest + Testing Library (mobile) · Cypress (E2E) · ESLint · Prettier · Husky + lint-staged · SonarCloud |
+| **Monorepo** | pnpm workspaces (backend + client) · npm (mobile, independiente) |
+
+---
+
+## 🏗️ Arquitectura
+
+### Vista general
+
+```mermaid
+flowchart LR
+    subgraph Clientes
+        WEB["💻 Web<br/>React + Vite"]
+        APP["📱 App Android<br/>Expo / React Native"]
+    end
+
+    subgraph Render["☁️ Render (un solo servicio)"]
+        API["⚙️ API REST<br/>Express + TypeScript"]
+        SPA["Build estático<br/>de la web"]
+    end
+
+    DB[("🐘 PostgreSQL<br/>Neon")]
+    CLD["🖼️ Cloudinary<br/>archivos y comprobantes"]
+    MAIL["✉️ Resend<br/>emails"]
+    GHA["⏰ GitHub Actions<br/>job diario"]
+
+    WEB -- "HTTPS /api" --> API
+    APP -- "HTTPS /api" --> API
+    API -. sirve .-> SPA
+    API -- Prisma --> DB
+    API --> CLD
+    API --> MAIL
+    GHA -- "POST /api/jobs/diario" --> API
 ```
 
-## Requisitos
+- **Un solo despliegue para la web y la API**: el backend sirve el build de React desde el mismo puerto, así no hace falta un servidor aparte para el frontend.
+- **La app móvil no tiene backend propio**: usa la misma API, identificándose con el header `X-Client-Type: mobile`.
+- **Jobs programados externos**: el hosting gratuito apaga el servicio sin tráfico, por eso la emisión de facturas y los recordatorios los dispara GitHub Actions todos los días a las 8:00 (hora de Argentina), con un secreto compartido.
 
-- Node.js >= 22.13
-- pnpm >= 9 (el repo usa pnpm 11 vía `packageManager`)
-- PostgreSQL 16 corriendo localmente (o accesible por red)
+### Capas del backend
 
-## Instalación y ejecución
+```mermaid
+flowchart TB
+    R["Rutas<br/><i>routes/*.routes.ts</i>"] --> M["Middleware<br/>autenticación · roles · rate limit · validación Zod"]
+    M --> S["Servicios y fachadas<br/><i>services/</i> · reglas de negocio"]
+    S --> P["Prisma Client"]
+    P --> D[("PostgreSQL")]
+    S --> X["Integraciones<br/>Cloudinary · Resend · PDFKit"]
+```
 
-### 1. Instalar dependencias
+### Patrones de diseño
+
+Cada patrón se aplicó donde había una variación real que convenía aislar:
+
+| Patrón | Dónde | Qué resuelve |
+|---|---|---|
+| 🧩 **Facade** | `services/panelFamilia.facade.ts`<br/>`services/pagos.facade.ts` | Una sola llamada combina el catálogo de servicios con las inscripciones del alumno, o el estado de cuenta completo, y aplica las reglas de negocio: máximo 2 deportes, sin superposición horaria y sin duplicados. |
+| 📊 **Strategy** | `services/reportes/` | Los 14 reportes en PDF comparten una interfaz (`ReportStrategy`). Para sumar uno nuevo alcanza con agregar un archivo, sin tocar el motor ni las rutas. |
+| 🏭 **Factory Method** | `services/notificaciones/` | Las alertas por inasistencias se envían por notificación interna o por email según la preferencia de cada familia. La fábrica decide el canal, y el servicio de asistencia no lo conoce. |
+
+### Seguridad
+
+- 🔐 **Sesiones con JWT**: un access token de 15 minutos (en memoria) y un refresh token que rota en cada uso. En la app se guarda en el almacenamiento seguro del dispositivo; en la web, en una cookie `httpOnly`.
+- 🔑 Contraseñas con **bcrypt** y recuperación por código enviado por email.
+- 🛡️ **Helmet**, **CORS** con lista blanca y **rate limiting** en la recuperación de contraseña y el formulario de contacto.
+- 👥 **Control de acceso por rol** en cada endpoint. Un padre solo ve a sus hijos vinculados y un docente, solo sus cursos.
+- 📎 Los archivos subidos se validan por su **contenido real** (no solo por la extensión) y los comprobantes se sirven con **URLs firmadas** que vencen a los 5 minutos.
+- 📝 **Auditoría** de altas, bajas y cambios de precios.
+
+---
+
+## 📲 Instalar la app en Android (APK)
+
+La app para familias se instala directamente desde un archivo `.apk`, sin pasar por Google Play.
+
+> **Requisitos:** un celular con **Android 10 o superior** y conexión a internet.
+
+**1. Abrí el link de descarga desde el celular**
+
+👉 **[Descargar Educar para Transformar (APK)](https://expo.dev/accounts/lauoporto/projects/educar-para-transformar/builds/41e607c9-e712-48f6-a16c-fdd53da8aaed)**
+
+También podés abrir el link en la computadora y escanear con el celular el código QR que aparece en la página.
+
+**2. Descargá el archivo**
+
+Tocá **Install** (o **Download**). El navegador puede advertir que el archivo podría ser dañino; es el aviso habitual para apps que no vienen de Google Play. Confirmá con **Descargar de todas formas**.
+
+**3. Permití la instalación de apps desconocidas**
+
+Al abrir el archivo descargado, Android te va a pedir permiso:
+
+1. Tocá **Configuración** en el aviso.
+2. Activá **Permitir de esta fuente** para tu navegador (por ejemplo, Chrome).
+3. Volvé atrás.
+
+> La ruta exacta cambia según la marca. Si no aparece el aviso, buscala en *Ajustes → Aplicaciones → Acceso especial → Instalar apps desconocidas*.
+
+**4. Instalá la app**
+
+Tocá **Instalar**. Si **Google Play Protect** muestra un aviso, elegí **Más detalles → Instalar de todas formas**.
+
+**5. Abrí la app e iniciá sesión**
+
+Buscá **Educar para Transformar** en tu menú de aplicaciones e ingresá con tu usuario y contraseña de padre o tutor. Para probarla, podés usar la [cuenta de demostración](#-usuarios-de-prueba).
+
+> ⏳ **El primer ingreso puede tardar hasta un minuto**: el servidor de demostración se "duerme" cuando no hay uso. La app lo avisa con una franja que dice *"Despertando el servidor…"*.
+
+<details>
+<summary><b>¿Problemas para instalar?</b></summary>
+
+| Problema | Solución |
+|---|---|
+| *"App no instalada"* | Ya tenés instalada una versión anterior firmada de otra forma: desinstalala y volvé a instalar. |
+| *"Se bloqueó la instalación"* | Revisá el paso 3: el navegador necesita permiso para instalar apps desconocidas. |
+| No encuentro el archivo | Buscalo en la app **Archivos** → **Descargas**. |
+| *"No pudimos conectarnos con el servidor"* | Revisá la conexión a internet y esperá unos segundos: puede que el servidor se esté despertando. |
+
+</details>
+
+<details>
+<summary><b>Generar un APK nuevo (para desarrolladores)</b></summary>
+
+El APK se compila en la nube con **EAS Build**. El perfil `preview` de `mobile/eas.json` ya apunta a la API de producción.
 
 ```bash
-pnpm install
+cd mobile
+npx eas-cli login       # una sola vez, con la cuenta de Expo del proyecto
+npm run build:apk       # al terminar, EAS entrega el link y el QR de descarga
 ```
 
-Esto instala las dependencias de `backend` y `client` (el `frontend` viejo no tiene `package.json`: son archivos estáticos que ya no se usan).
+</details>
 
-### 2. Configurar variables de entorno
+---
+
+## 💻 Ejecutar el proyecto localmente
+
+### Requisitos previos
+
+| Herramienta | Versión | Para qué |
+|---|---|---|
+| [Git](https://git-scm.com/) | cualquiera | Clonar el repositorio |
+| [Node.js](https://nodejs.org/) | **22.13 o superior** | Backend, web y app |
+| [pnpm](https://pnpm.io/) | 9 o superior (se activa con Corepack) | Dependencias del monorepo |
+| [PostgreSQL](https://www.postgresql.org/download/) | 16 o superior | Base de datos |
+| [Expo Go](https://expo.dev/go) *(opcional)* | última | Probar la app en el celular |
+
+### Paso 1 · Clonar el repositorio
 
 ```bash
+git clone https://github.com/LauOporto/CentroEducativo-EducarParaTransformar.git
+cd CentroEducativo-EducarParaTransformar
+```
+
+### Paso 2 · Instalar las dependencias
+
+```bash
+corepack enable     # habilita pnpm (viene con Node.js)
+pnpm install        # instala backend y web, y genera el cliente de Prisma
+```
+
+### Paso 3 · Configurar las variables de entorno
+
+Copiá el archivo de ejemplo:
+
+```bash
+# macOS / Linux / Git Bash
 cp backend/.env.example backend/.env
+
+# Windows (PowerShell)
+Copy-Item backend/.env.example backend/.env
 ```
 
-Editá `backend/.env` y completá al menos:
+Abrí `backend/.env` y completá como mínimo:
 
-- `DATABASE_URL` — cadena de conexión a tu PostgreSQL local (usuario, password y nombre de la base).
-- `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` — secretos largos y aleatorios. Podés generarlos con:
+| Variable | Qué poner |
+|---|---|
+| `DATABASE_URL` | Reemplazá `TU_PASSWORD` por la contraseña de tu usuario de PostgreSQL. |
+| `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` | Dos secretos distintos, de al menos 32 caracteres. |
+| `STORAGE_DRIVER` | Descomentala con el valor `local` para guardar los comprobantes de pago en disco, sin necesidad de Cloudinary. |
 
-  ```bash
-  node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-  ```
+Para generar cada secreto:
 
-El resto de las variables (`PORT`, `CORS_ORIGIN`, `UPLOAD_DIR`) ya tienen valores por defecto razonables para desarrollo local.
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
 
-### 3. Crear la base de datos
+<details>
+<summary><b>Variables opcionales</b></summary>
 
-Creá una base vacía en tu instancia de PostgreSQL con el nombre que pusiste en `DATABASE_URL` (por defecto `educar_transformar_db`), por ejemplo:
+| Variable | Uso | Sin configurar |
+|---|---|---|
+| `CLOUDINARY_*` | Galería, CVs y planes de estudio | La app arranca, pero esas cargas fallan. Para desarrollo alcanza con una cuenta gratuita. |
+| `RESEND_API_KEY` | Envío real de emails | Los mails se muestran completos en la consola del backend. |
+| `MAIL_REDIRECT_TO` | Redirige todos los mails a una casilla de prueba | Se envían a cada destinatario real. |
+| `BANCO_*` | Datos bancarios de las facturas | Se usan datos ficticios de demostración. |
+| `FERIADOS_EXTRA` | Feriados puente que no se calculan solos | Solo se consideran los feriados nacionales. |
+| `CRON_SECRET` | Protege el endpoint de jobs diarios | El endpoint queda deshabilitado. |
+
+</details>
+
+### Paso 4 · Crear la base de datos
 
 ```bash
 psql -U postgres -c "CREATE DATABASE educar_transformar_db;"
 ```
 
-### 4. Aplicar migraciones y cargar datos de prueba
+> También podés crearla desde **pgAdmin**: clic derecho en *Databases → Create → Database*.
+
+### Paso 5 · Aplicar las migraciones y cargar los datos de ejemplo
 
 ```bash
-pnpm --filter backend prisma:migrate
-pnpm --filter backend prisma:seed
+pnpm --filter backend prisma:migrate            # crea las tablas
+pnpm --filter backend prisma:seed               # usuarios, cursos, materias, notas, servicios, noticias y horarios
+pnpm --filter backend prisma:seed-facturacion   # precios, facturas y pagos de ejemplo (opcional)
 ```
 
-El seed crea usuarios de prueba para cada rol (admin, docentes, estudiantes, padres). La contraseña de todos es `123456`; el login acepta `usuario` o `email`. Revisá [backend/prisma/seed.ts](backend/prisma/seed.ts) para ver los usuarios disponibles (ej. `admin` / `123456`).
-
-### 5. Correr el programa
-
-Hay dos formas de levantarlo, según qué estés haciendo.
-
-### Opción A — Todo junto, con hot-reload (recomendada para desarrollar)
-
-Un solo comando, una sola terminal:
+### Paso 6 · Levantar la web y la API
 
 ```bash
-pnpm run dev
+pnpm dev
 ```
 
-Esto levanta el backend (`tsx watch`) y Vite en paralelo (`pnpm -r --parallel dev`, corre el script `dev` de cada paquete del workspace a la vez). Abrí **http://localhost:5173**. Vite tiene un proxy configurado (`client/vite.config.js`) que reenvía `/api` y `/uploads` al backend en el puerto 4000, así que desde el navegador todo se ve como si fuera un solo origen.
+Este comando levanta el backend y la web en paralelo, con recarga automática.
 
-Si preferís levantarlos en terminales separadas (por ejemplo para ver los logs de cada uno sin que se mezclen), podés correr `pnpm run backend:dev` y `pnpm run client:dev` en dos ventanas distintas — es exactamente lo mismo que hace `pnpm run dev`, solo que no comparten terminal.
+| Servicio | URL |
+|---|---|
+| 🌐 Web | **http://localhost:5173** |
+| ⚙️ API | http://localhost:4000/api |
+| ❤️ Health check | http://localhost:4000/health |
 
-### Opción B — Un solo proceso (como en producción)
+Ingresá con cualquiera de los [usuarios de prueba](#-usuarios-de-prueba). 🎉
+
+<details>
+<summary><b>Alternativa: un solo proceso, igual que en producción</b></summary>
 
 ```bash
-pnpm run client:build   # compila client/ a client/dist
-pnpm run backend:dev    # (o pnpm --filter backend start, con el backend ya compilado)
+pnpm run client:build    # compila la web en client/dist
+pnpm run backend:dev     # la API sirve también la web
 ```
 
-Abrí **http://localhost:4000** — el backend sirve la API y el build de React desde el mismo puerto y proceso, sin hot-reload del frontend (hay que repetir `client:build` después de cada cambio). Usá esta opción para probar el comportamiento real antes de desplegar.
+Abrí **http://localhost:4000**. No tiene recarga automática de la web: hay que volver a compilar después de cada cambio.
 
-En ambos casos:
-- **Health check:** http://localhost:4000/health
-- **API:** http://localhost:4000/api
+</details>
 
-## Otros comandos útiles
+### Paso 7 · Ejecutar la app móvil *(opcional)*
+
+La app vive en `mobile/` y usa **npm** (está fuera del workspace de pnpm).
 
 ```bash
-pnpm --filter backend typecheck      # chequeo de tipos sin compilar
-pnpm --filter backend build          # compila a backend/dist
-pnpm --filter backend start          # corre la build compilada
-pnpm --filter backend prisma:studio  # explorador visual de la base de datos
-pnpm --filter backend db:reset       # resetea la base y vuelve a correr migraciones + seed
-pnpm --filter backend prisma:ajustes-produccion  # catálogo del TP, noticias y horarios en una base existente (ver DEPLOY.md, paso 9)
-pnpm --filter backend prisma:seed-facturacion    # precios, facturas y pagos de demo (Parte 3)
-pnpm run client:build                # compila client/ a client/dist (lo que sirve el backend)
-pnpm --filter client dev             # solo Vite, sin pasar por el script de raíz
+cd mobile
+npm install
 ```
 
-## Contenido del sitio público
+Para que use tu backend local, creá el archivo `mobile/.env.local`:
 
-Los datos de contacto (teléfono, WhatsApp, email, dirección y redes sociales) están centralizados en [client/src/config/institucion.js](client/src/config/institucion.js). Las **noticias** se administran desde el panel del Admin (**Noticias**) y las **consultas** del formulario de contacto llegan a **Consultas web** y por mail a `CONTACTO_EMAIL` (o a `MAIL_REDIRECT_TO`, si está cargado).
+```bash
+# Desde un celular: la IP de tu computadora en la red Wi-Fi (no "localhost")
+EXPO_PUBLIC_API_URL=http://192.168.0.10:4000
 
-## Roles
+# Desde el navegador de la computadora
+# EXPO_PUBLIC_API_URL=http://localhost:4000
+```
 
-- **Estudiante** — accede a su boletín, planes de estudio, asistencia y foros.
-- **Docente** — carga calificaciones y asistencia, publica planes de estudio y participa en los foros.
-- **Padre / Tutor** — visualiza el boletín, las materias y la asistencia de los hijos vinculados a su cuenta.
-- **Admin** — administra usuarios, vínculos padre-hijo, aprobación de cuentas docentes, estructura académica (niveles, cursos, materias, asignaciones y **horario de cursado**), deportes, transporte, comedor, precios y pagos, noticias y consultas del sitio, y modera inscripciones, opiniones y postulaciones de empleo. Las autoridades y el personal de la escuela acceden con este rol.
+> Si no creás este archivo, la app usa la API de producción.
 
-## Patrones de diseño
+Iniciá el servidor de desarrollo:
 
-El proyecto aplica tres patrones, cada uno en un punto puntual del dominio donde existe una variación real que conviene aislar (no se aplicaron "porque sí" en todos lados).
+```bash
+npx expo start
+```
 
-### Facade — panel Padre/Alumno
+- 📱 **En el celular:** abrí **Expo Go** y escaneá el código QR de la terminal. El celular y la computadora tienen que estar en la misma red Wi-Fi.
+- 🌐 **En el navegador:** presioná `w`. En ese caso, agregá `http://localhost:8081` a `CORS_ORIGIN` en `backend/.env`.
 
-**Problema:** una sola pantalla necesita combinar datos de varios servicios distintos (catálogo de deportes/transporte/comedor + el estado de inscripción de un alumno) sin que el frontend tenga que orquestar múltiples llamadas.
+### Comandos útiles
 
-**Dónde:**
-- `backend/src/services/panelFamilia.facade.ts` — la fachada: `obtenerResumenServicios(estudianteId)` combina 6 tablas de 2 dominios distintos (catálogo + inscripciones) detrás de una única función, más las operaciones de inscribir/desinscribir de deportes, transporte y comedor con sus reglas de negocio (máximo 2 deportes, solapamiento horario, sin duplicados).
-- Se usa desde `backend/src/routes/inscripciones.routes.ts`, y la misma fachada sirve tanto para el panel Padre como para que el propio alumno se autogestione (`backend/src/utils/studentAccess.ts`).
+```bash
+pnpm --filter backend prisma:studio   # explorador visual de la base de datos
+pnpm --filter backend db:reset        # borra la base y la vuelve a crear con los datos de ejemplo
+pnpm --filter backend typecheck       # chequeo de tipos del backend
+pnpm build                            # compila la web y el backend para producción
+pnpm lint                             # ESLint en todo el monorepo
+```
 
-### Strategy — Motor de Reportes
+---
 
-**Problema:** los reportes gerenciales del TP (RF-25 a RF-33) comparten la misma forma general (reciben filtros, arman un PDF) pero cada uno agrega y muestra datos completamente distintos.
+## 👥 Usuarios de prueba
 
-**Dónde:** `backend/src/services/reportes/`
-- `types.ts` — interfaz `ReportStrategy` que toda estrategia cumple (clave, roles autorizados, `parseParams`, `obtenerDatos`, `renderPdf`, `nombreArchivo`).
-- Las 9 estrategias académicas y de servicios (RF-25 a RF-33): `porAlumno`, `listadoAlumnosPorCurso`, `porDocente`, `listadoAlumnosPorMateria`, `listadoDocentesPorNivel`, `listadoAlumnosPorDeporte`, `listadoAlumnosPorDeporteYNivel`, `listadoAlumnosPorDeporteNivelHorario` y `listadoAlumnosPorRecorrido`.
-- Las 5 estrategias financieras y de pagos (RF-52 y RF-53): `ingresosPorPeriodo`, `pagosCompletosPorPeriodo`, `pagosIncompletosPorPeriodo`, `pagosPorDeporte` y `pagosPorRecorrido`.
-- `pdfHelpers.ts` — layout compartido (encabezado, secciones, tablas con salto de página automático) usado por todas las estrategias.
-- `motor.ts` — el registro de estrategias por clave (`registrarEstrategia` / `obtenerEstrategia`); no conoce el detalle interno de ninguna.
-- `index.ts` — alta de estrategias; sumar un reporte nuevo es agregar un archivo `<clave>.strategy.ts` + una línea acá, sin tocar el motor ni el router.
-- Se consume desde `backend/src/routes/reportes.routes.ts` (`GET /api/reportes/:key/pdf`), que solo conoce la interfaz, nunca las clases concretas.
+Todos los usuarios de los datos de ejemplo tienen la contraseña **`123456`**. El login acepta usuario o email.
 
-### Factory Method — Notificaciones automáticas (RF-34)
+| Rol | Usuario | Para probar |
+|---|---|---|
+| 🛠️ Administración | `admin` | Panel completo, facturación, pagos y reportes *(solo local)* |
+| 👩‍🏫 Docente | `mlopez` | Calificaciones, asistencia y planes de estudio |
+| 🧑‍🎓 Alumno | `fbarrabino` | Boletín, horario y servicios |
+| 👨‍👩‍👧 Familia | `pbarrabino` | Un hijo, con facturas pagada, parcial y pendiente |
+| 👨‍👩‍👧 Familia | `mgomezp` | Dos hijos, para probar el selector de hijo |
 
-**Problema:** al disparar la alerta automática por 3 inasistencias no justificadas consecutivas, el canal de envío depende de la preferencia configurada de cada padre/tutor (notificación interna o email); construir el objeto de notificación "a mano" según el canal obligaría a tocar el servicio de asistencia cada vez que se sume un canal nuevo.
+> 📱 La **app móvil** solo permite el ingreso de padres y tutores. En la **demo en vivo** podés entrar con `pbarrabino` / `123456`.
 
-**Dónde:** `backend/src/services/notificaciones/`
-- `types.ts` — interfaz común `Notificacion` (`enviar()`).
-- `notificacionInterna.ts` / `notificacionEmail.ts` — las clases concretas por canal.
-- `notificacionFactory.ts` — el Factory Method: `crearNotificacion(canal, payload)` decide qué clase instanciar.
-- `enviarNotificacion.ts` — punto de entrada: resuelve el `canalNotificacion` real del destinatario (`User.canalNotificacion`, enum `INTERNA` | `EMAIL`) y delega en la fábrica.
-- Se dispara desde `backend/src/services/asistencia.service.ts` (`verificarInasistenciasConsecutivas`), llamado desde `backend/src/routes/attendance.routes.ts` después de cada alta de asistencia. Ese servicio nunca sabe si el padre recibe un email o una notificación interna.
+---
 
+## ✅ Calidad y testing
 
+| Tipo | Herramienta | Comando |
+|---|---|---|
+| Unitarios del backend | `node:test` + cobertura | `pnpm test` |
+| Unitarios y de pantallas de la app | Jest + Testing Library | `cd mobile && npm test` |
+| End-to-end | Cypress, contra una base aislada | `pnpm build && pnpm e2e` |
+| Estilo y tipos | ESLint · Prettier · `tsc` | `pnpm lint` · `pnpm --filter backend typecheck` |
+
+**Integración continua.** Cada pull request y cada push a `main` ejecutan en GitHub Actions el lint, el chequeo de tipos, los tests con cobertura, el build de la web y del backend, los tests de la app y la suite E2E contra un PostgreSQL efímero.
+
+**Antes de cada commit**, Husky y lint-staged formatean y revisan los archivos modificados. La rama `main` está protegida: los cambios entran por pull request, con el CI en verde.
+
+---
+
+## 📁 Estructura del repositorio
+
+```
+.
+├── backend/                 API REST (Express + TypeScript + Prisma)
+│   ├── prisma/              esquema, migraciones y datos de ejemplo
+│   └── src/
+│       ├── routes/          endpoints por dominio
+│       ├── middleware/      autenticación, roles y carga de archivos
+│       ├── services/        reglas de negocio, fachadas, reportes y notificaciones
+│       └── utils/           fechas, feriados, montos y validaciones
+├── client/                  web en React + Vite + Tailwind
+│   ├── src/pages/           público, admin, docente, estudiante y padre
+│   └── cypress/             pruebas end-to-end
+├── mobile/                  app Android para familias (Expo + React Native)
+│   └── src/
+│       ├── app/             pantallas (expo-router)
+│       ├── pagos/           estado de cuenta, comprobantes y transferencias
+│       └── lib/             cliente HTTP y sesión
+├── scripts/                 E2E y métricas del repositorio
+├── .github/workflows/       CI y jobs diarios
+├── render.yaml              infraestructura como código (Render)
+└── DEPLOY.md                guía de despliegue paso a paso
+```
+
+---
+
+## 🚀 Despliegue
+
+| Componente | Plataforma | Detalle |
+|---|---|---|
+| API + web | **Render** | Definido en [`render.yaml`](render.yaml). Se despliega solo cuando el CI de `main` pasa. |
+| Base de datos | **Neon** | PostgreSQL administrado. Las migraciones se aplican al iniciar el servicio. |
+| Archivos | **Cloudinary** | Almacenamiento persistente; los comprobantes de pago son privados. |
+| Emails | **Resend** | Envío por API HTTPS. |
+| Jobs diarios | **GitHub Actions** | Emisión de facturas y recordatorios de deuda. |
+| App Android | **EAS Build** | APK de distribución directa. |
+
+La guía completa, con las variables de entorno de cada servicio, está en **[DEPLOY.md](DEPLOY.md)**.
+
+---
+
+## 🤝 Equipo
+
+Desarrollado por el equipo **FLCODE**:
+
+| Integrante |
+|---|
+| **Lautaro Oporto** |
+| **Franco Barrabino** |
+| **Facundo Jáuregui** |
+| **Fabricio Thompson** |
+
+---
+
+<div align="center">
+
+**Educar para Transformar** · Hecho con 💙 para la comunidad educativa
+
+© 2026 Equipo FLCODE
+
+</div>
