@@ -4,6 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Aviso } from '@/auth/AuthContext';
 import { AvisoBanner, Boton, Cargando, Pantalla, Tarjeta, Texto, Titulo } from '@/components/ui';
 import { primerNombre, SelectorHijo } from '@/components/SelectorHijo';
+import { BotonVolver } from '@/components/BotonVolver';
+import { mensajeCobro } from '@/lib/cobroServicios';
+import { hoyArgentina } from '@/pagos/formato';
 import { useHijos } from '@/hijos/HijosContext';
 import { api } from '@/lib/api';
 import type { Hijo, ResumenServicios } from '@/lib/tipos';
@@ -38,7 +41,7 @@ type Accion = {
   clave: string;
 };
 
-function confirmar(titulo: string, mensaje: string, boton: string): Promise<boolean> {
+function confirmar(titulo: string, mensaje: string, boton: string, destructivo = true): Promise<boolean> {
   if (Platform.OS === 'web') return Promise.resolve(globalThis.confirm(`${titulo}\n\n${mensaje}`));
   return new Promise((resolver) =>
     Alert.alert(
@@ -46,7 +49,7 @@ function confirmar(titulo: string, mensaje: string, boton: string): Promise<bool
       mensaje,
       [
         { text: 'Cancelar', style: 'cancel', onPress: () => resolver(false) },
-        { text: boton, style: 'destructive', onPress: () => resolver(true) },
+        { text: boton, style: destructivo ? 'destructive' : 'default', onPress: () => resolver(true) },
       ],
       { cancelable: true, onDismiss: () => resolver(false) },
     ),
@@ -67,6 +70,7 @@ export default function Servicios() {
     </Pantalla>
   ) : !seleccionado || hijos.length === 0 ? (
     <Pantalla>
+      <BotonVolver />
       <Titulo>Servicios</Titulo>
       <Tarjeta>
         <Texto suave>
@@ -112,6 +116,17 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
     if (await confirmar(titulo, mensaje, 'Dar de baja')) ejecutar(accion);
   };
 
+  // Alta o cambio: antes de confirmar se muestra cuánto cuesta y desde qué
+  // factura se cobra (no hay cobro en el momento, ver lib/cobroServicios).
+  const darDeAlta = async (
+    titulo: string,
+    precioMensual: number,
+    boton: string,
+    accion: Parameters<typeof ejecutar>[0],
+  ) => {
+    if (await confirmar(titulo, mensajeCobro(precioMensual, hoyArgentina()), boton, false)) ejecutar(accion);
+  };
+
   return (
     <Pantalla
       scrollRef={scroll}
@@ -123,9 +138,13 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
         />
       }
     >
+      <BotonVolver />
       <View style={{ gap: 2 }}>
         <Titulo>Servicios</Titulo>
-        <Texto suave>Deportes, transporte y comedor. Los cambios se cobran a partir de la próxima factura.</Texto>
+        <Texto suave>
+          Deportes, transporte y comedor. No se paga al inscribir: cada servicio se suma a la factura mensual
+          siguiente, que se emite el último día hábil del mes y se paga desde Pagos.
+        </Texto>
       </View>
       <SelectorHijo />
       {aviso ? <AvisoBanner aviso={aviso} /> : null}
@@ -209,7 +228,7 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
                         cargando={enCurso(`deporte-${g.id}`)}
                         deshabilitado={mutacion.isPending || consulta.data.deportes.inscriptos.length >= MAX_DEPORTES}
                         onPress={() =>
-                          ejecutar({
+                          void darDeAlta(`¿Inscribir a ${nombre} a ${g.deporte}?`, g.precioMensual, 'Inscribir', {
                             ruta: '/deportes',
                             method: 'POST',
                             body: { grupoDeporteId: g.id },
@@ -272,13 +291,20 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
                       cargando={enCurso(`transporte-${r.id}`)}
                       deshabilitado={mutacion.isPending}
                       onPress={() =>
-                        ejecutar({
-                          ruta: '/transporte',
-                          method: 'PUT',
-                          body: { recorridoId: r.id },
-                          exito: `Transporte asignado: ${r.nombre}.`,
-                          clave: `transporte-${r.id}`,
-                        })
+                        void darDeAlta(
+                          consulta.data.transporte.actual
+                            ? `¿Cambiar el transporte de ${nombre} a ${r.nombre}?`
+                            : `¿Asignar a ${nombre} el transporte ${r.nombre}?`,
+                          r.precioMensual,
+                          consulta.data.transporte.actual ? 'Cambiar' : 'Asignar',
+                          {
+                            ruta: '/transporte',
+                            method: 'PUT',
+                            body: { recorridoId: r.id },
+                            exito: `Transporte asignado: ${r.nombre}.`,
+                            clave: `transporte-${r.id}`,
+                          },
+                        )
                       }
                     />
                   )}
@@ -328,13 +354,20 @@ function ServiciosHijo({ hijo }: { hijo: Hijo }) {
                       cargando={enCurso(`comedor-${t.id}`)}
                       deshabilitado={mutacion.isPending}
                       onPress={() =>
-                        ejecutar({
-                          ruta: '/comedor',
-                          method: 'PUT',
-                          body: { turnoId: t.id },
-                          exito: `Comedor asignado: ${t.nombre}.`,
-                          clave: `comedor-${t.id}`,
-                        })
+                        void darDeAlta(
+                          consulta.data.comedor.actual
+                            ? `¿Cambiar el comedor de ${nombre} a ${t.nombre}?`
+                            : `¿Asignar a ${nombre} el comedor ${t.nombre}?`,
+                          t.precioMensual,
+                          consulta.data.comedor.actual ? 'Cambiar' : 'Asignar',
+                          {
+                            ruta: '/comedor',
+                            method: 'PUT',
+                            body: { turnoId: t.id },
+                            exito: `Comedor asignado: ${t.nombre}.`,
+                            clave: `comedor-${t.id}`,
+                          },
+                        )
                       }
                     />
                   )}

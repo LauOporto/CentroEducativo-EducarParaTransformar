@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as WebBrowser from 'expo-web-browser';
+import { File } from 'expo-file-system';
 import type { QueryClient } from '@tanstack/react-query';
 import { api, apiMultipart, descargarArchivo } from '@/lib/api';
 import type { Rango } from './rango';
@@ -64,11 +65,17 @@ export async function armarFormularioTransferencia(datos: DatosTransferencia): P
     const blob = await (await fetch(datos.archivo.uri)).blob();
     form.append('archivo', new Blob([blob], { type: datos.archivo.tipo }), datos.archivo.nombre);
   } else {
-    // React Native sube el archivo desde el uri local con esta forma.
+    // Desde el SDK 58 el fetch global es expo/fetch, que NO admite la forma
+    // clásica de React Native { uri, name, type }: tira "Unsupported
+    // FormDataPart implementation" antes de mandar nada (la app lo mostraba
+    // como "sin conexión"). Serializa cualquier parte con name/type/bytes(),
+    // así que se lee el archivo local con expo-file-system. El tipo se fija
+    // explícito porque el backend exige que coincida con el contenido real.
+    const { uri, nombre, tipo } = datos.archivo;
     form.append('archivo', {
-      uri: datos.archivo.uri,
-      name: datos.archivo.nombre,
-      type: datos.archivo.tipo,
+      name: nombre,
+      type: tipo,
+      bytes: () => new File(uri).bytes(),
     } as unknown as Blob);
   }
   form.append('nroOperacion', datos.nroOperacion);

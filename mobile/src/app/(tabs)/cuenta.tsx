@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { useAuth } from '@/auth/AuthContext';
 import { AvisoBanner, Boton, Cargando, Pantalla, Tarjeta, Texto, Titulo } from '@/components/ui';
+import { BotonVolver } from '@/components/BotonVolver';
 import { api } from '@/lib/api';
 import type { RespuestaPerfil } from '@/lib/tipos';
 import { colors, fonts, spacing } from '@/theme';
@@ -19,6 +20,7 @@ export default function Cuenta() {
 
   return (
     <Pantalla>
+      <BotonVolver />
       <Titulo>Mi cuenta</Titulo>
 
       {perfil.isPending ? (

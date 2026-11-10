@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AvisoBanner, Boton, Cargando, Pantalla, Tarjeta, Texto, Titulo } from '@/components/ui';
 import { SelectorHijo } from '@/components/SelectorHijo';
+import { BotonVolver } from '@/components/BotonVolver';
 import { useHijos } from '@/hijos/HijosContext';
 import type { Hijo } from '@/lib/tipos';
 import { clavesPagos, pagosApi } from '@/pagos/api';
@@ -43,6 +44,7 @@ export default function Pagos() {
     </Pantalla>
   ) : !seleccionado || hijos.length === 0 ? (
     <Pantalla>
+      <BotonVolver />
       <Titulo>Pagos</Titulo>
       <Tarjeta>
         <Texto suave>
@@ -79,6 +81,7 @@ function PagosHijo({ hijo }: { hijo: Hijo }) {
         />
       }
     >
+      <BotonVolver />
       <View style={estilosPagos.encabezado}>
         <Titulo>Pagos</Titulo>
         <Texto suave>Cuotas, deuda por ítem, facturas y pagos. Solo se paga por transferencia bancaria.</Texto>
