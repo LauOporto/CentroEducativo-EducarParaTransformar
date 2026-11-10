@@ -9,7 +9,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ar.edu.educarparatransformar.familias"
+      "bundleIdentifier": "ar.edu.educarparatransformar.familias",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "ar.edu.educarparatransformar.familias",
@@ -40,7 +43,15 @@
       ],
       "expo-asset",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Necesitamos la cámara para fotografiar el comprobante de la transferencia.",
+          "photosPermission": "Necesitamos tus fotos para adjuntar el comprobante de la transferencia.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

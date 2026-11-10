@@ -9,6 +9,7 @@ calificaciones, asistencia, servicios, facturación y pagos, todo en un mismo lu
 
 [![Demo en vivo](https://img.shields.io/badge/Demo-en%20vivo-1F6FEB?style=for-the-badge&logo=render&logoColor=white)](https://educar-para-transformar-iffe.onrender.com)
 [![Descargar APK](https://img.shields.io/badge/Android-Descargar%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://expo.dev/accounts/lauoporto/projects/educar-para-transformar/builds/41e607c9-e712-48f6-a16c-fdd53da8aaed)
+[![Probar en iOS](https://img.shields.io/badge/iOS-Probar%20en%20simulador-000000?style=for-the-badge&logo=apple&logoColor=white)](#-probar-la-app-en-ios)
 
 ![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
@@ -29,6 +30,7 @@ calificaciones, asistencia, servicios, facturación y pagos, todo en un mismo lu
 - [Tecnologías](#-tecnologías)
 - [Arquitectura](#-arquitectura)
 - [Instalar la app en Android (APK)](#-instalar-la-app-en-android-apk)
+- [Probar la app en iOS](#-probar-la-app-en-ios)
 - [Ejecutar el proyecto localmente](#-ejecutar-el-proyecto-localmente)
 - [Usuarios de prueba](#-usuarios-de-prueba)
 - [Calidad y testing](#-calidad-y-testing)
@@ -48,7 +50,7 @@ Reúne tres productos que comparten una única API y una única base de datos:
 |---|---|---|---|
 | 🌐 | **Sitio institucional** | Público general | Presenta la escuela, sus niveles e instalaciones; publica noticias y recibe consultas, preinscripciones y postulaciones laborales. |
 | 💻 | **Campus virtual** | Administración, docentes, alumnos y familias | Gestión académica, asistencia, servicios complementarios, facturación, pagos y reportes en PDF. |
-| 📱 | **App para familias** | Padres y tutores | Estado de cuenta, pago de cuotas por transferencia e inscripción de los hijos a deportes, transporte y comedor, desde el celular. |
+| 📱 | **App para familias** (Android e iOS) | Padres y tutores | Estado de cuenta, pago de cuotas por transferencia e inscripción de los hijos a deportes, transporte y comedor, desde el celular. |
 
 > 💡 **Una sola fuente de verdad.** La web y la app consumen la misma API REST: lo que una familia hace desde el celular se ve al instante en el campus, y viceversa.
 
@@ -144,7 +146,7 @@ sequenceDiagram
 | **Base de datos** | PostgreSQL 16+ (Neon en producción) |
 | **Web** | React 18 · React Router 6 · Tailwind CSS 3 · Vite 5 |
 | **Mobile** | Expo SDK 58 · React Native 0.88 · TypeScript · expo-router · TanStack Query · expo-secure-store |
-| **Servicios externos** | Cloudinary (archivos) · Resend (emails) · EAS Build (APK) |
+| **Servicios externos** | Cloudinary (archivos) · Resend (emails) · EAS Build (Android e iOS) |
 | **Infraestructura** | Render (API + web) · GitHub Actions (CI y jobs programados) |
 | **Calidad** | node:test (unit) · Jest + Testing Library (mobile) · Cypress (E2E) · ESLint · Prettier · Husky + lint-staged · SonarCloud |
 | **Monorepo** | pnpm workspaces (backend + client) · npm (mobile, independiente) |
@@ -159,7 +161,7 @@ sequenceDiagram
 flowchart LR
     subgraph Clientes
         WEB["💻 Web<br/>React + Vite"]
-        APP["📱 App Android<br/>Expo / React Native"]
+        APP["📱 App móvil<br/>Android · iOS<br/>Expo / React Native"]
     end
 
     subgraph Render["☁️ Render (un solo servicio)"]
@@ -275,6 +277,85 @@ cd mobile
 npx eas-cli login       # una sola vez, con la cuenta de Expo del proyecto
 npm run build:apk       # al terminar, EAS entrega el link y el QR de descarga
 ```
+
+</details>
+
+---
+
+## 🍏 Probar la app en iOS
+
+La app es multiplataforma: el mismo código corre en iPhone y usa **la misma API y los mismos datos** que la versión de Android y la web. Una transferencia cargada desde iOS aparece al instante en el campus y en Android.
+
+El `.apk` es exclusivo de Android. Para iOS hay dos caminos, y ninguno necesita una Mac ni una cuenta paga de Apple:
+
+| Opción | Necesitás | Ideal para |
+|---|---|---|
+| **A. Simulador en el navegador** | Una computadora y una cuenta gratuita de Appetize.io | Probar sin tener un iPhone |
+| **B. Expo Go** | Un iPhone con Expo Go y el proyecto corriendo en tu PC | Verla en un iPhone real |
+
+### Opción A · iPhone virtual en el navegador (Appetize.io)
+
+**1. Descargá el build para simulador**
+
+👉 **[Descargar Educar para Transformar para simulador iOS (.tar.gz)](https://expo.dev/accounts/lauoporto/projects/educar-para-transformar/builds/198fe00e-7b13-4678-bade-735e8c72daaf)**
+
+En la página del build, tocá **Download**. No hace falta descomprimir el archivo.
+
+**2. Subilo a Appetize**
+
+1. Entrá a **[appetize.io](https://appetize.io)** y creá una cuenta gratuita.
+2. Tocá **Upload** y elegí el archivo `.tar.gz` que descargaste. Appetize detecta solo que es una app de iOS.
+
+**3. Abrí el iPhone virtual**
+
+Elegí un modelo de iPhone y tocá **Tap to play**. La app arranca en el navegador y se maneja con el mouse.
+
+**4. Iniciá sesión**
+
+Usá la [cuenta de demostración](#-usuarios-de-prueba) `pbarrabino` / `123456`. El primer ingreso puede tardar hasta un minuto mientras se despierta el servidor.
+
+> 📷 **El simulador no tiene cámara.** Para cargar una transferencia, usá **"Elegir de la galería"** (el simulador trae fotos de ejemplo) o **"Elegir PDF"**, en lugar de **"Sacar foto"**.
+
+> El plan gratuito de Appetize tiene minutos de uso limitados por mes; alcanzan para recorrer la app completa.
+
+### Opción B · En un iPhone real con Expo Go
+
+1. En el iPhone, instalá **[Expo Go](https://apps.apple.com/app/expo-go/id982107779)** desde la App Store.
+2. En tu computadora, con el proyecto clonado e instalado ([paso 7 de la ejecución local](#paso-7--ejecutar-la-app-móvil-opcional)), ejecutá:
+
+   ```bash
+   cd mobile
+   npx expo start --tunnel
+   ```
+
+   El modo `--tunnel` permite que el iPhone se conecte aunque no esté en la misma red Wi-Fi. La primera vez te puede pedir instalar un paquete adicional: aceptá.
+3. Escaneá el código QR de la terminal con la **cámara** del iPhone y abrilo con Expo Go.
+
+> Si no creaste `mobile/.env.local`, la app usa la API de producción, con los mismos datos que la versión de Android.
+
+<details>
+<summary><b>Diferencias con Android</b></summary>
+
+| Tema | En iOS |
+|---|---|
+| Volver atrás | iPhone no tiene tecla atrás: se usa el botón **Volver** de cada pantalla o se desliza desde el borde izquierdo. |
+| Avisos y confirmaciones | Se ven con el estilo nativo de Apple, con las mismas opciones. |
+| Compartir PDFs | Se abre el menú de compartir de iOS (Guardar en Archivos, AirDrop, WhatsApp…). |
+| Permisos | La primera vez que uses la cámara o la galería, iOS te pide permiso con un mensaje que explica para qué se usa. |
+
+</details>
+
+<details>
+<summary><b>Generar un build nuevo para simulador iOS (para desarrolladores)</b></summary>
+
+El perfil `ios-simulador` de `mobile/eas.json` compila en la nube de Expo una versión para el simulador de iOS. No requiere una Mac ni credenciales de Apple.
+
+```bash
+cd mobile
+npx eas-cli build --platform ios --profile ios-simulador
+```
+
+Al terminar, EAS entrega el link del `.tar.gz`. Sirve para Appetize.io o para el simulador de Xcode, en una Mac. Instalar la app en iPhones reales (TestFlight o App Store) requiere una cuenta de **Apple Developer**.
 
 </details>
 
@@ -500,6 +581,7 @@ Todos los usuarios de los datos de ejemplo tienen la contraseña **`123456`**. E
 | Emails | **Resend** | Envío por API HTTPS. |
 | Jobs diarios | **GitHub Actions** | Emisión de facturas y recordatorios de deuda. |
 | App Android | **EAS Build** | APK de distribución directa. |
+| App iOS | **EAS Build** | Build para simulador, que se prueba en el navegador con Appetize.io. |
 
 La guía completa, con las variables de entorno de cada servicio, está en **[DEPLOY.md](DEPLOY.md)**.
 

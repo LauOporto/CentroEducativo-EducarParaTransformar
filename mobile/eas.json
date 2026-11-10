@@ -20,6 +20,14 @@
         "EXPO_PUBLIC_API_URL": "https://educar-para-transformar-iffe.onrender.com"
       }
     },
+    "ios-simulador": {
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://educar-para-transformar-iffe.onrender.com"
+      }
+    },
     "production": {
       "android": {
         "buildType": "apk"
