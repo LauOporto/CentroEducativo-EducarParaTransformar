@@ -4,6 +4,7 @@ import { DiaSemana, Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
+import { hayNombreEquivalente } from '../utils/texto';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { actualizarPrecio, conMonto } from '../services/precios.service';
 
@@ -83,9 +84,10 @@ const deporteSchema = z.object({ nombre: z.string().trim().min(2).max(40) });
 router.post('/', async (req, res, next) => {
   try {
     const data = deporteSchema.parse(req.body);
-    const existe = await prisma.deporte.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
-    });
+    const existe = hayNombreEquivalente(
+      await prisma.deporte.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+    );
     if (existe) throw HttpError.conflict('Ya existe un deporte con ese nombre.');
     const deporte = await prisma.deporte.create({ data });
     res.json({ exito: true, deporte: conMonto(deporte, 'precioMensual') });
@@ -98,9 +100,11 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = deporteSchema.parse(req.body);
-    const conflicto = await prisma.deporte.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
-    });
+    const conflicto = hayNombreEquivalente(
+      await prisma.deporte.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+      id,
+    );
     if (conflicto) throw HttpError.conflict('Ya existe un deporte con ese nombre.');
     const deporte = await prisma.deporte.update({ where: { id }, data });
     res.json({ exito: true, deporte: conMonto(deporte, 'precioMensual') });

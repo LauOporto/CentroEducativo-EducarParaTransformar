@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 
 import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
+import { hayNombreEquivalente } from '../utils/texto';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { actualizarPrecio, conMonto } from '../services/precios.service';
 
@@ -61,9 +62,10 @@ router.post('/', async (req, res, next) => {
         `El servicio de transporte admite como máximo ${MAX_RECORRIDOS} recorridos. Editá uno existente en lugar de crear otro.`,
       );
     }
-    const existe = await prisma.recorridoTransporte.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
-    });
+    const existe = hayNombreEquivalente(
+      await prisma.recorridoTransporte.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+    );
     if (existe) throw HttpError.conflict('Ya existe un recorrido con ese nombre.');
     const recorrido = await prisma.recorridoTransporte.create({
       data: { nombre: data.nombre, horaSalida: toTime(data.horaSalida), horaRegreso: toTime(data.horaRegreso) },
@@ -78,9 +80,11 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = recorridoSchema.parse(req.body);
-    const conflicto = await prisma.recorridoTransporte.findFirst({
-      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
-    });
+    const conflicto = hayNombreEquivalente(
+      await prisma.recorridoTransporte.findMany({ select: { id: true, nombre: true } }),
+      data.nombre,
+      id,
+    );
     if (conflicto) throw HttpError.conflict('Ya existe un recorrido con ese nombre.');
     const recorrido = await prisma.recorridoTransporte.update({
       where: { id },

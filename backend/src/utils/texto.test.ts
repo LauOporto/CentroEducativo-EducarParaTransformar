@@ -32,3 +32,17 @@ test('recortarFinal es lineal: entradas patológicas para una regex con backtrac
   const ms = Number(process.hrtime.bigint() - inicio) / 1e6;
   assert.ok(ms < 500, `tardó ${ms} ms`);
 });
+
+test('claveNombre ignora mayúsculas, tildes y espacios repetidos', async () => {
+  const { claveNombre, hayNombreEquivalente } = await import('./texto');
+  assert.equal(claveNombre('  Fútbol '), claveNombre('FUTBOL'));
+  assert.equal(claveNombre('Primer   Turno'), claveNombre('primer turno'));
+  assert.notEqual(claveNombre('Vóley'), claveNombre('Vóleibol'));
+  const filas = [
+    { id: 1, nombre: 'Fútbol' },
+    { id: 2, nombre: 'Vóley' },
+  ];
+  assert.equal(hayNombreEquivalente(filas, 'futbol'), true);
+  assert.equal(hayNombreEquivalente(filas, 'Futbol', 1), false); // editar el propio
+  assert.equal(hayNombreEquivalente(filas, 'Ajedrez'), false);
+});
