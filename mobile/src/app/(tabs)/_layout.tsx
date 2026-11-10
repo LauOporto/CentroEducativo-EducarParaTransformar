@@ -7,6 +7,8 @@ export default function TabsLayout() {
   return (
     <HijosProvider>
       <Tabs
+        // "Volver" (y la tecla atrás de Android) regresa a la pestaña anterior, no siempre a Inicio.
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.blue500,
