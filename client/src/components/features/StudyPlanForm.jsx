@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { studyPlansService } from '../../services/api/studyPlansService';
+import { materiasService } from '../../services/api/materiasService';
 import { useToast } from '../../hooks/useToast';
 
 const EMPTY = { materia: '', titulo: '', objetivos: '', contenidos: '' };
@@ -8,6 +9,15 @@ export default function StudyPlanForm({ onCreated }) {
   const toast = useToast();
   const [form, setForm] = useState(EMPTY);
   const [file, setFile] = useState(null);
+  // Solo las materias que el profesor tiene asignadas (el backend lo exige).
+  const [materias, setMaterias] = useState([]);
+
+  useEffect(() => {
+    materiasService.listAsignaciones().then((data) => {
+      const nombres = data.exito ? data.asignaciones.map((a) => a.materia) : [];
+      setMaterias([...new Set(nombres)].sort((a, b) => a.localeCompare(b)));
+    });
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -22,21 +32,30 @@ export default function StudyPlanForm({ onCreated }) {
       e.target.reset();
       onCreated?.();
     } else {
-      toast.error(res.mensaje || 'Error al publicar.');
+      toast.error(res.message || res.mensaje || 'Error al publicar.');
     }
   };
 
   return (
     <details className="mb-6 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-      <summary className="cursor-pointer font-semibold"><i className="fas fa-plus-circle text-accent" /> Cargar nuevo plan de estudios</summary>
+      <summary className="cursor-pointer font-semibold">
+        <i className="fas fa-plus-circle text-accent" /> Cargar nuevo plan de estudios
+      </summary>
       <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2">
-        <input
+        <select
           required
-          placeholder="Materia"
+          aria-label="Materia"
           value={form.materia}
           onChange={(e) => setForm({ ...form, materia: e.target.value })}
           className="rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
-        />
+        >
+          <option value="">{materias.length ? 'Materia…' : 'No tenés materias asignadas'}</option>
+          {materias.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
         <input
           required
           placeholder="Título"
@@ -61,7 +80,10 @@ export default function StudyPlanForm({ onCreated }) {
           className="rounded border border-blue-200 p-2 text-sm sm:col-span-2 dark:border-slate-600 dark:bg-slate-900"
         />
         <input type="file" onChange={(e) => setFile(e.target.files[0])} className="text-sm sm:col-span-2" />
-        <button type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white sm:col-span-2 sm:justify-self-end">
+        <button
+          type="submit"
+          className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white sm:col-span-2 sm:justify-self-end"
+        >
           <i className="fas fa-save" /> Publicar plan
         </button>
       </form>

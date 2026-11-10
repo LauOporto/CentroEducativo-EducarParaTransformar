@@ -42,6 +42,8 @@ const PagosPage = lazy(() => import('../pages/admin/PagosPage'));
 const ReportesPage = lazy(() => import('../pages/admin/ReportesPage'));
 const AuditoriaPage = lazy(() => import('../pages/admin/AuditoriaPage'));
 const GaleriaPage = lazy(() => import('../pages/admin/GaleriaPage'));
+const NoticiasPage = lazy(() => import('../pages/admin/NoticiasPage'));
+const ConsultasPage = lazy(() => import('../pages/admin/ConsultasPage'));
 
 export default function AppRoutes() {
   return (
@@ -117,6 +119,8 @@ export default function AppRoutes() {
           <Route path="reportes" element={<ReportesPage />} />
           <Route path="auditoria" element={<AuditoriaPage />} />
           <Route path="galeria" element={<GaleriaPage />} />
+          <Route path="noticias" element={<NoticiasPage />} />
+          <Route path="consultas" element={<ConsultasPage />} />
           <Route path="*" element={<NotFoundPage volverA="/admin" textoVolver="Volver al panel" />} />
         </Route>
 

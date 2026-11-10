@@ -4,12 +4,15 @@ import Hero from '../../components/landing/Hero';
 import Nosotros from '../../components/landing/Nosotros';
 import Niveles from '../../components/landing/Niveles';
 import Bienestar from '../../components/landing/Bienestar';
+import Instalaciones from '../../components/landing/Instalaciones';
 import Noticias from '../../components/landing/Noticias';
 import Galeria from '../../components/landing/Galeria';
 import InscripcionForm from '../../components/landing/InscripcionForm';
 import EmpleoForm from '../../components/landing/EmpleoForm';
 import OpinionesSection from '../../components/landing/OpinionesSection';
+import Contacto from '../../components/landing/Contacto';
 import Footer from '../../components/landing/Footer';
+import WhatsAppButton from '../../components/landing/WhatsAppButton';
 import LoginModal from '../../components/auth/LoginModal';
 import RegisterModal from '../../components/auth/RegisterModal';
 
@@ -23,15 +26,26 @@ export default function LandingPage() {
       <Nosotros />
       <Niveles />
       <Bienestar />
+      <Instalaciones />
       <Noticias />
       <Galeria />
       <InscripcionForm />
       <EmpleoForm />
       <OpinionesSection />
+      <Contacto />
       <Footer />
+      <WhatsAppButton />
 
-      <LoginModal open={modal === 'login'} onClose={() => setModal(null)} onSwitchToRegister={() => setModal('register')} />
-      <RegisterModal open={modal === 'register'} onClose={() => setModal(null)} onSwitchToLogin={() => setModal('login')} />
+      <LoginModal
+        open={modal === 'login'}
+        onClose={() => setModal(null)}
+        onSwitchToRegister={() => setModal('register')}
+      />
+      <RegisterModal
+        open={modal === 'register'}
+        onClose={() => setModal(null)}
+        onSwitchToLogin={() => setModal('login')}
+      />
     </div>
   );
 }

@@ -106,9 +106,29 @@ model MateriaCurso {
   docente   User     @relation("DocenteMateriaCurso", fields: [docenteId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
 
+  horarios HorarioCurso[]
+
   @@unique([materiaId, cursoId, docenteId])
   @@index([cursoId])
   @@index([docenteId])
+}
+
+// Horario de cursado (Parte 2: "Horarios" del Módulo Administración y
+// "Horarios de cada curso" del reporte por docente). Cada bloque es una
+// asignación Materia–Curso–Profesor en un día y una franja. Las reglas de
+// solapamiento (mismo curso o mismo profesor en la misma franja) viven en
+// services/horarios.service.ts.
+model HorarioCurso {
+  id             Int          @id @default(autoincrement())
+  materiaCursoId Int
+  materiaCurso   MateriaCurso @relation(fields: [materiaCursoId], references: [id], onDelete: Cascade)
+  diaSemana      DiaSemana
+  horaInicio     DateTime     @db.Time
+  horaFin        DateTime     @db.Time
+  createdAt      DateTime     @default(now())
+
+  @@unique([materiaCursoId, diaSemana, horaInicio])
+  @@index([diaSemana])
 }
 
 model User {
@@ -476,6 +496,39 @@ model GaleriaImagen {
   createdAt DateTime @default(now())
 
   @@index([orden])
+}
+
+// Parte 1: noticias del sitio público, administrables desde el panel Admin
+// (antes eran 3 textos fijos en el frontend). Solo las publicadas se ven.
+model Noticia {
+  id        Int      @id @default(autoincrement())
+  titulo    String
+  resumen   String
+  contenido String
+  imagenUrl String?
+  fecha     DateTime @db.Date
+  publicada Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publicada, fecha])
+}
+
+// Parte 1: "consultas mediante página web". El formulario de contacto del
+// sitio público guarda la consulta y avisa por mail a la casilla del colegio;
+// el Admin la marca como respondida.
+model Consulta {
+  id           Int       @id @default(autoincrement())
+  nombre       String
+  email        String
+  telefono     String?
+  asunto       String
+  mensaje      String
+  respondida   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  respondidaEn DateTime?
+
+  @@index([respondida, createdAt])
 }
 
 // ---- Parte 3: facturación y pagos (RF-49, RF-50) ----

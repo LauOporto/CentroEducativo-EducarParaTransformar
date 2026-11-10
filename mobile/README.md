@@ -98,7 +98,7 @@ Para generar el archivo `.apk` e instalarlo directamente en un celular Android (
 ```bash
 cd mobile
 npx eas-cli login
-npm run build:apk
+npm run build:apk   # usa eas-cli vía npx: no hace falta instalarlo global
 ```
 
 Al terminar el build en la nube de Expo, EAS entrega un link y un código QR para descargar e instalar el `.apk` en el dispositivo físico sin depender de Expo Go ni de estar en la misma red Wi-Fi que la PC.

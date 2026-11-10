@@ -100,11 +100,13 @@ export function crearEnviadorMail(config: ConfigMail) {
   };
 }
 
-// En los tests nunca se manda un mail real, aunque el .env local tenga la key.
+// En los tests nunca se manda un mail real ni se redirige, aunque el .env
+// local tenga la key o MAIL_REDIRECT_TO (los tests verifican el destinatario).
+const enTests = env.NODE_ENV === 'test';
 export const enviarMail = crearEnviadorMail({
-  apiKey: env.NODE_ENV === 'test' ? undefined : env.RESEND_API_KEY,
+  apiKey: enTests ? undefined : env.RESEND_API_KEY,
   from: env.MAIL_FROM,
-  redirigirA: env.MAIL_REDIRECT_TO,
+  redirigirA: enTests ? undefined : env.MAIL_REDIRECT_TO,
 });
 
 // ---- Plantilla HTML ----------------------------------------------------------

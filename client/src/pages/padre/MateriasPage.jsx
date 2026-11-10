@@ -7,6 +7,17 @@ import { useCursos } from '../../hooks/useCursos';
 import { useToast } from '../../hooks/useToast';
 import MateriasGrid from '../../components/features/MateriasGrid';
 import MateriasCursoList from '../../components/features/MateriasCursoList';
+import HorarioSemanal from '../../components/features/HorarioSemanal';
+import { horariosService } from '../../services/api/horariosService';
+
+function HorarioHijo({ hijoId, curso }) {
+  const [horarios, setHorarios] = useState(null);
+  useEffect(() => {
+    setHorarios(null);
+    horariosService.list({ estudianteId: hijoId }).then((data) => setHorarios(data.exito ? data.horarios : []));
+  }, [hijoId, curso]);
+  return <HorarioSemanal horarios={horarios} />;
+}
 
 function InscribirCursado({ hijoId, onInscripto }) {
   const toast = useToast();
@@ -35,13 +46,23 @@ function InscribirCursado({ hijoId, onInscripto }) {
       </p>
       <form onSubmit={submit} className="flex flex-wrap gap-2">
         <select
-          required value={cursoId} onChange={(e) => setCursoId(e.target.value)}
+          required
+          value={cursoId}
+          onChange={(e) => setCursoId(e.target.value)}
           className="min-w-[220px] flex-1 rounded border border-blue-200 p-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         >
           <option value="">Elegir curso…</option>
-          {cursos.map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
+          {cursos.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.etiqueta}
+            </option>
+          ))}
         </select>
-        <button disabled={enviando} type="submit" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        <button
+          disabled={enviando}
+          type="submit"
+          className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
           <i className="fas fa-check" /> Inscribir al cursado
         </button>
       </form>
@@ -86,7 +107,9 @@ export default function MateriasPage() {
 
   return (
     <div>
-      <h3 className="mb-2 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">Materias que está cursando</h3>
+      <h3 className="mb-2 border-b border-blue-100 pb-3 text-xl font-bold dark:border-slate-700">
+        Materias que está cursando
+      </h3>
 
       {hijo && !hijo.curso ? (
         <InscribirCursado hijoId={hijoId} onInscripto={refrescarHijos} />
@@ -96,6 +119,9 @@ export default function MateriasPage() {
             Curso: <b>{hijo?.curso}</b> — profesor a cargo de cada materia (RF-11).
           </p>
           <MateriasCursoList materias={materias} loading={materias === null} mensaje={mensajeMaterias} />
+
+          <h4 className="mb-3 mt-8 font-semibold">Horario de cursado</h4>
+          <HorarioHijo hijoId={hijoId} curso={hijo?.curso} />
 
           <p className="mb-2 mt-8 text-sm text-ink-faint">Resumen de calificaciones por materia.</p>
           <MateriasGrid notas={notas} loading={notas === null} />

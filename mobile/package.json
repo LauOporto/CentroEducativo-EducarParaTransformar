@@ -44,7 +44,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "build:apk": "eas build --platform android --profile preview"
+    "build:apk": "npx --yes eas-cli build --platform android --profile preview"
   },
   "private": true,
   "jest": {

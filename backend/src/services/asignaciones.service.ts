@@ -22,6 +22,22 @@ const ASIGNACION_INCLUDE = {
   docente: { select: { id: true, nombre: true } },
 } as const;
 
+// Consistencia: notas, asistencias y planes guardan la materia por nombre.
+// Antes de escribir, el nombre se valida contra la tabla Materia (se devuelve
+// el nombre canónico, sin importar mayúsculas) y, si escribe un DOCENTE, que
+// tenga esa materia asignada en algún curso. El ADMIN no tiene esa restricción.
+export async function resolverMateriaDelDocente(nombre: string, usuario: { id: number; role: Role }): Promise<string> {
+  const materia = await prisma.materia.findFirst({
+    where: { nombre: { equals: nombre.trim(), mode: 'insensitive' } },
+  });
+  if (!materia) throw HttpError.badRequest(`La materia "${nombre}" no existe en el sistema.`);
+  if (usuario.role === Role.DOCENTE) {
+    const asignada = await prisma.materiaCurso.findFirst({ where: { materiaId: materia.id, docenteId: usuario.id } });
+    if (!asignada) throw HttpError.forbidden(`No tenés asignada la materia "${materia.nombre}".`);
+  }
+  return materia.nombre;
+}
+
 // Alta de una asignación Profesor–Materia–Curso (RF-13). Compartido por
 // POST /materias/asignaciones y POST /profesores/:id/materias para que las
 // reglas (existencia, rol DOCENTE, terna duplicada → 409) vivan en un solo

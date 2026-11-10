@@ -83,7 +83,9 @@ const deporteSchema = z.object({ nombre: z.string().trim().min(2).max(40) });
 router.post('/', async (req, res, next) => {
   try {
     const data = deporteSchema.parse(req.body);
-    const existe = await prisma.deporte.findUnique({ where: { nombre: data.nombre } });
+    const existe = await prisma.deporte.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
+    });
     if (existe) throw HttpError.conflict('Ya existe un deporte con ese nombre.');
     const deporte = await prisma.deporte.create({ data });
     res.json({ exito: true, deporte: conMonto(deporte, 'precioMensual') });
@@ -96,7 +98,9 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = deporteSchema.parse(req.body);
-    const conflicto = await prisma.deporte.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
+    const conflicto = await prisma.deporte.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
+    });
     if (conflicto) throw HttpError.conflict('Ya existe un deporte con ese nombre.');
     const deporte = await prisma.deporte.update({ where: { id }, data });
     res.json({ exito: true, deporte: conMonto(deporte, 'precioMensual') });

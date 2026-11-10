@@ -47,8 +47,19 @@ export function encabezadoReporte(doc: PDFKit.PDFDocument, titulo: string, subti
   doc.x = x0;
 }
 
+// Si queda menos de este espacio al pie, el título de sección (o el
+// encabezado de una tabla) pasa a la página siguiente junto con su contenido.
+// Sin esto, PDFKit pagina cada celda del encabezado por separado y quedan
+// hojas casi vacías con un solo título de columna.
+const ESPACIO_MINIMO = 70;
+
+function asegurarEspacio(doc: PDFKit.PDFDocument, alto: number) {
+  if (doc.y + alto > doc.page.height - doc.page.margins.bottom) doc.addPage();
+}
+
 export function seccion(doc: PDFKit.PDFDocument, titulo: string) {
   const x0 = margenIzquierdo(doc);
+  asegurarEspacio(doc, ESPACIO_MINIMO);
   doc.x = x0;
   doc.moveDown(0.8);
   doc.fontSize(13).fillColor(COLOR_TITULO).text(titulo, x0, doc.y);
@@ -94,6 +105,7 @@ export function tabla(
     doc.x = x0;
   };
 
+  asegurarEspacio(doc, filaAltura * 3);
   dibujarEncabezado();
 
   if (filas.length === 0) {
@@ -154,6 +166,7 @@ export function tablaItems(doc: PDFKit.PDFDocument, columnas: ColumnasTabla, fil
       .lineWidth(0.5)
       .stroke();
   };
+  asegurarEspacio(doc, 40); // que el encabezado no quede solo al pie de la hoja
   fila(columnas.titulos, 'Helvetica-Bold');
   filas.forEach((f) => fila(f, 'Helvetica'));
   doc.font('Helvetica');

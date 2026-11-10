@@ -64,6 +64,8 @@ Y en **Environment**, estas variables (con Blueprint ya vienen cargadas salvo la
 | `MAIL_REDIRECT_TO` (opcional) | Si se carga, **todos** los mails van a esa casilla y el asunto dice a quién iban (`[para: …]`). Hace falta mientras no haya un dominio propio verificado en Resend. |
 | `MAIL_FROM` (opcional) | Remitente. Default: `Educar para Transformar <onboarding@resend.dev>`. Con dominio propio: por ejemplo `Educar para Transformar <avisos@tudominio.com.ar>`. |
 | `CRON_SECRET` (opcional) | Clave de 24 caracteres o más que protege `POST /api/jobs/diario` (paso 7). Sin cargar, ese endpoint responde 503 y no corre ningún job automático. |
+| `CONTACTO_EMAIL` (opcional) | Casilla que recibe el aviso de cada consulta del formulario de contacto del sitio. Default: `info@educarparatransformar.edu.ar`. Con `MAIL_REDIRECT_TO` cargado, el aviso llega a esa casilla. |
+| `FERIADOS_EXTRA` (opcional) | Puentes y días no laborables decretados en el año, separados por coma (ej. `2026-12-07,2027-03-23`). Se suman a los feriados nacionales que el sistema ya calcula para decidir el último día hábil del mes. |
 
 ## 5. Deploy
 
@@ -113,7 +115,7 @@ Render free **bloquea el SMTP saliente** (puertos 25, 465 y 587), así que los m
 
 Con eso, el workflow `.github/workflows/jobs-diarios.yml` llama todos los días a las 08:00 (Argentina) a `POST /api/jobs/diario`, que decide qué corre:
 
-- **Último día hábil del mes** (lunes a viernes, sin feriados): genera las facturas del mes siguiente y manda a cada padre la de su hijo con el detalle y el PDF.
+- **Último día hábil del mes** (lunes a viernes que no sea feriado nacional ni un día de `FERIADOS_EXTRA`): genera las facturas del mes siguiente y manda a cada padre la de su hijo con el detalle y el PDF.
 - **Día 20**: aviso a los padres de las facturas del mes con saldo pendiente.
 
 Cada envío queda registrado (tabla `EnvioRecordatorio`): correrlo dos veces no repite mails, y lo que falló se reintenta al día siguiente.
@@ -133,6 +135,23 @@ DATABASE_URL="postgresql://usuario:password@ep-algo.region.aws.neon.tech/neondb?
 ```
 
 El script `backend/prisma/seed-facturacion.ts` es idempotente: solo asigna precios que sigan en `0`, no modifica facturas ya emitidas y hace `upsert` de los comprobantes y pagos de prueba.
+
+## 9. Ajustes de datos en producción (catálogo, noticias y horarios)
+
+La migración `20261109230000_noticias_consultas_horarios` crea las tablas de noticias, consultas web y horario de cursado (se aplica sola en el deploy). Para cargar los datos iniciales en una base que ya está en uso, corré **antes** que `prisma:seed-facturacion`:
+
+```bash
+DATABASE_URL="postgresql://usuario:password@ep-algo.region.aws.neon.tech/neondb?sslmode=require" pnpm --filter backend prisma:ajustes-produccion
+```
+
+El script `backend/prisma/ajustes-produccion.ts` es idempotente y:
+
+- deja el catálogo con los 8 deportes del enunciado (renombra `Vóley` → `Vóleibol`, `Handball` → `Artes Marciales` y `Hockey` → `Danza`, conservando grupos e inscripciones);
+- unifica turnos de comedor duplicados que solo difieren en mayúsculas (ej. `Primer Turno` / `Primer turno`), pasando las inscripciones al más antiguo;
+- carga las noticias iniciales del sitio (solo las que falten);
+- genera el horario de cursado de los cursos que todavía no tienen, sin superponer cursos, profesores ni sus grupos de deporte.
+
+Después, el Admin edita todo desde el panel (**Académico → Horarios**, **Noticias**, **Deportes, Transporte y Comedor**).
 
 ## Limitaciones conocidas del plan free
 

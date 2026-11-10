@@ -9,6 +9,8 @@ import { actualizarPrecio, conMonto } from '../services/precios.service';
 
 const router = Router();
 
+export const MAX_RECORRIDOS = 4;
+
 router.get('/', requireAuth, async (_req, res, next) => {
   try {
     const recorridos = await prisma.recorridoTransporte.findMany({ orderBy: { nombre: 'asc' } });
@@ -53,7 +55,15 @@ const toTime = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 router.post('/', async (req, res, next) => {
   try {
     const data = recorridoSchema.parse(req.body);
-    const existe = await prisma.recorridoTransporte.findUnique({ where: { nombre: data.nombre } });
+    // Regla de negocio del TP: "El servicio de transporte tiene cuatro recorridos".
+    if ((await prisma.recorridoTransporte.count()) >= MAX_RECORRIDOS) {
+      throw HttpError.conflict(
+        `El servicio de transporte admite como máximo ${MAX_RECORRIDOS} recorridos. Editá uno existente en lugar de crear otro.`,
+      );
+    }
+    const existe = await prisma.recorridoTransporte.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const } },
+    });
     if (existe) throw HttpError.conflict('Ya existe un recorrido con ese nombre.');
     const recorrido = await prisma.recorridoTransporte.create({
       data: { nombre: data.nombre, horaSalida: toTime(data.horaSalida), horaRegreso: toTime(data.horaRegreso) },
@@ -68,7 +78,9 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const data = recorridoSchema.parse(req.body);
-    const conflicto = await prisma.recorridoTransporte.findFirst({ where: { nombre: data.nombre, NOT: { id } } });
+    const conflicto = await prisma.recorridoTransporte.findFirst({
+      where: { nombre: { equals: data.nombre, mode: 'insensitive' as const }, NOT: { id } },
+    });
     if (conflicto) throw HttpError.conflict('Ya existe un recorrido con ese nombre.');
     const recorrido = await prisma.recorridoTransporte.update({
       where: { id },

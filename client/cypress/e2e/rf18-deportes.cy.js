@@ -1,5 +1,5 @@
 // CP-RF18-01 — RF-18: un alumno puede estar inscripto como máximo en 2 deportes.
-// Datos del seed: fbarrabino tiene Fútbol (martes) y Vóley (miércoles), y
+// Datos del seed: fbarrabino tiene Fútbol (martes) y Vóleibol (miércoles), y
 // Básquet de Secundaria (lunes) le queda disponible sin superposición horaria.
 const elegirGrupo = (deporte) =>
   cy
@@ -26,8 +26,8 @@ describe('RF-18 · Máximo 2 deportes simultáneos por alumno', () => {
     cy.contains('ya está inscripto en 2 deportes').should('be.visible');
     cy.get('[data-cy=deportes-inscriptos] li').should('have.length', 2);
 
-    // Paso 3: da de baja Vóley (la confirmación del navegador se acepta sola).
-    cy.get('[data-cy=deportes-inscriptos]').contains('li', 'Vóley').contains('button', 'Dar de baja').click();
+    // Paso 3: da de baja Vóleibol (la confirmación del navegador se acepta sola).
+    cy.get('[data-cy=deportes-inscriptos]').contains('li', 'Vóleibol').contains('button', 'Dar de baja').click();
     cy.contains('Baja realizada.').should('be.visible');
     cy.get('[data-cy=deportes-inscriptos] li').should('have.length', 1);
 

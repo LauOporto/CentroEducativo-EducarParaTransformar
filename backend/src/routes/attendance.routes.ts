@@ -6,8 +6,16 @@ import { prisma } from '../db/prisma';
 import { HttpError } from '../utils/httpError';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { verificarInasistenciasConsecutivas } from '../services/asistencia.service';
+import { resolverMateriaDelDocente } from '../services/asignaciones.service';
 
 const router = Router();
+
+// La asistencia puede ser general del día (materia vacía) o de una materia:
+// en ese caso la materia tiene que existir y el docente tenerla asignada.
+async function materiaClave(materia: string | null | undefined, usuario: { id: number; role: Role }) {
+  if (!materia || materia.trim() === '') return '';
+  return resolverMateriaDelDocente(materia, usuario);
+}
 
 const STATUS_VALUES = ['PRESENTE', 'AUSENTE', 'TARDE', 'JUSTIFICADO'] as const;
 
@@ -34,12 +42,13 @@ const bulkSchema = z.object({
 router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req, res, next) => {
   try {
     const data = recordSchema.parse(req.body);
+    const materia = await materiaClave(data.materia, req.authUser!);
     const result = await prisma.attendance.upsert({
       where: {
         estudianteId_fecha_materia: {
           estudianteId: data.estudiante_id,
           fecha: new Date(data.fecha),
-          materia: data.materia ?? '',
+          materia,
         },
       },
       update: { status: data.status as AttendanceStatus, observacion: data.observacion ?? null },
@@ -47,12 +56,12 @@ router.post('/', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (req,
         estudianteId: data.estudiante_id,
         fecha: new Date(data.fecha),
         status: data.status as AttendanceStatus,
-        materia: data.materia ?? '',
+        materia,
         observacion: data.observacion ?? null,
       },
     });
 
-    await verificarInasistenciasConsecutivas(data.estudiante_id, data.materia ?? '');
+    await verificarInasistenciasConsecutivas(data.estudiante_id, materia);
 
     res.json({ exito: true, asistencia: result });
   } catch (err) {
@@ -64,7 +73,7 @@ router.post('/bulk', requireAuth, requireRole(Role.DOCENTE, Role.ADMIN), async (
   try {
     const data = bulkSchema.parse(req.body);
     const fechaDate = new Date(data.fecha);
-    const materiaKey = data.materia ?? '';
+    const materiaKey = await materiaClave(data.materia, req.authUser!);
 
     const ops = data.records.map((r) =>
       prisma.attendance.upsert({

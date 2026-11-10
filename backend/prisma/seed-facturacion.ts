@@ -17,10 +17,10 @@ import { generarFacturasPeriodo, recalcularEstadoFactura } from '../src/services
 const CUOTA_POR_NIVEL: Record<string, number> = { Inicial: 180000, Primaria: 220000, Secundaria: 260000 };
 const PRECIO_DEPORTE: Record<string, number> = {
   Fútbol: 32000,
-  Vóley: 28000,
+  Vóleibol: 28000,
   Básquet: 30000,
-  Handball: 27000,
-  Hockey: 38000,
+  'Artes Marciales': 27000,
+  Danza: 38000,
   Atletismo: 25000,
   Natación: 45000,
   Ajedrez: 26000,

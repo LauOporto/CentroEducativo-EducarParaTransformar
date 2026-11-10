@@ -386,3 +386,25 @@ test('filtro por alumno o recurso inexistente devuelve 404', async () => {
     (err) => err instanceof HttpError && err.status === 404,
   );
 });
+
+test('resumenPorCurso: corte por año escolar con cantidad de alumnos y subtotal', async () => {
+  const { resumenPorCurso, porCursoYAlumno, SIN_CURSO } = await import('./financieros.helpers');
+  const alumnos = [
+    { alumno: 'Zoe', curso: 'Secundaria — 2° año', subtotal: 100.1 },
+    { alumno: 'Ana', curso: 'Secundaria — 10° año', subtotal: 50 },
+    { alumno: 'Juan', curso: 'Secundaria — 2° año', subtotal: 200.2 },
+    { alumno: 'Luz', curso: null, subtotal: 10 },
+  ];
+  assert.deepEqual(
+    resumenPorCurso(alumnos, (a) => a.subtotal),
+    [
+      { curso: 'Secundaria — 2° año', alumnos: 2, subtotal: 300.3 },
+      { curso: 'Secundaria — 10° año', alumnos: 1, subtotal: 50 },
+      { curso: SIN_CURSO, alumnos: 1, subtotal: 10 },
+    ],
+  );
+  assert.deepEqual(
+    [...alumnos].sort(porCursoYAlumno).map((a) => a.alumno),
+    ['Juan', 'Zoe', 'Ana', 'Luz'],
+  );
+});

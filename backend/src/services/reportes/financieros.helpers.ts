@@ -53,6 +53,40 @@ export function parseParamsPeriodoAlumno(req: Request): ParamsPeriodoAlumno {
   return { desde, hasta, estudianteId };
 }
 
+// Enunciado (Parte 3, listados 2 y 3): "discriminado por año y por año a que
+// alumno corresponde". Se lee como dos cortes: el año del período facturado y
+// el año escolar (curso) del alumno. Dentro de cada año se resume por curso y
+// los alumnos se listan agrupados por curso.
+export interface ResumenCurso {
+  curso: string;
+  alumnos: number;
+  subtotal: number;
+}
+
+export const SIN_CURSO = 'Sin curso asignado';
+
+export function resumenPorCurso<T extends { curso: string | null }>(
+  alumnos: T[],
+  monto: (a: T) => number,
+): ResumenCurso[] {
+  const mapa = new Map<string, ResumenCurso>();
+  for (const a of alumnos) {
+    const curso = a.curso ?? SIN_CURSO;
+    const r = mapa.get(curso) ?? { curso, alumnos: 0, subtotal: 0 };
+    r.alumnos += 1;
+    r.subtotal = Math.round((r.subtotal + monto(a)) * 100) / 100;
+    mapa.set(curso, r);
+  }
+  return [...mapa.values()].sort((a, b) => a.curso.localeCompare(b.curso, 'es', { numeric: true }));
+}
+
+export const porCursoYAlumno = (
+  a: { curso: string | null; alumno: string },
+  b: { curso: string | null; alumno: string },
+) =>
+  (a.curso ?? SIN_CURSO).localeCompare(b.curso ?? SIN_CURSO, 'es', { numeric: true }) ||
+  a.alumno.localeCompare(b.alumno);
+
 export const fechaCorta = (iso: string) => iso.split('-').reverse().join('/');
 
 export const rangoLabel = (rango: RangoFechas) => `Período: ${fechaCorta(rango.desde)} al ${fechaCorta(rango.hasta)}`;

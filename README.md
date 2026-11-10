@@ -99,16 +99,22 @@ pnpm --filter backend build          # compila a backend/dist
 pnpm --filter backend start          # corre la build compilada
 pnpm --filter backend prisma:studio  # explorador visual de la base de datos
 pnpm --filter backend db:reset       # resetea la base y vuelve a correr migraciones + seed
+pnpm --filter backend prisma:ajustes-produccion  # catálogo del TP, noticias y horarios en una base existente (ver DEPLOY.md, paso 9)
+pnpm --filter backend prisma:seed-facturacion    # precios, facturas y pagos de demo (Parte 3)
 pnpm run client:build                # compila client/ a client/dist (lo que sirve el backend)
 pnpm --filter client dev             # solo Vite, sin pasar por el script de raíz
 ```
+
+## Contenido del sitio público
+
+Los datos de contacto (teléfono, WhatsApp, email, dirección y redes sociales) están centralizados en [client/src/config/institucion.js](client/src/config/institucion.js). Las **noticias** se administran desde el panel del Admin (**Noticias**) y las **consultas** del formulario de contacto llegan a **Consultas web** y por mail a `CONTACTO_EMAIL` (o a `MAIL_REDIRECT_TO`, si está cargado).
 
 ## Roles
 
 - **Estudiante** — accede a su boletín, planes de estudio, asistencia y foros.
 - **Docente** — carga calificaciones y asistencia, publica planes de estudio y participa en los foros.
 - **Padre / Tutor** — visualiza el boletín, las materias y la asistencia de los hijos vinculados a su cuenta.
-- **Admin** — administra usuarios, vínculos padre-hijo, aprobación de cuentas docentes y modera inscripciones, opiniones y postulaciones de empleo.
+- **Admin** — administra usuarios, vínculos padre-hijo, aprobación de cuentas docentes, estructura académica (niveles, cursos, materias, asignaciones y **horario de cursado**), deportes, transporte, comedor, precios y pagos, noticias y consultas del sitio, y modera inscripciones, opiniones y postulaciones de empleo. Las autoridades y el personal de la escuela acceden con este rol.
 
 ## Patrones de diseño
 

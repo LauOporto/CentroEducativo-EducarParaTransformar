@@ -5,7 +5,15 @@ import { CURSO_SELECT, formatCursoLabel } from '../../utils/cursoLabel';
 import { fechaISO, fechaUTC } from '../../utils/fechas';
 import { HttpError } from '../../utils/httpError';
 import { formatearPesos, sumar, toMonto } from '../../utils/montos';
-import { fechaCorta, parseParamsPeriodoAlumno, rangoLabel, type ParamsPeriodoAlumno } from './financieros.helpers';
+import {
+  fechaCorta,
+  parseParamsPeriodoAlumno,
+  porCursoYAlumno,
+  rangoLabel,
+  resumenPorCurso,
+  type ParamsPeriodoAlumno,
+  type ResumenCurso,
+} from './financieros.helpers';
 import { bloqueTotales, encabezadoReporte, seccion, tablaItems } from './pdfHelpers';
 import type { ReportStrategy } from './types';
 
@@ -44,6 +52,8 @@ export interface GrupoAlumnoPagosIncompletos {
 
 export interface GrupoAnioPagosIncompletos {
   anio: string;
+  /** Corte por año escolar (curso) del alumno dentro del año (subtotal = saldo). */
+  cursos: ResumenCurso[];
   subtotalTotal: number;
   subtotalPagado: number;
   subtotalSaldo: number;
@@ -161,6 +171,7 @@ async function obtenerDatos({ desde, hasta, estudianteId }: ParamsPeriodoAlumno)
         subtotalTotal: toMonto(sumar(alumnos.map((a) => a.subtotalTotal))),
         subtotalPagado: toMonto(sumar(alumnos.map((a) => a.subtotalPagado))),
         subtotalSaldo: toMonto(sumar(alumnos.map((a) => a.subtotalSaldo))),
+        cursos: resumenPorCurso(alumnos, (a) => a.subtotalSaldo),
         alumnos,
       };
     });
@@ -189,7 +200,12 @@ function renderPdf(doc: PDFKit.PDFDocument, data: DatosPagosIncompletos) {
 
   for (const grupoAnio of data.anios) {
     seccion(doc, `Año ${grupoAnio.anio} — Saldo pendiente: ${formatearPesos(grupoAnio.subtotalSaldo)}`);
-    for (const al of grupoAnio.alumnos) {
+    tablaItems(
+      doc,
+      { titulos: ['Año escolar (curso)', 'Alumnos', 'Saldo'], anchos: [250, 90, 120], derecha: [1, 2] },
+      grupoAnio.cursos.map((c) => [c.curso, String(c.alumnos), formatearPesos(c.subtotal)]),
+    );
+    for (const al of [...grupoAnio.alumnos].sort(porCursoYAlumno)) {
       doc.moveDown(0.3);
       doc
         .font('Helvetica-Bold')
@@ -234,7 +250,7 @@ export const pagosIncompletosPorPeriodoStrategy: ReportStrategy<ParamsPeriodoAlu
   key: 'pagos-incompletos-por-periodo',
   titulo: 'Pagos Incompletos por Período',
   descripcion:
-    'Facturas pendientes o con pago parcial y saldo mayor a 0 en el período, agrupadas por año y por alumno, con total, pagado y saldo.',
+    'Facturas pendientes o con pago parcial y saldo mayor a 0 en el período, agrupadas por año, por año escolar (curso) y por alumno, con total, pagado y saldo.',
   rolesAutorizados: [Role.ADMIN],
   parseParams: parseParamsPeriodoAlumno,
   obtenerDatos,
